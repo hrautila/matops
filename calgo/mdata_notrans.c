@@ -466,6 +466,7 @@ void mdata_vpur_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B
   double *Cc, *c0, *c1, *c2, *c3;
   double Cpy[MAX_UA_NB*MAX_UA_MB]  __attribute__((aligned(16)));
   double Acpy[MAX_UA_VP*MAX_UA_MB] __attribute__((aligned(16)));
+  double Bcpy[MAX_UA_VP*MAX_UA_NB] __attribute__((aligned(16)));
 
 
   if (vlen > nP || vlen <= 0) {
@@ -484,14 +485,18 @@ void mdata_vpur_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B
   // TODO: scaling with beta ....
 
   while (vpS < nP) {
+    nB = vpL-vpS;
+
     // column viewport start in panel B[:,S]
     Bc = &B->md[S*B->step + vpS];
     // row viewport start A[R,:]
     AvpS = &A->md[vpS*A->step + R];
 
     colcpy(Acpy, nC, AvpS, A->step, E-R, vpL-vpS);
+    colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
 
-    vpur_notrans(Cpy, Acpy, Bc, alpha, nC, nC, B->step, L-S, E-R, vpL-vpS);
+    //vpur_notrans(Cpy, Acpy, Bc, alpha, nC, nC, B->step, L-S, E-R, vpL-vpS);
+    vpur_notrans(Cpy, Acpy, Bcpy, alpha, nC, nC, nB, L-S, E-R, vpL-vpS);
 
     vpS = vpL;
     vpL += vlen;
