@@ -23,6 +23,7 @@ const P = 8
 
 var A, At, B, Bt, C *matrix.FloatMatrix
 
+
 func TestMakeData(t *testing.T) {
     rand.Seed(time.Now().UnixNano())
     A = matrix.FloatWithValue(M, P, 2.0)
@@ -293,8 +294,10 @@ func TestAlignedSmallTransAB(t *testing.T) {
     bM := 6
     bN := 6
     bP := 6
-    D := matrix.FloatWithValue(bM, bP, 2.0)
-    E := matrix.FloatWithValue(bP, bN, 1.0)
+    D := matrix.FloatNormal(bM, bP)
+    E := matrix.FloatNormal(bP, bN)
+    //D := matrix.FloatWithValue(bM, bP, 2.0)
+    //E := matrix.FloatWithValue(bP, bN, 1.0)
     C0 := matrix.FloatZeros(bM, bN)
     C1 := matrix.FloatZeros(bM, bN)
     Dt := D.Transpose()
@@ -354,6 +357,15 @@ func TestUnAlignedTransAB(t *testing.T) {
 
     MultUnAlignedTransAB(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+}
+
+func TestCopyTrans(t *testing.T) {
+    A := matrix.FloatNormal(4, 5);
+    C := matrix.FloatZeros(5, 4);
+    copy_trans(C.FloatArray(), A.FloatArray(), C.LeadingIndex(),
+        A.LeadingIndex(), A.Rows(), A.Cols())
+
+    t.Logf("A:\n%v\nC:\n%v\n", A, C);
 }
 
 // Local Variables:

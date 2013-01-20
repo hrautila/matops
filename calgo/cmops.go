@@ -183,7 +183,13 @@ func MultUnAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB,
 
 
 
-
+func copy_trans(C, A []float64, ldC, ldA, M, N int) {
+    var Cr *C.double
+    var Ar *C.double
+    Cr =  (*C.double)(unsafe.Pointer(&C[0]))
+    Ar =  (*C.double)(unsafe.Pointer(&A[0]))
+    C.colcpy_trans(Cr, C.int(ldC), Ar, C.int(ldA), C.int(M), C.int(N))
+}
 
 
 
