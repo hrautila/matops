@@ -42,8 +42,10 @@ func TestUnAlignedSmall(t *testing.T) {
     bM := 7
     bN := 7
     bP := 7
-    D := matrix.FloatNormal(bM, bP)
-    E := matrix.FloatNormal(bP, bN)
+    //D := matrix.FloatNormal(bM, bP)
+    //E := matrix.FloatNormal(bP, bN)
+    D := matrix.FloatWithValue(bM, bP, 2.0)
+    E := matrix.FloatWithValue(bP, bN, 1.0)
     C0 := matrix.FloatZeros(bM, bN)
     C1 := matrix.FloatZeros(bM, bN)
 
@@ -60,11 +62,13 @@ func TestUnAlignedSmall(t *testing.T) {
 }
 
 func TestAlignedSmall(t *testing.T) {
-    bM := 8
-    bN := 8
-    bP := 8
-    D := matrix.FloatNormal(bM, bP)
-    E := matrix.FloatNormal(bP, bN)
+    bM := 6
+    bN := 6
+    bP := 6
+    //D := matrix.FloatNormal(bM, bP)
+    //E := matrix.FloatNormal(bP, bN)
+    D := matrix.FloatWithValue(bM, bP, 2.0)
+    E := matrix.FloatWithValue(bP, bN, 1.0)
     C0 := matrix.FloatZeros(bM, bN)
     C1 := matrix.FloatZeros(bM, bN)
 
@@ -128,10 +132,10 @@ func TestAlignedSmallTransA(t *testing.T) {
     bM := 6
     bN := 6
     bP := 6
-    D := matrix.FloatNormal(bM, bP)
-    E := matrix.FloatNormal(bP, bN)
-    //D := matrix.FloatWithValue(bM, bP, 2.0)
-    //E := matrix.FloatWithValue(bP, bN, 1.0)
+    //D := matrix.FloatNormal(bM, bP)
+    //E := matrix.FloatNormal(bP, bN)
+    D := matrix.FloatWithValue(bM, bP, 2.0)
+    E := matrix.FloatWithValue(bP, bN, 1.0)
     C0 := matrix.FloatZeros(bM, bN)
     C1 := matrix.FloatZeros(bM, bN)
     Dt := D.Transpose()
@@ -166,6 +170,96 @@ func TestAlignedTransA(t *testing.T) {
     //t.Logf("blas: C=D*E\n%v\n", C0)
 
     MultAlignedTransA(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+}
+
+func TestUnAlignedSmallTransB(t *testing.T) {
+    bM := 5
+    bN := 5
+    bP := 5
+    //D := matrix.FloatNormal(bM, bP)
+    //E := matrix.FloatNormal(bP, bN)
+    D := matrix.FloatWithValue(bM, bP, 2.0)
+    E := matrix.FloatWithValue(bP, bN, 1.0)
+    C0 := matrix.FloatZeros(bM, bN)
+    C1 := matrix.FloatZeros(bM, bN)
+    Et := E.Transpose()
+
+    Dr := D.FloatArray()
+    Er := Et.FloatArray()
+    C1r := C1.FloatArray()
+
+    blas.GemmFloat(D, Et, C0, 1.0, 1.0, linalg.OptTransA)
+    t.Logf("blas: C=D*E.T\n%v\n", C0)
+
+    MultUnAlignedTransB(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    t.Logf("C1: C1=D*E.T\n%v\n", C1)
+}
+
+func TestAlignedSmallTransB(t *testing.T) {
+    bM := 6
+    bN := 6
+    bP := 6
+    //D := matrix.FloatNormal(bM, bP)
+    //E := matrix.FloatNormal(bP, bN)
+    D := matrix.FloatWithValue(bM, bP, 2.0)
+    E := matrix.FloatWithValue(bP, bN, 1.0)
+    C0 := matrix.FloatZeros(bM, bN)
+    C1 := matrix.FloatZeros(bM, bN)
+    Et := E.Transpose()
+
+    Dr := D.FloatArray()
+    Er := Et.FloatArray()
+    C1r := C1.FloatArray()
+
+    blas.GemmFloat(D, Et, C0, 1.0, 1.0, linalg.OptTransA)
+    t.Logf("blas: C=D*E.T\n%v\n", C0)
+
+    MultAlignedTransB(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    t.Logf("C1: C1=D*E.T\n%v\n", C1)
+}
+
+func TestAlignedTransB(t *testing.T) {
+    bM := 100*M
+    bN := 100*N
+    bP := 100*P
+    D := matrix.FloatNormal(bM, bP)
+    E := matrix.FloatNormal(bP, bN)
+    C0 := matrix.FloatZeros(bM, bN)
+    C1 := matrix.FloatZeros(bM, bN)
+    Et := E.Transpose()
+
+    Dr := D.FloatArray()
+    Er := Et.FloatArray()
+    C1r := C1.FloatArray()
+
+    blas.GemmFloat(D, Et, C0, 1.0, 1.0, linalg.OptTransB)
+    //t.Logf("blas: C=D*E\n%v\n", C0)
+
+    MultAlignedTransB(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+}
+
+func TestUnAlignedTransB(t *testing.T) {
+    bM := 100*M + 1
+    bN := 100*N + 1
+    bP := 100*P + 1
+    D := matrix.FloatNormal(bM, bP)
+    E := matrix.FloatNormal(bP, bN)
+    C0 := matrix.FloatZeros(bM, bN)
+    C1 := matrix.FloatZeros(bM, bN)
+    Et := E.Transpose()
+
+    Dr := D.FloatArray()
+    Er := Et.FloatArray()
+    C1r := C1.FloatArray()
+
+    blas.GemmFloat(D, Et, C0, 1.0, 1.0, linalg.OptTransB)
+    //t.Logf("blas: C=D*E.T\n%v\n", C0)
+
+    MultUnAlignedTransB(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
