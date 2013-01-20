@@ -14,6 +14,7 @@ import (
     "github.com/hrautila/mperf"
     "github.com/hrautila/matops/calgo"
     "fmt"
+    "os"
     "flag"
     "runtime"
     "strings"
@@ -33,6 +34,7 @@ var testName string
 var testCount int
 var VPsize int
 var sizeList string
+var transpose string
 
 func init() {
     flag.IntVar(&M, "M", 600, "Matrix A rows.")
@@ -50,6 +52,7 @@ func init() {
     flag.IntVar(&testCount, "n", 5, "Number of test runs.")
     flag.StringVar(&testName, "T", "test", "Test name for reporting")
     flag.StringVar(&sizeList, "L", "", "Comma separated list of sizes.")
+    flag.StringVar(&transpose, "t", "N", "Transpose op, N, A, B, AB")
 }
 
 var sizes []int = []int{
@@ -58,7 +61,10 @@ var sizes []int = []int{
     1000, 1100, 1200, 1300, 1400, 1500}
 
 func index(i, r, sz int) int {
-    return i*sz/r - ((i*sz/r) & 0x1);
+    if (i == r) {
+        return sz;
+    }
+    return i*sz/r - ((i*sz/r) & 0x3);
 }
 
 func TestTemplate(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
@@ -107,20 +113,6 @@ func CTestMultAligned(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return fnc, A, B, C
 }
 
-func CTestMultUnAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
-    A, B, C = mperf.MakeData(m, n, p, randomData, false)
-    fnc = func() {
-        Ar := A.FloatArray()
-        Br := B.FloatArray()
-        Cr := C.FloatArray()
-        ldC := C.LeadingIndex()
-        ldA := A.LeadingIndex()
-        ldB := B.LeadingIndex()
-        calgo.MultUnAlignedTransA(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
-    }
-    return fnc, A, B, C
-}
-
 func CTestMultAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
     fnc = func() {
@@ -139,6 +131,57 @@ func CTestMultAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatri
             return
         }
         calgo.MultAlignedTransA(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
+    }
+    return fnc, A, B, C
+}
+
+func CTestMultUnAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldC := C.LeadingIndex()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        calgo.MultUnAlignedTransA(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
+    }
+    return fnc, A, B, C
+}
+
+
+func CTestMultAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldC := C.LeadingIndex()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        C_aligned := uintptr(unsafe.Pointer(&Cr[0])) % 16 == 0
+        A_aligned := uintptr(unsafe.Pointer(&Ar[0])) % 16 == 0
+        B_aligned := uintptr(unsafe.Pointer(&Br[0])) % 16 == 0
+        if ! (C_aligned && A_aligned && B_aligned) {
+            fmt.Printf("C aligned: %v\nA aligned: %v\nB aligned: %v\n", C_aligned,
+                A_aligned, B_aligned)
+            return
+        }
+        calgo.MultAlignedTransB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
+    }
+    return fnc, A, B, C
+}
+
+func CTestMultUnAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldC := C.LeadingIndex()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        calgo.MultUnAlignedTransB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
     }
     return fnc, A, B, C
 }
@@ -223,14 +266,37 @@ func CTestGemmTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return fnc, A, B, C
 }
 
+func CTestGemmTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    fnc = func() {
+        blas.GemmFloat(A, B, C, 1.0, 1.0, linalg.OptTransB)
+    }
+    return fnc, A, B, C
+}
+
+func CheckNoTrans(A, B, C *matrix.FloatMatrix) {
+    blas.GemmFloat(A, B, C, 1.0, 1.0)
+}
+
+func CheckTransA(A, B, C *matrix.FloatMatrix) {
+    blas.GemmFloat(A, B, C, 1.0, 1.0, linalg.OptTransA)
+}
+
+func CheckTransB(A, B, C *matrix.FloatMatrix) {
+    blas.GemmFloat(A, B, C, 1.0, 1.0, linalg.OptTransB)
+}
+
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     "ParallelAligned": PTestAligned,
     "ParallelUnAligned": PTestUnAligned,
     "MultUnAligned": CTestMultUnAligned,
     "MultAligned": CTestMultAligned,
-    "MultUnAlignedTransA": CTestMultUnAligned,
-    "MultAlignedTransA": CTestMultAligned,
+    "MultAlignedTransA": CTestMultAlignedTransA,
+    "MultUnAlignedTransA": CTestMultUnAlignedTransA,
+    "MultAlignedTransB": CTestMultAlignedTransB,
+    "MultUnAlignedTransB": CTestMultUnAlignedTransB,
     "GemmTransA": CTestGemmTransA,
+    "GemmTransB": CTestGemmTransB,
     "Gemm": CTestGemm}
 
     
@@ -257,35 +323,57 @@ func main() {
         }
         return
     }
-    if singleTest {
-        sec, _ := mperf.SingleTest(testName, testFunc, M, N, P, check, verbose)
-        fmt.Printf("%vs\n", sec)
+    var checkFunc mperf.MatrixCheckFunc
+    if transpose[0] == 'B' {
+        checkFunc = CheckTransB
+    } else if len(transpose) == 1 && transpose[0] == 'A' {
+        checkFunc = CheckTransA
     } else {
-        if len(sizeList) > 0 {
-            sizes = parseSizeList(sizeList)
-        }
-        times := mperf.MultipleSizeTests(testFunc, sizes, testCount, verbose)
-        if asGflops {
-            if verbose {
-                fmt.Printf("calculating Gflops ...\n")
-            }
-            for sz := range times {
-                n := int64(sz)
-                times[sz] = 2.0*float64(n*n*n) / times[sz] * 1e-9
-            }
-        }
-        // print out as python dictionary
-        fmt.Printf("{")
-        i := 0
-        for sz := range times {
-            if i > 0 {
-                fmt.Printf(", ")
-            }
-            fmt.Printf("%d: %v", sz, times[sz])
-            i++
-        }
-        fmt.Printf("}\n")
+        checkFunc = CheckNoTrans
     }
+    
+    if singleTest {
+        fnc, A, B, C0 := testFunc(M, N, P)
+        mperf.FlushCache()
+        tm := mperf.Timeit(fnc)
+        if check {
+            reftime, ok := mperf.CheckWithFunc(A, B, C0, checkFunc)
+            if verbose {
+                fmt.Fprintf(os.Stderr, "%s: %v\n", testName, tm)
+                fmt.Fprintf(os.Stderr, "Reference: [%v] %v (%.2f) \n",
+                    ok, reftime, tm.Seconds()/reftime.Seconds())
+        }
+        }
+        //sec, _ := mperf.SingleTest(testName, testFunc, M, N, P, check, verbose)
+        fmt.Printf("%vs\n", tm.Seconds())
+        return
+    } 
+
+
+    if len(sizeList) > 0 {
+        sizes = parseSizeList(sizeList)
+    }
+    times := mperf.MultipleSizeTests(testFunc, sizes, testCount, verbose)
+    if asGflops {
+        if verbose {
+            fmt.Printf("calculating Gflops ...\n")
+        }
+        for sz := range times {
+            n := int64(sz)
+            times[sz] = 2.0*float64(n*n*n) / times[sz] * 1e-9
+        }
+    }
+    // print out as python dictionary
+    fmt.Printf("{")
+    i := 0
+    for sz := range times {
+        if i > 0 {
+            fmt.Printf(", ")
+        }
+        fmt.Printf("%d: %v", sz, times[sz])
+        i++
+    }
+    fmt.Printf("}\n")
 }
 
 // Local Variables:
