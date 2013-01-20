@@ -140,6 +140,48 @@ func MultUnAlignedTransB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, 
 }
 
 
+func MultAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
+    var Cm C.mdata_t;
+    var Am C.mdata_t;
+    var Bm C.mdata_t;
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmult_aligned_transab(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta),
+        C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
+
+
+func MultUnAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
+    var Cm C.mdata_t;
+    var Am C.mdata_t;
+    var Bm C.mdata_t;
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmult_unaligned_transab(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta),
+        C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
+
+
 
 
 

@@ -156,6 +156,20 @@ dmult_aligned_transb(mdata_t *C, const mdata_t *A, const mdata_t *B,
                      int vlen, int NB, int MB);
 
 
+// C = alpha*A.T*B.T + beta*C for data not aligned at 16 bytes.
+extern void
+dmult_unaligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                        double alpha, double beta, 
+                        int P, int S, int L, int R, int E,
+                        int vlen, int NB, int MB);
+
+extern void
+dmult_aligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                      double alpha, double beta, 
+                      int P, int S, int L, int R, int E,
+                      int vlen, int NB, int MB);
+
+
 #endif
 
 // Local Variables:
