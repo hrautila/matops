@@ -289,14 +289,14 @@ _inner_ddot_trans(double *Cr, const double *Ar, const double *Br,
     iB += ldB;
     f1 = Ar[1] * Br[iB];
     cval += f1;
-    Br += 2;
+    Br += 2*ldB;
     Ar += 2;
     k += 2;
   }
   if (k < nVP) {
     f0 = Ar[0] * Br[0];
     cval += f0;
-    Br++;
+    Br += ldB;
     Ar++;
     k++;
   }
