@@ -35,10 +35,10 @@ void _inner_ddot4_trans_sse(double *c0, double *c1, double *c2, double *c3,
     __builtin_prefetch(b3+2*ldB, 0, 1);
 
     AR = _mm_load_pd(Ar);
-    B0 = _mm_set_pd(b0[0], b0[ldB]);
-    B1 = _mm_set_pd(b1[0], b1[ldB]);
-    B2 = _mm_set_pd(b2[0], b2[ldB]);
-    B3 = _mm_set_pd(b3[0], b2[ldB]);
+    B0 = _mm_set_pd(b0[ldB], b0[0]);
+    B1 = _mm_set_pd(b1[ldB], b1[0]);
+    B2 = _mm_set_pd(b2[ldB], b2[0]);
+    B3 = _mm_set_pd(b3[ldB], b3[0]);
     F0 = AR * B0;
     C0 = C0 + F0;
     F1 = AR * B1;
@@ -60,10 +60,10 @@ void _inner_ddot4_trans_sse(double *c0, double *c1, double *c2, double *c3,
     __builtin_prefetch(b3+2*ldB, 0, 1);
 
     AR = _mm_load_pd(Ar);
-    B0 = _mm_set_pd(b0[0], b0[ldB]);
-    B1 = _mm_set_pd(b1[0], b1[ldB]);
-    B2 = _mm_set_pd(b2[0], b2[ldB]);
-    B3 = _mm_set_pd(b3[0], b2[ldB]);
+    B0 = _mm_set_pd(b0[ldB], b0[0]);
+    B1 = _mm_set_pd(b1[ldB], b1[0]);
+    B2 = _mm_set_pd(b2[ldB], b2[0]);
+    B3 = _mm_set_pd(b3[ldB], b3[0]);
     F0 = AR * B0;
     C0 = C0 + F0;
     F1 = AR * B1;
@@ -84,10 +84,10 @@ void _inner_ddot4_trans_sse(double *c0, double *c1, double *c2, double *c3,
 
   if (k < nVP-1) {
     AR = _mm_load_pd(Ar);
-    B0 = _mm_set_pd(b0[0], b0[ldB]);
-    B1 = _mm_set_pd(b1[0], b1[ldB]);
-    B2 = _mm_set_pd(b2[0], b2[ldB]);
-    B3 = _mm_set_pd(b3[0], b2[ldB]);
+    B0 = _mm_set_pd(b0[ldB], b0[0]);
+    B1 = _mm_set_pd(b1[ldB], b1[0]);
+    B2 = _mm_set_pd(b2[ldB], b2[0]);
+    B3 = _mm_set_pd(b3[ldB], b3[0]);
     F0 = AR * B0;
     C0 = C0 + F0;
     F1 = AR * B1;
@@ -112,7 +112,7 @@ void _inner_ddot4_trans_sse(double *c0, double *c1, double *c2, double *c3,
     c1[0] += f1;
     f0 = cval * b2[0];
     c2[0] += f0;
-    f1 = cval * b2[0];
+    f1 = cval * b3[0];
     c3[0] += f1;
     k++;
   }
@@ -147,8 +147,8 @@ _inner_ddot2_trans_sse(double *c0, double *c1,
   // unrolling of loops;
   for (k = 0; k < nVP-3; k += 4) {
     AR = _mm_load_pd(Ar);
-    B0 = _mm_set_pd(b0[0], b0[ldB]);
-    B1 = _mm_set_pd(b1[0], b1[ldB]);
+    B0 = _mm_set_pd(b0[ldB], b0[0]);
+    B1 = _mm_set_pd(b1[ldB], b1[0]);
     F0 = AR * B0;
     C0 = C0 + F0;
     F1 = AR * B1;
@@ -158,8 +158,8 @@ _inner_ddot2_trans_sse(double *c0, double *c1,
     b1 += 2*ldB;
 
     AR = _mm_load_pd(Ar);
-    B0 = _mm_set_pd(b0[0], b0[ldB]);
-    B1 = _mm_set_pd(b1[0], b1[ldB]);
+    B0 = _mm_set_pd(b0[ldB], b0[0]);
+    B1 = _mm_set_pd(b1[ldB], b1[0]);
     F0 = AR * B0;
     C0 = C0 + F0;
     F1 = AR * B1;
@@ -173,8 +173,8 @@ _inner_ddot2_trans_sse(double *c0, double *c1,
 
   if (k < nVP-1) {
     AR = _mm_load_pd(Ar);
-    B0 = _mm_set_pd(b0[0], b0[ldB]);
-    B1 = _mm_set_pd(b1[0], b1[ldB]);
+    B0 = _mm_set_pd(b0[ldB], b0[0]);
+    B1 = _mm_set_pd(b1[ldB], b1[0]);
     F0 = AR * B0;
     C0 = C0 + F0;
     F1 = AR * B1;
@@ -216,14 +216,14 @@ _inner_ddot_trans_sse(double *Cr, const double *Ar, const double *Br,
   // unrolling of loops;
   for (k = 0; k < nVP-3; k += 4) {
     AR = _mm_load_pd(Ar);
-    BR = _mm_set_pd(Br[0], Br[ldB]);
+    BR = _mm_set_pd(Br[ldB], Br[0]);
     F0 = AR * BR;
     C0 = C0 + F0;
     Ar += 2;
     Br += 2*ldB;
 
     AR = _mm_load_pd(Ar);
-    BR = _mm_set_pd(Br[0], Br[ldB]);
+    BR = _mm_set_pd(Br[ldB], Br[0]);
     F0 = AR * BR;
     C0 = C0 + F0;
     Ar += 2;
@@ -234,7 +234,7 @@ _inner_ddot_trans_sse(double *Cr, const double *Ar, const double *Br,
 
   if (k < nVP-1) {
     AR = _mm_load_pd(Ar);
-    BR = _mm_set_pd(Br[0], Br[ldB]);
+    BR = _mm_set_pd(Br[ldB], Br[0]);
     F0 = AR * BR;
     C0 = C0 + F0;
     Ar += 2;
@@ -244,7 +244,7 @@ _inner_ddot_trans_sse(double *Cr, const double *Ar, const double *Br,
   if (k < nVP) {
     cval = Ar[0] * Br[0];
     Cr[0] += cval * alpha;
-    Br++;
+    Br += ldB;
     Ar++;
     k++;
   }
