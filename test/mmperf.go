@@ -19,7 +19,7 @@ import (
     "runtime"
     "strings"
     "strconv"
-    "unsafe"
+    //"unsafe"
 )
 
 
@@ -100,14 +100,6 @@ func CTestMultAligned(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
         ldC := C.LeadingIndex()
         ldA := A.LeadingIndex()
         ldB := B.LeadingIndex()
-        C_aligned := uintptr(unsafe.Pointer(&Cr[0])) % 16 == 0
-        A_aligned := uintptr(unsafe.Pointer(&Ar[0])) % 16 == 0
-        B_aligned := uintptr(unsafe.Pointer(&Br[0])) % 16 == 0
-        if ! (C_aligned && A_aligned && B_aligned) {
-            fmt.Printf("C aligned: %v\nA aligned: %v\nB aligned: %v\n", C_aligned,
-                A_aligned, B_aligned)
-            return
-        }
         calgo.MultAligned(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
     }
     return fnc, A, B, C
@@ -115,6 +107,7 @@ func CTestMultAligned(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
 
 func CTestMultAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    A = A.Transpose()
     fnc = func() {
         Ar := A.FloatArray()
         Br := B.FloatArray()
@@ -122,14 +115,6 @@ func CTestMultAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatri
         ldC := C.LeadingIndex()
         ldA := A.LeadingIndex()
         ldB := B.LeadingIndex()
-        C_aligned := uintptr(unsafe.Pointer(&Cr[0])) % 16 == 0
-        A_aligned := uintptr(unsafe.Pointer(&Ar[0])) % 16 == 0
-        B_aligned := uintptr(unsafe.Pointer(&Br[0])) % 16 == 0
-        if ! (C_aligned && A_aligned && B_aligned) {
-            fmt.Printf("C aligned: %v\nA aligned: %v\nB aligned: %v\n", C_aligned,
-                A_aligned, B_aligned)
-            return
-        }
         calgo.MultAlignedTransA(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
     }
     return fnc, A, B, C
@@ -137,6 +122,7 @@ func CTestMultAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatri
 
 func CTestMultUnAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    A = A.Transpose()
     fnc = func() {
         Ar := A.FloatArray()
         Br := B.FloatArray()
@@ -152,6 +138,7 @@ func CTestMultUnAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMat
 
 func CTestMultAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    B = B.Transpose()
     fnc = func() {
         Ar := A.FloatArray()
         Br := B.FloatArray()
@@ -159,14 +146,6 @@ func CTestMultAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatri
         ldC := C.LeadingIndex()
         ldA := A.LeadingIndex()
         ldB := B.LeadingIndex()
-        C_aligned := uintptr(unsafe.Pointer(&Cr[0])) % 16 == 0
-        A_aligned := uintptr(unsafe.Pointer(&Ar[0])) % 16 == 0
-        B_aligned := uintptr(unsafe.Pointer(&Br[0])) % 16 == 0
-        if ! (C_aligned && A_aligned && B_aligned) {
-            fmt.Printf("C aligned: %v\nA aligned: %v\nB aligned: %v\n", C_aligned,
-                A_aligned, B_aligned)
-            return
-        }
         calgo.MultAlignedTransB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
     }
     return fnc, A, B, C
@@ -174,6 +153,7 @@ func CTestMultAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatri
 
 func CTestMultUnAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    B = B.Transpose()
     fnc = func() {
         Ar := A.FloatArray()
         Br := B.FloatArray()
@@ -189,6 +169,8 @@ func CTestMultUnAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMat
 
 func CTestMultAlignedTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    A = A.Transpose()
+    B = B.Transpose()
     fnc = func() {
         Ar := A.FloatArray()
         Br := B.FloatArray()
@@ -203,6 +185,8 @@ func CTestMultAlignedTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatr
 
 func CTestMultUnAlignedTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    A = A.Transpose()
+    B = B.Transpose()
     fnc = func() {
         Ar := A.FloatArray()
         Br := B.FloatArray()
@@ -279,6 +263,134 @@ func PTestUnAligned(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return fnc, A, B, C
 }
 
+func PTestAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    A = A.Transpose()
+
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        ldC := C.LeadingIndex()
+
+        worker := func(m0, n0, p0, start, end int, ready chan int) {
+            calgo.MultAlignedTransA(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB,
+                p0, 0, n, start, end, VPsize, NB, MB)
+            ready <- 1
+        }
+        // fire up nWorker-1 go-routines
+        ch := make(chan int, nWorker-1)
+        for k := 1; k < nWorker; k++ {
+            go worker(m, n, p, index(k, nWorker, m), index((k+1), nWorker, m), ch)
+        }
+        calgo.MultAlignedTransA(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB,
+            p, 0, n, 0, index(1, nWorker, m), VPsize, NB, MB)
+        nready := 1
+        for nready < nWorker {
+            nready += <- ch
+        }
+    }
+    return fnc, A, B, C
+}
+
+func PTestUnAlignedTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    A = A.Transpose()
+
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        ldC := C.LeadingIndex()
+
+        worker := func(m0, n0, p0, start, end int, ready chan int) {
+            calgo.MultUnAlignedTransA(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB,
+                p0, 0, n, start, end, VPsize, NB, MB)
+            ready <- 1
+        }
+        // fire up nWorker-1 go-routines
+        ch := make(chan int, nWorker-1)
+        for k := 1; k < nWorker; k++ {
+            go worker(m, n, p, index(k, nWorker, m), index((k+1), nWorker, m), ch)
+        }
+        calgo.MultUnAlignedTransA(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB,
+            p, 0, n, 0, index(1, nWorker, m), VPsize, NB, MB)
+        nready := 1
+        for nready < nWorker {
+            nready += <- ch
+        }
+    }
+    return fnc, A, B, C
+}
+
+
+func PTestAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    B = B.Transpose()
+
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        ldC := C.LeadingIndex()
+
+        worker := func(m0, n0, p0, start, end int, ready chan int) {
+            calgo.MultAlignedTransB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB,
+                p0, 0, n, start, end, VPsize, NB, MB)
+            ready <- 1
+        }
+        // fire up nWorker-1 go-routines
+        ch := make(chan int, nWorker-1)
+        for k := 1; k < nWorker; k++ {
+            go worker(m, n, p, index(k, nWorker, m), index((k+1), nWorker, m), ch)
+        }
+        calgo.MultAlignedTransB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB,
+            p, 0, n, 0, index(1, nWorker, m), VPsize, NB, MB)
+        nready := 1
+        for nready < nWorker {
+            nready += <- ch
+        }
+    }
+    return fnc, A, B, C
+}
+
+func PTestUnAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    B = B.Transpose()
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        ldC := C.LeadingIndex()
+
+        worker := func(m0, n0, p0, start, end int, ready chan int) {
+            calgo.MultUnAlignedTransB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB,
+                p0, 0, n, start, end, VPsize, NB, MB)
+            ready <- 1
+        }
+        // fire up nWorker-1 go-routines
+        ch := make(chan int, nWorker-1)
+        for k := 1; k < nWorker; k++ {
+            go worker(m, n, p, index(k, nWorker, m), index((k+1), nWorker, m), ch)
+        }
+        calgo.MultUnAlignedTransB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB,
+            p, 0, n, 0, index(1, nWorker, m), VPsize, NB, MB)
+        nready := 1
+        for nready < nWorker {
+            nready += <- ch
+        }
+    }
+    return fnc, A, B, C
+}
+
 func CTestGemm(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
     fnc = func() {
@@ -289,6 +401,7 @@ func CTestGemm(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
 
 func CTestGemmTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    A = A.Transpose()
     fnc = func() {
         blas.GemmFloat(A, B, C, 1.0, 1.0, linalg.OptTransA)
     }
@@ -297,8 +410,19 @@ func CTestGemmTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
 
 func CTestGemmTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    B = B.Transpose()
     fnc = func() {
         blas.GemmFloat(A, B, C, 1.0, 1.0, linalg.OptTransB)
+    }
+    return fnc, A, B, C
+}
+
+func CTestGemmTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    A = A.Transpose()
+    B = B.Transpose()
+    fnc = func() {
+        blas.GemmFloat(A, B, C, 1.0, 1.0, linalg.OptTransA, linalg.OptTransB)
     }
     return fnc, A, B, C
 }
@@ -315,17 +439,28 @@ func CheckTransB(A, B, C *matrix.FloatMatrix) {
     blas.GemmFloat(A, B, C, 1.0, 1.0, linalg.OptTransB)
 }
 
+func CheckTransAB(A, B, C *matrix.FloatMatrix) {
+    blas.GemmFloat(A, B, C, 1.0, 1.0, linalg.OptTransA, linalg.OptTransB)
+}
+
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     "ParallelAligned": PTestAligned,
     "ParallelUnAligned": PTestUnAligned,
+    "ParallelAlignedTransA": PTestAlignedTransA,
+    "ParallelUnAlignedTransA": PTestUnAlignedTransA,
+    "ParallelAlignedTransB": PTestAlignedTransB,
+    "ParallelUnAlignedTransB": PTestUnAlignedTransB,
     "MultUnAligned": CTestMultUnAligned,
     "MultAligned": CTestMultAligned,
     "MultAlignedTransA": CTestMultAlignedTransA,
     "MultUnAlignedTransA": CTestMultUnAlignedTransA,
     "MultAlignedTransB": CTestMultAlignedTransB,
     "MultUnAlignedTransB": CTestMultUnAlignedTransB,
+    "MultAlignedTransAB": CTestMultAlignedTransAB,
+    "MultUnAlignedTransAB": CTestMultUnAlignedTransAB,
     "GemmTransA": CTestGemmTransA,
     "GemmTransB": CTestGemmTransB,
+    "GemmTransAB": CTestGemmTransAB,
     "Gemm": CTestGemm}
 
     
@@ -357,6 +492,8 @@ func main() {
         checkFunc = CheckTransB
     } else if len(transpose) == 1 && transpose[0] == 'A' {
         checkFunc = CheckTransA
+    } else if len(transpose) > 1 {
+        checkFunc = CheckTransAB
     } else {
         checkFunc = CheckNoTrans
     }
