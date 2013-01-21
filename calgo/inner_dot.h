@@ -93,6 +93,8 @@ void _inner_ddot4_sse(double *c0, double *c1, double *c2, double *c3,
     k += 2;
   }
   if (k < nVP) {
+    //printf("ddot2_sse < nVP   : c0 += %9.2e * %9.2e\n", Ar[0], b0[0]);
+    //printf("ddot2_sse < nVP   : c1 += %9.2e * %9.2e\n", Ar[0], b1[0]);
     cval = Ar[0] * alpha;
     f0 = cval * b0[0];
     c0[0] += f0;
@@ -100,7 +102,7 @@ void _inner_ddot4_sse(double *c0, double *c1, double *c2, double *c3,
     c1[0] += f1;
     f0 = cval * b2[0];
     c2[0] += f0;
-    f1 = cval * b2[0];
+    f1 = cval * b3[0];
     c3[0] += f1;
     k++;
   }
@@ -173,9 +175,12 @@ _inner_ddot2_sse(double *c0, double *c1,
     k += 2;
   }
   if (k < nVP) {
+    //printf("ddot2_sse < nVP   : c0 += %9.2e * %9.2e\n", Ar[0], b0[0]);
+    //printf("ddot2_sse < nVP   : c1 += %9.2e * %9.2e\n", Ar[0], b1[0]);
     cval = Ar[0] * alpha;
     f0 = cval * b0[0];
     c0[0] += f0;
+    cval = Ar[0] * alpha;
     f1 = cval * b1[0];
     c1[0] += f1;
     k++;
@@ -229,6 +234,7 @@ _inner_ddot_sse(double *Cr, const double *Ar, const double *Br, double alpha, in
     k += 2;
   }
   if (k < nVP) {
+    //printf("ddot_sse  < nVP   : %9.2e += %9.2e * %9.2e\n", Cr[0], Ar[0], Br[0]);
     cval = Ar[0] * Br[0];
     Cr[0] += cval * alpha;
     Br++;
