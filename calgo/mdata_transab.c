@@ -67,8 +67,8 @@ void vpur_ddot_trans(double *Cc, const double *Aroot, const double *Bc, double a
       __builtin_prefetch(Br0+ldB, 0, 1);
       __builtin_prefetch(Br1+ldB, 0, 1);
       _inner_ddot2_trans_sse(c0, c1, Ac, Br0, Br1, alpha, nVP, ldB);
-      Br0 += ldB;
-      Br1 += ldB;
+      c0++;
+      c1++;
       Ac += ldA;
     }
     // forward to start of next column in C, B
@@ -84,8 +84,8 @@ void vpur_ddot_trans(double *Cc, const double *Aroot, const double *Bc, double a
     c0 = Cc;
     for (i = 0; i < nRE; i++) {
       __builtin_prefetch(Br0+ldB, 0, 1);
-      _inner_ddot_trans(c0, Ac, Br0,  alpha, nVP, ldB);
-      Br0 += ldB;
+      _inner_ddot_trans_sse(c0, Ac, Br0,  alpha, nVP, ldB);
+      c0++;
       Ac += ldA;
     }
     Cc += ldC;
@@ -212,7 +212,7 @@ void dvpur_aligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
     // column viewport start in panel B[:,S]
     Bc = &B->md[vpS*B->step + S];
     // row viewport start A[R,:]
-    AvpS = &A->md[vpS*A->step + R];
+    AvpS = &A->md[R*A->step + vpS];
 
     vpur_ddot_trans(Cc, AvpS, Bc, alpha, C->step, A->step, B->step, L-S, E-R, vpL-vpS);
 
@@ -236,7 +236,7 @@ void dmult_aligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
     nJ = L - j < NB ? L - j : NB;
     for (i = R; i < E; i += MB) {
       nI = E - i < MB ? E - i : MB;
-      dvpur_aligned_transb(C, A, B, alpha, beta, P, j, j+nJ, i, i+nI, vlen);
+      dvpur_aligned_transab(C, A, B, alpha, beta, P, j, j+nJ, i, i+nI, vlen);
     }
   }
 }
