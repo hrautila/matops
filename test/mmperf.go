@@ -187,6 +187,35 @@ func CTestMultUnAlignedTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMat
 }
 
 
+func CTestMultAlignedTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldC := C.LeadingIndex()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        calgo.MultAlignedTransAB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
+    }
+    return fnc, A, B, C
+}
+
+func CTestMultUnAlignedTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A, B, C = mperf.MakeData(m, n, p, randomData, false)
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        ldC := C.LeadingIndex()
+        ldA := A.LeadingIndex()
+        ldB := B.LeadingIndex()
+        calgo.MultUnAlignedTransAB(Cr, Ar, Br, 1.0, 1.0, ldC, ldA, ldB, p, 0, n, 0, m, VPsize, NB, MB)
+    }
+    return fnc, A, B, C
+}
+
+
 
 func PTestAligned(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A, B, C = mperf.MakeData(m, n, p, randomData, false)
