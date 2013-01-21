@@ -17,6 +17,10 @@
 #define MAX_UA_NB 128
 #define MAX_UA_VP 64
 
+#define MAX_MB_DDOT 64
+#define MAX_NB_DDOT 64
+#define MAX_VP_DDOT 192
+
 #define MAX_MB 256
 #define MAX_NB 256
 #define MAX_VP 192
@@ -94,6 +98,8 @@ void colcpy_trans(double *dst, int ldD, const double *src, int ldS, int nL, int 
     Sc += ldS;
   }
 }
+
+extern void print_tile(double *D, int ldD, int nR, int nC);
 
 extern double
 ddot_vec(const double *X, const double *Y, int incX, int incY, int N);

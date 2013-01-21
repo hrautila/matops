@@ -10,15 +10,6 @@
 #include "cmops.h"
 #include "inner_axpy.h"
 
-// max values of block sizes for unaligned cases.
-#define MAX_UA_MB 128
-#define MAX_UA_NB 128
-#define MAX_UA_VP 64
-
-#define MAX_MB 256
-#define MAX_NB 256
-#define MAX_VP 192
-
 
 // This will compute sub-block matrix product: Cij += Aik * Bkj using succesive
 // vector scaling (AXPY) operations.
@@ -166,9 +157,9 @@ void dvpur_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, dou
   const double *Bc, *Ac, *AvpS;
   const double *Br0, *Br1, *Br2, *Br3;
   double *Cc, *c0, *c1, *c2, *c3;
-  double Cpy[MAX_UA_NB*MAX_UA_MB]  __attribute__((aligned(16)));
-  double Acpy[MAX_UA_VP*MAX_UA_MB] __attribute__((aligned(16)));
-  double Bcpy[MAX_UA_VP*MAX_UA_NB] __attribute__((aligned(16)));
+  double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(16)));
+  double Acpy[MAX_VP_DDOT*MAX_MB_DDOT] __attribute__((aligned(16)));
+  double Bcpy[MAX_VP_DDOT*MAX_NB_DDOT] __attribute__((aligned(16)));
 
 
   if (vlen > nP || vlen <= 0) {
@@ -227,14 +218,14 @@ void dmult_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
   int i, j, nI, nJ;
 
   // restrict block sizes as data is copied to aligned buffers of predefined max sizes.
-  if (NB > MAX_UA_NB || NB <= 0) {
-    NB = MAX_UA_NB;
+  if (NB > MAX_NB_DDOT || NB <= 0) {
+    NB = MAX_NB_DDOT;
   }
-  if (MB > MAX_UA_MB || MB <= 0) {
-    MB = MAX_UA_MB;
+  if (MB > MAX_MB_DDOT || MB <= 0) {
+    MB = MAX_MB_DDOT;
   }
-  if (vlen> MAX_UA_VP || vlen <= 0) {
-    vlen = MAX_UA_VP;
+  if (vlen> MAX_VP_DDOT || vlen <= 0) {
+    vlen = MAX_VP_DDOT;
   }
 
   for (j = S; j < L; j += NB) {

@@ -96,15 +96,15 @@ void vpur_daxpy_trans(double *Cc, const double *Aroot, const double *Bc, double 
 }
 
 // print copied tile
-void print_tile(double *D, int nD, int nL, int nC)
+void print_tile(double *D, int ldD, int nR, int nC)
 {
   register int i, j;
-  for (i = 0; i < nL; i++) {
+  for (i = 0; i < nR; i++) {
     printf("[");
     for (j = 0; j < nC; j++) {
       if (j != 0)
         printf(", ");
-      printf("%.1f", D[j*nD+i]);
+      printf("%9.2e", D[j*ldD+i]);
     }
     printf("]\n");
   }
@@ -118,9 +118,9 @@ void dvpur_unaligned_transb(mdata_t *C, const mdata_t *A, const mdata_t *B,
   const double *Bc, *Ac, *AvpS;
   const double *Br0, *Br1, *Br2, *Br3;
   double *Cc, *c0, *c1, *c2, *c3;
-  double Cpy[MAX_UA_NB*MAX_UA_MB]  __attribute__((aligned(16)));
-  double Acpy[MAX_UA_VP*MAX_UA_MB] __attribute__((aligned(16)));
-  double Bcpy[MAX_UA_VP*MAX_UA_NB] __attribute__((aligned(16)));
+  double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(16)));
+  double Acpy[MAX_VP_DDOT*MAX_MB_DDOT] __attribute__((aligned(16)));
+  double Bcpy[MAX_VP_DDOT*MAX_NB_DDOT] __attribute__((aligned(16)));
 
 
   if (vlen > nP || vlen <= 0) {
@@ -179,14 +179,14 @@ void dmult_unaligned_transb(mdata_t *C, const mdata_t *A, const mdata_t *B,
   int i, j, nI, nJ;
 
   // restrict block sizes as data is copied to aligned buffers of predefined max sizes.
-  if (NB > MAX_UA_NB || NB <= 0) {
-    NB = MAX_UA_NB;
+  if (NB > MAX_NB_DDOT || NB <= 0) {
+    NB = MAX_NB_DDOT;
   }
-  if (MB > MAX_UA_MB || MB <= 0) {
-    MB = MAX_UA_MB;
+  if (MB > MAX_MB_DDOT || MB <= 0) {
+    MB = MAX_MB_DDOT;
   }
-  if (vlen> MAX_UA_VP || vlen <= 0) {
-    vlen = MAX_UA_VP;
+  if (vlen > MAX_VP_DDOT || vlen <= 0) {
+    vlen = MAX_VP_DDOT;
   }
 
   for (j = S; j < L; j += NB) {
