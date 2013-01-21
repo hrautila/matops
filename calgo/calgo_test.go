@@ -79,7 +79,7 @@ func _TestAlignedSmall(t *testing.T) {
     t.Logf("C1: C1=D*E\n%v\n", C1)
 }
 
-func _TestAligned(t *testing.T) {
+func TestAligned(t *testing.T) {
     bM := 100*M
     bN := 100*N
     bP := 100*P
@@ -99,7 +99,7 @@ func _TestAligned(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func _TestUnAligned(t *testing.T) {
+func TestUnAligned(t *testing.T) {
     bM := 100*M + 1
     bN := 100*N + 1
     bP := 100*P + 1
@@ -175,7 +175,7 @@ func _TestAlignedSmallTransA(t *testing.T) {
     t.Logf("C1: C1=D*E\n%v\n", C1)
 }
 
-func _TestAlignedTransA(t *testing.T) {
+func TestAlignedTransA(t *testing.T) {
     bM := 100*M
     bN := 100*N
     bP := 100*P
@@ -196,7 +196,7 @@ func _TestAlignedTransA(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func _TestUnAlignedTransA(t *testing.T) {
+func TestUnAlignedTransA(t *testing.T) {
     bM := 100*M + 1
     bN := 100*N + 1
     bP := 100*P + 1
@@ -265,7 +265,7 @@ func _TestAlignedSmallTransB(t *testing.T) {
     t.Logf("C1: C1=D*E.T\n%v\n", C1)
 }
 
-func _TestAlignedTransB(t *testing.T) {
+func TestAlignedTransB(t *testing.T) {
     bM := 100*M
     bN := 100*N
     bP := 100*P
@@ -286,7 +286,7 @@ func _TestAlignedTransB(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func _TestUnAlignedTransB(t *testing.T) {
+func TestUnAlignedTransB(t *testing.T) {
     bM := 100*M + 1
     bN := 100*N + 1
     bP := 100*P + 1
@@ -333,7 +333,7 @@ func _TestUnAlignedSmallTransAB(t *testing.T) {
     t.Logf("C1: C1=D.T*E.T\n%v\n", C1)
 }
 
-func TestAlignedSmallTransAB(t *testing.T) {
+func _TestAlignedSmallTransAB(t *testing.T) {
     bM := 6
     bN := 6
     bP := 6
@@ -401,7 +401,7 @@ func TestAlignedTransAB(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func _TestUnAlignedTransAB(t *testing.T) {
+func TestUnAlignedTransAB(t *testing.T) {
     bM := 100*M + 1
     bN := 100*N + 1
     bP := 100*P + 1
