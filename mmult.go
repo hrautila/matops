@@ -12,6 +12,7 @@ import (
     "github.com/hrautila/matops/calgo"
     //"errors"
     "math"
+    //"fmt"
 )
 
 // blocking parameter size for AXPY based algorithms
@@ -66,7 +67,8 @@ func isSquared(num int) (int, bool) {
 func divideWork(rows, cols, workers int) (colWorkers int, rowWorkers int) {
     colWorkers = 0
     rowWorkers = 0
-    nbynWorkers, issquare := isSquared(nWorker)
+    nwsqrt := int(math.Sqrt(float64(workers)))
+    issquare := nwsqrt*nwsqrt == workers
     if workers == 2 || (workers & 0x1) != 0 {
         // odd number of workers
         if cols > rows {
@@ -78,8 +80,8 @@ func divideWork(rows, cols, workers int) (colWorkers int, rowWorkers int) {
         }
     } else if issquare {
         // square number 
-        colWorkers = nbynWorkers
-        rowWorkers = nbynWorkers
+        colWorkers = nwsqrt
+        rowWorkers = nwsqrt
     } else {
         // even number of workers
         if cols > rows {
@@ -90,6 +92,7 @@ func divideWork(rows, cols, workers int) (colWorkers int, rowWorkers int) {
             rowWorkers = workers/2
         }
     }    
+    //fmt.Printf("divideWork: c=%d, r=%d\n", colWorkers, rowWorkers)
     return
 }
 
@@ -102,8 +105,9 @@ func scheduleWork(colworks, rowworks, cols, rows int, worker task) {
         colstart := blockIndex4(k, colworks, cols)
         colend   := blockIndex4(k+1, colworks, cols)
         for l := 0; l < rowworks; l++ {
-            rowstart := blockIndex4(k, rowworks, rows)
-            rowend   := blockIndex4(k+1, rowworks, rows)
+            rowstart := blockIndex4(l, rowworks, rows)
+            rowend   := blockIndex4(l+1, rowworks, rows)
+            //fmt.Printf("schedule: S=%d, L=%d, R=%d, E=%d\n", colstart, colend, rowstart, rowend)
             go worker(colstart, colend, rowstart, rowend, ch)
         }
     }
