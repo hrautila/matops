@@ -13,12 +13,15 @@ import (
     "github.com/hrautila/linalg"
     "github.com/hrautila/mperf"
     "github.com/hrautila/matops/calgo"
+    "github.com/hrautila/matops"
     "fmt"
     "os"
     "flag"
     "runtime"
     "strings"
     "strconv"
+    "math/rand"
+    "time"
     //"unsafe"
 )
 
@@ -427,6 +430,46 @@ func CTestGemmTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return fnc, A, B, C
 }
 
+func MMTestMult(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormal(m, p)
+    B = matrix.FloatNormal(p, n)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        matops.MMMult(C, A, B, 1.0, 1.0)
+    }
+    return
+}
+
+func MMTestMultTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormal(p, m)
+    B = matrix.FloatNormal(p, n)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        matops.MMMultTransA(C, A, B, 1.0, 1.0)
+    }
+    return
+}
+
+func MMTestMultTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormal(m, p)
+    B = matrix.FloatNormal(n, p)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        matops.MMMultTransB(C, A, B, 1.0, 1.0)
+    }
+    return
+}
+
+func MMTestMultTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormal(p, m)
+    B = matrix.FloatNormal(n, p)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        matops.MMMultTransAB(C, A, B, 1.0, 1.0)
+    }
+    return
+}
+
 func CheckNoTrans(A, B, C *matrix.FloatMatrix) {
     blas.GemmFloat(A, B, C, 1.0, 1.0)
 }
@@ -444,12 +487,14 @@ func CheckTransAB(A, B, C *matrix.FloatMatrix) {
 }
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
+    // parallel lowel tests: calgo interfaces
     "ParallelAligned": PTestAligned,
     "ParallelUnAligned": PTestUnAligned,
     "ParallelAlignedTransA": PTestAlignedTransA,
     "ParallelUnAlignedTransA": PTestUnAlignedTransA,
     "ParallelAlignedTransB": PTestAlignedTransB,
     "ParallelUnAlignedTransB": PTestUnAlignedTransB,
+    // lowel tests: calgo interfaces
     "MultUnAligned": CTestMultUnAligned,
     "MultAligned": CTestMultAligned,
     "MultAlignedTransA": CTestMultAlignedTransA,
@@ -458,6 +503,12 @@ var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     "MultUnAlignedTransB": CTestMultUnAlignedTransB,
     "MultAlignedTransAB": CTestMultAlignedTransAB,
     "MultUnAlignedTransAB": CTestMultUnAlignedTransAB,
+    // matops interfaces
+    "MMTestMult": MMTestMult,
+    "MMTestMultTransA": MMTestMultTransA,
+    "MMTestMultTransB": MMTestMultTransB,
+    "MMTestMultTransAB": MMTestMultTransAB,
+    // blas interface reference tests
     "GemmTransA": CTestGemmTransA,
     "GemmTransB": CTestGemmTransB,
     "GemmTransAB": CTestGemmTransAB,
@@ -479,6 +530,9 @@ func parseSizeList(s string) []int {
 func main() {
     flag.Parse()
     runtime.GOMAXPROCS(nWorker)
+    matops.NumWorkers(nWorker)
+    rand.Seed(time.Now().UnixNano())
+
     testFunc, ok := tests[testName]
     if ! ok {
         fmt.Printf("Error: test %s does not exists.\nKnown tests:\n", testName)
