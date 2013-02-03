@@ -424,10 +424,10 @@ void dmvec_vpur_aligned_notrans(mvec_t *Y, const mdata_t *A, const mvec_t *X,
 // Y = alpha*A*X + beta*Y for rows R:E, A is M*N and 0 < R < E <= M, Update
 // with S:L columns from A and correspoding elements from X.
 // length of X. With matrix-vector operation will avoid copying data.
-void dmvec_unaligned_notrans(mvec_t *Y, const mdata_t *A, const mvec_t *X,
-                             double alpha, double beta,
-                             int S, int L, int R, int E,
-                             int vlen, int MB)
+void dmult_mv_notrans(mvec_t *Y, const mdata_t *A, const mvec_t *X,
+                      double alpha, double beta,
+                      int S, int L, int R, int E,
+                      int vlen, int MB)
 {
   int i, j, nI, nJ, a_aligned, y_aligned, lda_even;
 
