@@ -81,7 +81,7 @@ func TestTemplate(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
 }
 
 
-func CTestMatVecUnAligned(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
+func CTestMultMV(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
     A = matrix.FloatNormal(m, n)
     X = matrix.FloatNormal(n, 1)
     Y = matrix.FloatZeros(m, 1)
@@ -89,7 +89,20 @@ func CTestMatVecUnAligned(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix)
         Ar := A.FloatArray()
         Xr := X.FloatArray()
         Yr := Y.FloatArray()
-        calgo.MatVecUnAligned(Yr, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0, n, 0, m, VPsize, MB)
+        calgo.MultMV(Yr, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0, n, 0, m, VPsize, MB)
+    }
+    return
+}
+
+func CTestMultMVTransA(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
+    A = matrix.FloatNormal(n, m)
+    X = matrix.FloatNormal(n, 1)
+    Y = matrix.FloatZeros(m, 1)
+    fnc = func() {
+        Ar := A.FloatArray()
+        Xr := X.FloatArray()
+        Yr := Y.FloatArray()
+        calgo.MultMVTransA(Yr, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0, n, 0, m, VPsize, MB)
     }
     return
 }
@@ -105,12 +118,12 @@ func CTestGemv(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
 }
 
 func CTestGemvTransA(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
-    A = matrix.FloatNormal(m, n)
+    A = matrix.FloatNormal(n, m)
     X = matrix.FloatNormal(n, 1)
     Y = matrix.FloatZeros(m, 1)
     A = A.Transpose()
     fnc = func() {
-        blas.GemvFloat(A, X, Y, 1.0, 1.0, linalg.OptTransA)
+        blas.GemvFloat(A, X, Y, 1.0, 1.0, linalg.OptTrans)
     }
     return
 }
@@ -121,12 +134,13 @@ func CheckNoTrans(A, X, Y *matrix.FloatMatrix) {
 }
 
 func CheckTransA(A, X, Y *matrix.FloatMatrix) {
-    blas.GemvFloat(A, X, Y, 1.0, 1.0, linalg.OptTransA)
+    blas.GemvFloat(A, X, Y, 1.0, 1.0, linalg.OptTrans)
 }
 
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
-    "MatVecUnAligned": CTestMatVecUnAligned,
+    "MultMV": CTestMultMV,
+    "MultMVTransA": CTestMultMVTransA,
     "GemvTransA": CTestGemvTransA,
     "Gemv": CTestGemv}
 

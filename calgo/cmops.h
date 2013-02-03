@@ -183,10 +183,16 @@ dmult_aligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
 
 // matrix-vector: Y = alpha*A*X + beta*Y
 extern void
-dmvec_unaligned_notrans(mvec_t *Y, const mdata_t *A, const mvec_t *X,
-                        double alpha, double beta,
-                        int S, int L, int R, int E,
-                        int vlen, int MB);
+dmult_mv_notrans(mvec_t *Y, const mdata_t *A, const mvec_t *X,
+                 double alpha, double beta,
+                 int S, int L, int R, int E,
+                 int vlen, int MB);
+
+extern void
+dmult_mv_transa(mvec_t *Y, const mdata_t *A, const mvec_t *X,
+                double alpha, double beta,
+                int S, int L, int R, int E,
+                int vlen, int MB);
 
 #endif
 

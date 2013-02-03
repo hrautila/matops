@@ -183,7 +183,8 @@ func MultUnAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB,
 }
 
 
-func MatVecUnAligned(Y, A, X []float64, alpha, beta float64, incY, ldA, incX, S, L, R, E, H, MB int) {
+// Y = alpha*A*X + beta*Y; Y is M*1, X is N*1 and A is M*N
+func MultMV(Y, A, X []float64, alpha, beta float64, incY, ldA, incX, S, L, R, E, H, MB int) {
     var Yv C.mvec_t;
     var Xv C.mvec_t;
     var Am C.mdata_t;
@@ -194,7 +195,28 @@ func MatVecUnAligned(Y, A, X []float64, alpha, beta float64, incY, ldA, incX, S,
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
-    C.dmvec_unaligned_notrans(
+    C.dmult_mv_notrans(
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.double(alpha), C.double(beta),
+        C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(MB))
+}
+
+// Y = alpha*A*X + beta*Y; Y is M*1, X is N*1 and A is N*M
+func MultMVTransA(Y, A, X []float64, alpha, beta float64, incY, ldA, incX, S, L, R, E, H, MB int) {
+    var Yv C.mvec_t;
+    var Xv C.mvec_t;
+    var Am C.mdata_t;
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.dmult_mv_transa(
         (*C.mvec_t)(unsafe.Pointer(&Yv)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mvec_t)(unsafe.Pointer(&Xv)),

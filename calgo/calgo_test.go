@@ -432,7 +432,7 @@ func _TestCopyTrans(t *testing.T) {
     t.Logf("A:\n%v\nC:\n%v\n", A, C);
 }
 
-func TestMatVecUnAlignedSmall(t *testing.T) {
+func TestMultMVSmall(t *testing.T) {
     bM := 5
     bN := 5
     //A := matrix.FloatNormal(bM, bN)
@@ -449,12 +449,12 @@ func TestMatVecUnAlignedSmall(t *testing.T) {
     blas.GemvFloat(A, X, Y0, 1.0, 1.0)
     t.Logf("blas: Y=A*X\n%v\n", Y0)
 
-    MatVecUnAligned(Y1r, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0,  bN, 0,  bM, 4, 4)
+    MultMV(Y1r, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0,  bN, 0,  bM, 4, 4)
     t.Logf("Y0 == Y1: %v\n", Y0.AllClose(Y1))
     t.Logf("Y1: Y1 = A*X\n%v\n", Y1)
 }
 
-func TestMatVecUnAligned(t *testing.T) {
+func TestMultMV(t *testing.T) {
     bM := 100*M
     bN := 100*N
     A := matrix.FloatNormal(bM, bN)
@@ -468,7 +468,64 @@ func TestMatVecUnAligned(t *testing.T) {
 
     blas.GemvFloat(A, X, Y0, 1.0, 1.0)
 
-    MatVecUnAligned(Y1r, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0,  bN, 0,  bM, 32, 32)
+    MultMV(Y1r, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0,  bN, 0,  bM, 32, 32)
+    t.Logf("Y0 == Y1: %v\n", Y0.AllClose(Y1))
+    if ! Y0.AllClose(Y1) {
+        y0 := Y0.SubMatrix(0, 0, 2, 1)
+        y1 := Y1.SubMatrix(0, 0, 2, 1)
+        t.Logf("y0=\n%v\n", y0)
+        t.Logf("y1=\n%v\n", y1)
+    }
+}
+
+func TestMultMVTransASmall(t *testing.T) {
+    bM := 5
+    bN := 5
+    Adata := [][]float64{
+     []float64{1.0, 1.0, 1.0, 1.0, 1.0},
+     []float64{2.0, 2.0, 2.0, 2.0, 2.0},
+     []float64{3.0, 3.0, 3.0, 3.0, 3.0},
+     []float64{4.0, 4.0, 4.0, 4.0, 4.0},
+     []float64{5.0, 5.0, 5.0, 5.0, 5.0}}
+
+    //A := matrix.FloatNormal(bM, bN)
+    //X := matrix.FloatNormal(bN, 1)
+    //A := matrix.FloatWithValue(bM, bN, 2.0)
+    A := matrix.FloatMatrixFromTable(Adata)
+    X := matrix.FloatVector([]float64{1.0, 2.0, 3.0, 4.0, 5.0})
+    At := A.Transpose()
+    Y1 := matrix.FloatZeros(bM, 1)
+    Y0 := matrix.FloatZeros(bM, 1)
+
+    Ar := At.FloatArray()
+    Xr := X.FloatArray()
+    Y1r := Y1.FloatArray()
+
+    t.Logf("At=\n%v\n", At)
+    blas.GemvFloat(At, X, Y0, 1.0, 1.0, linalg.OptTrans)
+    t.Logf("blas: Y=A.T*X\n%v\n", Y0)
+
+    MultMVTransA(Y1r, Ar, Xr, 1.0, 1.0, 1, At.LeadingIndex(), 1, 0,  bN, 0,  bM, 4, 4)
+    t.Logf("Y0 == Y1: %v\n", Y0.AllClose(Y1))
+    t.Logf("Y1: Y1 = A*X\n%v\n", Y1)
+}
+
+func TestMultMVTransA(t *testing.T) {
+    bM := 100*M
+    bN := 100*N
+    A := matrix.FloatNormal(bM, bN)
+    At := A.Transpose()
+    X := matrix.FloatNormal(bN, 1)
+    Y1 := matrix.FloatZeros(bM, 1)
+    Y0 := matrix.FloatZeros(bM, 1)
+
+    Ar := At.FloatArray()
+    Xr := X.FloatArray()
+    Y1r := Y1.FloatArray()
+
+    blas.GemvFloat(At, X, Y0, 1.0, 1.0, linalg.OptTrans)
+
+    MultMVTransA(Y1r, Ar, Xr, 1.0, 1.0, 1, At.LeadingIndex(), 1, 0,  bN, 0,  bM, 32, 32)
     t.Logf("Y0 == Y1: %v\n", Y0.AllClose(Y1))
     if ! Y0.AllClose(Y1) {
         y0 := Y0.SubMatrix(0, 0, 2, 1)
