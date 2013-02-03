@@ -79,7 +79,7 @@ func _TestAlignedSmall(t *testing.T) {
     t.Logf("C1: C1=D*E\n%v\n", C1)
 }
 
-func TestAligned(t *testing.T) {
+func _TestAligned(t *testing.T) {
     bM := 100*M
     bN := 100*N
     bP := 100*P
@@ -99,7 +99,7 @@ func TestAligned(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func TestUnAligned(t *testing.T) {
+func _TestUnAligned(t *testing.T) {
     bM := 100*M + 1
     bN := 100*N + 1
     bP := 100*P + 1
@@ -175,7 +175,7 @@ func _TestAlignedSmallTransA(t *testing.T) {
     t.Logf("C1: C1=D*E\n%v\n", C1)
 }
 
-func TestAlignedTransA(t *testing.T) {
+func _TestAlignedTransA(t *testing.T) {
     bM := 100*M
     bN := 100*N
     bP := 100*P
@@ -196,7 +196,7 @@ func TestAlignedTransA(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func TestUnAlignedTransA(t *testing.T) {
+func _TestUnAlignedTransA(t *testing.T) {
     bM := 100*M + 1
     bN := 100*N + 1
     bP := 100*P + 1
@@ -265,7 +265,7 @@ func _TestAlignedSmallTransB(t *testing.T) {
     t.Logf("C1: C1=D*E.T\n%v\n", C1)
 }
 
-func TestAlignedTransB(t *testing.T) {
+func _TestAlignedTransB(t *testing.T) {
     bM := 100*M
     bN := 100*N
     bP := 100*P
@@ -286,7 +286,7 @@ func TestAlignedTransB(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func TestUnAlignedTransB(t *testing.T) {
+func _TestUnAlignedTransB(t *testing.T) {
     bM := 100*M + 1
     bN := 100*N + 1
     bP := 100*P + 1
@@ -379,7 +379,7 @@ func _TestAlignedSmallTransAB(t *testing.T) {
     t.Logf("C1: C1=D*E.T\n%v\n", C1)
 }
 
-func TestAlignedTransAB(t *testing.T) {
+func _TestAlignedTransAB(t *testing.T) {
     bM := 100*M
     bN := 100*N
     bP := 100*P
@@ -401,7 +401,7 @@ func TestAlignedTransAB(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func TestUnAlignedTransAB(t *testing.T) {
+func _TestUnAlignedTransAB(t *testing.T) {
     bM := 100*M + 1
     bN := 100*N + 1
     bP := 100*P + 1
@@ -430,6 +430,52 @@ func _TestCopyTrans(t *testing.T) {
         A.LeadingIndex(), A.Rows(), A.Cols())
 
     t.Logf("A:\n%v\nC:\n%v\n", A, C);
+}
+
+func TestMatVecUnAlignedSmall(t *testing.T) {
+    bM := 5
+    bN := 5
+    //A := matrix.FloatNormal(bM, bN)
+    //X := matrix.FloatNormal(bN, 1)
+    A := matrix.FloatWithValue(bM, bN, 2.0)
+    X := matrix.FloatVector([]float64{1.0, 2.0, 3.0, 4.0, 5.0})
+    Y1 := matrix.FloatZeros(bM, 1)
+    Y0 := matrix.FloatZeros(bM, 1)
+
+    Ar := A.FloatArray()
+    Xr := X.FloatArray()
+    Y1r := Y1.FloatArray()
+
+    blas.GemvFloat(A, X, Y0, 1.0, 1.0)
+    t.Logf("blas: Y=A*X\n%v\n", Y0)
+
+    MatVecUnAligned(Y1r, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0,  bN, 0,  bM, 4, 4)
+    t.Logf("Y0 == Y1: %v\n", Y0.AllClose(Y1))
+    t.Logf("Y1: Y1 = A*X\n%v\n", Y1)
+}
+
+func TestMatVecUnAligned(t *testing.T) {
+    bM := 100*M
+    bN := 100*N
+    A := matrix.FloatNormal(bM, bN)
+    X := matrix.FloatNormal(bN, 1)
+    Y1 := matrix.FloatZeros(bM, 1)
+    Y0 := matrix.FloatZeros(bM, 1)
+
+    Ar := A.FloatArray()
+    Xr := X.FloatArray()
+    Y1r := Y1.FloatArray()
+
+    blas.GemvFloat(A, X, Y0, 1.0, 1.0)
+
+    MatVecUnAligned(Y1r, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0,  bN, 0,  bM, 32, 32)
+    t.Logf("Y0 == Y1: %v\n", Y0.AllClose(Y1))
+    if ! Y0.AllClose(Y1) {
+        y0 := Y0.SubMatrix(0, 0, 2, 1)
+        y1 := Y1.SubMatrix(0, 0, 2, 1)
+        t.Logf("y0=\n%v\n", y0)
+        t.Logf("y1=\n%v\n", y1)
+    }
 }
 
 // Local Variables:

@@ -15,9 +15,10 @@ import "unsafe"
 
 
 func MultAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
-    var Cm C.mdata_t;
-    var Am C.mdata_t;
-    var Bm C.mdata_t;
+
+    var Cm C.mdata_t
+    var Am C.mdata_t
+    var Bm C.mdata_t
 
     Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
     Cm.step = C.int(ldC)
@@ -179,6 +180,27 @@ func MultUnAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB,
         C.double(alpha), C.double(beta),
         C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
         C.int(H), C.int(NB), C.int(MB))
+}
+
+
+func MatVecUnAligned(Y, A, X []float64, alpha, beta float64, incY, ldA, incX, S, L, R, E, H, MB int) {
+    var Yv C.mvec_t;
+    var Xv C.mvec_t;
+    var Am C.mdata_t;
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.dmvec_unaligned_notrans(
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.double(alpha), C.double(beta),
+        C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(MB))
 }
 
 

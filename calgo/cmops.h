@@ -35,6 +35,11 @@ typedef struct mdata {
   int step;
 } mdata_t;
 
+typedef struct mvec {
+  double *md;
+  int inc;
+} mvec_t;
+
 extern void *memcpy(void *, const void *, size_t);
 
 // Copy nC columns of length nL from source to dest. Source row stride is nS and destination
@@ -105,7 +110,7 @@ extern double
 ddot_vec(const double *X, const double *Y, int incX, int incY, int N);
 
 extern void
-dscale_vec(double *X, int ldX, double f0, int N);
+dscale_vec(double *X, int incX, double f0, int N);
 
 extern void
 dscale_tile(double *X, int ldX, double f0, int M, int N);
@@ -175,6 +180,13 @@ dmult_aligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
                       int P, int S, int L, int R, int E,
                       int vlen, int NB, int MB);
 
+
+// matrix-vector: Y = alpha*A*X + beta*Y
+extern void
+dmvec_unaligned_notrans(mvec_t *Y, const mdata_t *A, const mvec_t *X,
+                        double alpha, double beta,
+                        int S, int L, int R, int E,
+                        int vlen, int MB);
 
 #endif
 
