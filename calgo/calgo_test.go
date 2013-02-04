@@ -478,7 +478,7 @@ func TestMultMV(t *testing.T) {
     }
 }
 
-func TestMultMVTransASmall(t *testing.T) {
+func _TestMultMVTransASmall(t *testing.T) {
     bM := 5
     bN := 5
     Adata := [][]float64{
@@ -510,7 +510,7 @@ func TestMultMVTransASmall(t *testing.T) {
     t.Logf("Y1: Y1 = A*X\n%v\n", Y1)
 }
 
-func TestMultMVTransA(t *testing.T) {
+func _TestMultMVTransA(t *testing.T) {
     bM := 100*M
     bN := 100*N
     A := matrix.FloatNormal(bM, bN)
@@ -533,6 +533,39 @@ func TestMultMVTransA(t *testing.T) {
         t.Logf("y0=\n%v\n", y0)
         t.Logf("y1=\n%v\n", y1)
     }
+}
+
+
+func TestMultSymmSmall(t *testing.T) {
+    //bM := 5
+    bN := 5
+    bP := 5
+    Adata := [][]float64{
+     []float64{1.0, 1.0, 1.0, 1.0, 1.0},
+     []float64{0.0, 2.0, 2.0, 2.0, 2.0},
+     []float64{0.0, 0.0, 3.0, 3.0, 3.0},
+     []float64{0.0, 0.0, 0.0, 4.0, 4.0},
+     []float64{0.0, 0.0, 0.0, 0.0, 5.0}}
+
+    //A := matrix.FloatNormal(bN, bN)
+    A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
+    //B := matrix.FloatNormal(bN, bP)
+    //A := matrix.FloatWithValue(bM, bP, 2.0)
+    B := matrix.FloatWithValue(bN, bP, 1.0)
+    C0 := matrix.FloatZeros(bN, bP)
+    C1 := matrix.FloatZeros(bN, bP)
+
+    Ar := A.FloatArray()
+    Br := B.FloatArray()
+    C1r := C1.FloatArray()
+
+    t.Logf("A=\n%v\n", A)
+    blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptUpper)
+    t.Logf("blas: C=A*B\n%v\n", C0)
+
+    MultSymmUnAligned(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 4, 4, 4)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
 // Local Variables:

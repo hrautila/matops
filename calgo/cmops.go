@@ -14,6 +14,7 @@ import "C"
 import "unsafe"
 
 
+// C = alpha*A*B + beta*C; C is M*N, A is M*P and B is P*N; all data aligned to 16 bytesf
 func MultAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
 
     var Cm C.mdata_t
@@ -37,6 +38,7 @@ func MultAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L,
 }
 
 
+// C = alpha*A*B + beta*C; C is M*N, A is M*P and B is P*N; data may be unaligned
 func MultUnAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
     var Cm C.mdata_t;
     var Am C.mdata_t;
@@ -57,6 +59,7 @@ func MultUnAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, 
         C.int(H), C.int(NB), C.int(MB))
 }
 
+// C = alpha*A.T*B + beta*C; C is M*N, A is P*M and B is P*N; all data aligned to 16 bytes
 func MultAlignedTransA(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
     var Cm C.mdata_t;
     var Am C.mdata_t;
@@ -78,6 +81,7 @@ func MultAlignedTransA(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P,
 }
 
 
+// C = alpha*A.T*B + beta*C; C is M*N, A is P*M and B is P*N; data may be unaligned
 func MultUnAlignedTransA(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
     var Cm C.mdata_t;
     var Am C.mdata_t;
@@ -99,6 +103,7 @@ func MultUnAlignedTransA(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, 
 }
 
 
+// C = alpha*A*B.T + beta*C; C is M*N, A is M*P and B is N*P; all data aligned to 16 bytes
 func MultAlignedTransB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
     var Cm C.mdata_t;
     var Am C.mdata_t;
@@ -120,6 +125,7 @@ func MultAlignedTransB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P,
 }
 
 
+// C = alpha*A*B.T + beta*C; C is M*N, A is M*P and B is N*P; data may be unaligned
 func MultUnAlignedTransB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
     var Cm C.mdata_t;
     var Am C.mdata_t;
@@ -141,6 +147,8 @@ func MultUnAlignedTransB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, 
 }
 
 
+// C = alpha*A.T*B.T + beta*C; C is M*N, A is P*M and B is N*P;
+// all data aligned to 16 bytes
 func MultAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
     var Cm C.mdata_t;
     var Am C.mdata_t;
@@ -162,6 +170,7 @@ func MultAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P
 }
 
 
+// C = alpha*A.T*B.T + beta*C; C is M*N, A is P*M and B is N*P; data may be unaligned
 func MultUnAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
     var Cm C.mdata_t;
     var Am C.mdata_t;
@@ -179,6 +188,27 @@ func MultUnAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB,
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         C.double(alpha), C.double(beta),
         C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
+
+// C = alpha*A*B + beta*C; C is N*P, A is N*N and B is N*P; data may be unaligned
+func MultSymmUnAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, N, S, L, R, E, H, NB, MB int) {
+    var Cm C.mdata_t;
+    var Am C.mdata_t;
+    var Bm C.mdata_t;
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmult_symm_ua_notrans(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta),
+        C.int(N), C.int(S), C.int(L), C.int(R), C.int(E),
         C.int(H), C.int(NB), C.int(MB))
 }
 

@@ -66,6 +66,8 @@ void colcpy_trans(double *dst, int ldD, const double *src, int ldS, int nL, int 
     Dr = Dc;
     Sr = Sc;
     __builtin_prefetch(Sr+ldS, 0, 1);
+    // incrementing Dr with ldD follows the dst row
+    // and incrementing Sr with one follows the column
     for (i = 0; i <nL-3; i += 4) {
       *Dr = *Sr;
       Dr += ldD;
@@ -99,8 +101,41 @@ void colcpy_trans(double *dst, int ldD, const double *src, int ldS, int nL, int 
       i += 2;
     }
   increment:
+    // moves Dc pointer to next row on dst
     Dc++;
+    // moves Sc pointer to next column on src
     Sc += ldS;
+  }
+}
+
+extern inline
+void colcpy_fill_low(double *dst, int ldD, const double *src, int ldS, int nL, int nC)
+{
+  //assert(nL == nC);
+  register double *Dcu, *Dcl, *Drl, *Dru;
+  register const double *Sc, *Sr;
+  register int j, i;
+  Dcu = dst; Sc = src;
+  Dcl = dst;
+  // fill dst row and column at the same time, following src columns
+  for (j = 0; j < nC; j++) {
+    Dru = Dcu;
+    Drl = Dcl;
+    Sr = Sc;
+    for (i = 0; i <= j; i++) {
+      // when i==j then Dru == Drl and *Sr copied twice to same location.
+      *Dru = *Sr;
+      *Drl = *Sr;
+      Sr++;
+      Dru++; 
+      Drl += ldD;
+    }
+    // next column in source
+    Sc += ldS;
+    // next column for upper triagonal
+    Dcu += ldD;
+    // next row for lower triagonal
+    Dcl++;
   }
 }
 
@@ -180,6 +215,13 @@ dmult_aligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
                       int P, int S, int L, int R, int E,
                       int vlen, int NB, int MB);
 
+
+// C = alpha*A*B + beta*C, A is symmetric, upper matrix, unaligned
+extern void
+dmult_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                      double alpha, double beta,
+                      int P, int S, int L, int R, int E,
+                      int vlen, int NB, int MB);
 
 // matrix-vector: Y = alpha*A*X + beta*Y
 extern void
