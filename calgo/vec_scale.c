@@ -31,6 +31,63 @@ double ddot_vec(const double *X, const double *Y, int incX, int incY, int N)
   return c0 + c1;
 }
 
+// Y = alpha * X + beta * Y;
+void daxpy_vec(double *Y, const double *X, double alpha, double beta,
+               int incX, int incY, int N)
+{
+  // could make SSE version if incX == incY == 1 and align(Y) == align(X)
+
+  register int i;
+  register double *y0;
+  register const double *x0;
+
+  if (beta != 1.0) {
+    y0 = Y;
+    if (beta == 0.0) {
+      for (i = 0; i < N; i++) {
+        y0[0] = 0.0;
+        y0++;
+      }
+    } else {
+      for (i = 0; i < N; i++) {
+        y0[0] *= beta;
+        y0++;
+      }
+    }
+  }
+  y0 = Y; x0 = X;
+  for (i = 0; i < N-3; i += 4) {
+    y0[0] += alpha * x0[0];
+    x0 += incX;
+    y0 += incY;
+    y0[0] += alpha * x0[0];
+    x0 += incX;
+    y0 += incY;
+    y0[0] += alpha * x0[0];
+    x0 += incX;
+    y0 += incY;
+    y0[0] += alpha * x0[0];
+    x0 += incX;
+    y0 += incY;
+  }    
+  if (i == N) {
+    return;
+  }
+  if (i < N-1) {
+    y0[0] += alpha * x0[0];
+    x0 += incX;
+    y0 += incY;
+    y0[0] += alpha * x0[0];
+    x0 += incX;
+    y0 += incY;
+    i += 2;
+  }
+  if (i < N) {
+    y0[0] += alpha * x0[0];
+  }
+  return;
+}
+
 // Scale a vector of N elements with incX interval.
 void dscale_vec(double *X, int incX, double f0, int N)
 {
