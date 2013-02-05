@@ -60,7 +60,7 @@ void dvpur_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, doubl
     //printf("1. update: B=\n"); print_tile(Bcpy, nB, vpL-vpS, L-S);
 
     vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
-    printf("1. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
+    //printf("1. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
     vpL += vlen;
@@ -159,9 +159,9 @@ void dmult_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     for (i = R; i < E; i += MB) {
       nI = E - i < MB ? E - i : MB;
       dvpur_symm_ua_notrans(C, A, B, alpha, beta, P, j, j+nJ, i, i+nI, vlen);
-      printf("\nC=\n");
-      print_tile(C->md, C->step, E-R, L-S);
-      printf("\n");
+      //printf("\nC=\n");
+      //print_tile(C->md, C->step, E-R, L-S);
+      //printf("\n");
     }
   }
 }
