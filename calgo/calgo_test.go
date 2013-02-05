@@ -563,7 +563,39 @@ func TestMultSymmSmall(t *testing.T) {
     blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptUpper)
     t.Logf("blas: C=A*B\n%v\n", C0)
 
-    MultSymmUnAligned(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 4, 4, 4)
+    MultSymmUpper(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 4, 4, 4)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    t.Logf("C1: C1 = A*X\n%v\n", C1)
+}
+
+func TestMultSymmLowerSmall(t *testing.T) {
+    //bM := 5
+    bN := 5
+    bP := 5
+    Adata := [][]float64{
+     []float64{1.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0}}
+
+    //A := matrix.FloatNormal(bN, bN)
+    A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
+    //B := matrix.FloatNormal(bN, bP)
+    //A := matrix.FloatWithValue(bM, bP, 2.0)
+    B := matrix.FloatWithValue(bN, bP, 1.0)
+    C0 := matrix.FloatZeros(bN, bP)
+    C1 := matrix.FloatZeros(bN, bP)
+
+    Ar := A.FloatArray()
+    Br := B.FloatArray()
+    C1r := C1.FloatArray()
+
+    t.Logf("A=\n%v\n", A)
+    blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptLower)
+    t.Logf("blas: C=A*B\n%v\n", C0)
+
+    MultSymmLower(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
@@ -583,7 +615,27 @@ func TestMultSymmUpper(t *testing.T) {
 
     blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptUpper)
 
-    MultSymmUnAligned(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 32, 32, 32)
+    MultSymmUpper(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 32, 32, 32)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    //t.Logf("C1: C1 = A*X\n%v\n", C1)
+}
+
+func TestMultSymmLower(t *testing.T) {
+    //bM := 5
+    bN := 100*N
+    bP := 100*P
+    A := matrix.FloatNormalSymmetric(bN, matrix.Lower)
+    B := matrix.FloatNormal(bN, bP)
+    C0 := matrix.FloatZeros(bN, bP)
+    C1 := matrix.FloatZeros(bN, bP)
+
+    Ar := A.FloatArray()
+    Br := B.FloatArray()
+    C1r := C1.FloatArray()
+
+    blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptLower)
+
+    MultSymmLower(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 32, 32, 32)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     //t.Logf("C1: C1 = A*X\n%v\n", C1)
 }

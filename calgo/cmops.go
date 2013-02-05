@@ -191,8 +191,9 @@ func MultUnAlignedTransAB(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB,
         C.int(H), C.int(NB), C.int(MB))
 }
 
-// C = alpha*A*B + beta*C; C is N*P, A is N*N and B is N*P; data may be unaligned
-func MultSymmUnAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, N, S, L, R, E, H, NB, MB int) {
+// C = alpha*A*B + beta*C; C is N*P, A is N*N and B is N*P; data may be unaligned,
+// A upper part is used, lower part not touched.
+func MultSymmUpper(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, N, S, L, R, E, H, NB, MB int) {
     var Cm C.mdata_t;
     var Am C.mdata_t;
     var Bm C.mdata_t;
@@ -203,7 +204,29 @@ func MultSymmUnAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, N,
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
 
-    C.dmult_symm_ua_notrans(
+    C.dmult_symm_ua_up_notrans(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta),
+        C.int(N), C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
+
+// C = alpha*A*B + beta*C; C is N*P, A is N*N and B is N*P; data may be unaligned,
+// A lower part is used, upper part not touched.
+func MultSymmLower(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, N, S, L, R, E, H, NB, MB int) {
+    var Cm C.mdata_t;
+    var Am C.mdata_t;
+    var Bm C.mdata_t;
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmult_symm_ua_low_notrans(
         (*C.mdata_t)(unsafe.Pointer(&Cm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mdata_t)(unsafe.Pointer(&Bm)),

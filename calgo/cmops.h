@@ -139,6 +139,38 @@ void colcpy_fill_low(double *dst, int ldD, const double *src, int ldS, int nL, i
   }
 }
 
+extern inline
+void colcpy_fill_up(double *dst, int ldD, const double *src, int ldS, int nL, int nC)
+{
+  //assert(nL == nC);
+  register double *Dcu, *Dcl, *Drl, *Dru;
+  register const double *Sc, *Sr;
+  register int j, i;
+  Dcu = dst; Sc = src;
+  Dcl = dst;
+  // fill dst row and column at the same time, following src columns
+  for (j = 0; j < nC; j++) {
+    // start at same point and diverge down (Drl) and right (Dru)
+    Dru = Dcu + j;
+    Drl = Dcl + j;
+    // start of data on column, j'th row
+    Sr = Sc + j;
+    for (i = 0; i < nC-j; i++) {
+      *Dru = *Sr;
+      *Drl = *Sr;
+      Sr++;
+      Dru += ldD;       // next column in row
+      Drl++;            // next row in column 
+    }
+    // NEXT column in source
+    Sc += ldS;
+    // next column for upper triagonal
+    Dcu += ldD;
+    // next column for lower triagonal
+    Dcl += ldD;
+  }
+}
+
 extern void print_tile(double *D, int ldD, int nR, int nC);
 
 extern double
@@ -218,10 +250,17 @@ dmult_aligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
 
 // C = alpha*A*B + beta*C, A is symmetric, upper matrix, unaligned
 extern void
-dmult_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                      double alpha, double beta,
-                      int P, int S, int L, int R, int E,
-                      int vlen, int NB, int MB);
+dmult_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                         double alpha, double beta,
+                         int P, int S, int L, int R, int E,
+                         int vlen, int NB, int MB);
+
+// C = alpha*A*B + beta*C, A is symmetric, lower matrix, unaligned
+extern void
+dmult_symm_ua_low_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                          double alpha, double beta,
+                          int P, int S, int L, int R, int E,
+                          int vlen, int NB, int MB);
 
 // matrix-vector: Y = alpha*A*X + beta*Y
 extern void
