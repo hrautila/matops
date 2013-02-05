@@ -568,6 +568,26 @@ func TestMultSymmSmall(t *testing.T) {
     t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
+func TestMultSymmUpper(t *testing.T) {
+    //bM := 5
+    bN := 100*N
+    bP := 100*P
+    A := matrix.FloatNormalSymmetric(bN, matrix.Upper)
+    B := matrix.FloatNormal(bN, bP)
+    C0 := matrix.FloatZeros(bN, bP)
+    C1 := matrix.FloatZeros(bN, bP)
+
+    Ar := A.FloatArray()
+    Br := B.FloatArray()
+    C1r := C1.FloatArray()
+
+    blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptUpper)
+
+    MultSymmUnAligned(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 32, 32, 32)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    //t.Logf("C1: C1 = A*X\n%v\n", C1)
+}
+
 // Local Variables:
 // tab-width: 4
 // indent-tabs-mode: nil
