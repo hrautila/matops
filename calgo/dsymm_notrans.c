@@ -26,7 +26,7 @@ void dvpur_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, doubl
     vlen = nP;
   }
 
-  printf("0. nP=%d, L=%d, S=%d, E=%d, R=%d, vlen=%d\n", nP, L, S, E, R, vlen);
+  //printf("0. nP=%d, L=%d, S=%d, E=%d, R=%d, vlen=%d\n", nP, L, S, E, R, vlen);
 
   // row stride in Cpy 
   nC = E - R;
@@ -49,14 +49,18 @@ void dvpur_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, doubl
     nB = vpL-vpS;
     nB += (nB & 0x1);
     nA = nB;
-    printf("1. vpS=%d, vpL=%d, nC=%d, nB=%d, nA=%d\n", vpS, vpL, nC, nB, nA);
+    //printf("1. vpS=%d, vpL=%d, nC=%d, nB=%d, nA=%d\n", vpS, vpL, nC, nB, nA);
     // viewport starts in B, A
     Bc = &B->md[S*B->step + vpS];
-    AvpS = &A->md[vpS*A->step + R];
-    colcpy(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
+    AvpS = &A->md[R*A->step + vpS];
+
+    colcpy(Acpy, nA, AvpS, A->step, vpL-vpS, E-R); //, vpL-vpS);
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
+    //printf("1. update: A=\n"); print_tile(Acpy, nA, vpL-vpS, E-R);
+    //printf("1. update: B=\n"); print_tile(Bcpy, nB, vpL-vpS, L-S);
 
     vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    printf("1. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
     vpL += vlen;
@@ -74,17 +78,18 @@ void dvpur_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, doubl
     nB += (nB & 0x1);
     nA = nB;
 
-    printf("2. vpS=%d, vpL=%d, nC=%d, nB=%d, nA=%d\n", vpS, vpL, nC, nB, nA);
+    //printf("2. vpS=%d, vpL=%d, nC=%d, nB=%d, nA=%d\n", vpS, vpL, nC, nB, nA);
     // viewport starts in B, A
     Bc = &B->md[S*B->step + vpS];
     AvpS = &A->md[vpS*A->step + R];
 
     // copy part of diagonal block and fill lower part
     colcpy_fill_low(Acpy, nA, AvpS, A->step, E-R, E-R);
-    print_tile(Acpy, nA, E-R, E-R);
+    //print_tile(Acpy, nA, E-R, E-R);
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
 
     vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    //printf("2. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
     vpL += vlen;
@@ -105,7 +110,7 @@ void dvpur_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, doubl
     nB += (nB & 0x1);
     nA = nB;
 
-    printf("3. vpS=%d, vpL=%d, nC=%d, nB=%d, nA=%d\n", vpS, vpL, nC, nB, nA);
+    //printf("3. vpS=%d, vpL=%d, nC=%d, nB=%d, nA=%d\n", vpS, vpL, nC, nB, nA);
     // column viewport start in panel B[:,S]
     Bc = &B->md[S*B->step + vpS];
     // row viewport start A[R,:]
@@ -116,6 +121,7 @@ void dvpur_symm_ua_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, doubl
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
 
     vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    //printf("3. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
     vpL += vlen;
