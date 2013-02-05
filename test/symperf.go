@@ -55,7 +55,7 @@ func init() {
     flag.IntVar(&testCount, "n", 5, "Number of test runs.")
     flag.StringVar(&testName, "T", "test", "Test name for reporting")
     flag.StringVar(&sizeList, "L", "", "Comma separated list of sizes.")
-    flag.StringVar(&transpose, "t", "N", "Transpose op, N, A, B, AB")
+    flag.StringVar(&transpose, "t", "N", "Check function type: N, A, B, AB, L, U")
 }
 
 var sizes []int = []int{
@@ -80,7 +80,7 @@ func TestTemplate(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return
 }
 
-func CTestSymmUnAligned(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+func CTestSymmUpper(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormalSymmetric(m, matrix.Upper)
     B = matrix.FloatNormal(m, n)
     C = matrix.FloatZeros(m, n)
@@ -88,13 +88,27 @@ func CTestSymmUnAligned(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
         Ar := A.FloatArray()
         Br := B.FloatArray()
         Cr := C.FloatArray()
-        calgo.MultSymmUnAligned(Cr, Ar, Br, 1.0, 1.0, C.LeadingIndex(), A.LeadingIndex(),
+        calgo.MultSymmUpper(Cr, Ar, Br, 1.0, 1.0, C.LeadingIndex(), A.LeadingIndex(),
             B.LeadingIndex(), m, 0, n, 0, m, VPsize, NB, MB)
     }
     return fnc, A, B, C
 }
 
-func CTestSymm(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+func CTestSymmLower(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormalSymmetric(m, matrix.Lower)
+    B = matrix.FloatNormal(m, n)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        Ar := A.FloatArray()
+        Br := B.FloatArray()
+        Cr := C.FloatArray()
+        calgo.MultSymmLower(Cr, Ar, Br, 1.0, 1.0, C.LeadingIndex(), A.LeadingIndex(),
+            B.LeadingIndex(), m, 0, n, 0, m, VPsize, NB, MB)
+    }
+    return fnc, A, B, C
+}
+
+func CTestBlasSymm(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormalSymmetric(m, matrix.Upper)
     B = matrix.FloatNormal(m, n)
     C = matrix.FloatZeros(m, n)
@@ -104,21 +118,33 @@ func CTestSymm(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return fnc, A, B, C
 }
 
+func CTestBlasSymmLow(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormalSymmetric(m, matrix.Lower)
+    B = matrix.FloatNormal(m, n)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        blas.SymmFloat(A, B, C, 1.0, 1.0, linalg.OptLower)
+    }
+    return fnc, A, B, C
+}
 
-func CheckNoTrans(A, B, C *matrix.FloatMatrix) {
+
+func CheckNormal(A, B, C *matrix.FloatMatrix) {
     blas.SymmFloat(A, B, C, 1.0, 1.0, linalg.OptUpper)
 }
 
-func CheckTransA(A, B, C *matrix.FloatMatrix) {
-    blas.SymmFloat(A, B, C, 1.0, 1.0, linalg.OptUpper, linalg.OptTransA)
+func CheckLower(A, B, C *matrix.FloatMatrix) {
+    blas.SymmFloat(A, B, C, 1.0, 1.0, linalg.OptLower)
 }
 
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     // lowel tests: calgo interfaces
-    "SymmUnAligned": CTestSymmUnAligned,
+    "SymmUpper": CTestSymmUpper,
+    "SymmLower": CTestSymmLower,
     // blas interface reference tests
-    "Symm": CTestSymm}
+    "BlasSymmLow": CTestBlasSymmLow,
+    "BlasSymm": CTestBlasSymm}
 
     
 func parseSizeList(s string) []int {
@@ -148,10 +174,10 @@ func main() {
         return
     }
     var checkFunc mperf.MatrixCheckFunc
-    if transpose[0] == 'A' {
-        checkFunc = CheckTransA
+    if transpose[0] == 'L' {
+        checkFunc = CheckLower
     } else {
-        checkFunc = CheckNoTrans
+        checkFunc = CheckNormal
     }
     
     if singleTest {
@@ -164,7 +190,7 @@ func main() {
                 fmt.Fprintf(os.Stderr, "%s: %v\n", testName, tm)
                 fmt.Fprintf(os.Stderr, "Reference: [%v] %v (%.2f) \n",
                     ok, reftime, tm.Seconds()/reftime.Seconds())
-        }
+            }
         }
         //sec, _ := mperf.SingleTest(testName, testFunc, M, N, P, check, verbose)
         fmt.Printf("%vs\n", tm.Seconds())
