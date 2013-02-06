@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "cmops.h"
-#include "inner_dot_trans.h"
+//#include "inner_dot_trans.h"
 
 // this will compute sub-block matrix product: Cij += Aik * Bkj using
 // successive vector scaling (AXPY) operations. Multipliers on a row.

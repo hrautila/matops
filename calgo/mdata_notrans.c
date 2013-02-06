@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "cmops.h"
-#include "inner_axpy.h"
+//#include "inner_axpy.h"
 
 
 // This will compute sub-block matrix product: Cij += Aik * Bkj using succesive

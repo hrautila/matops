@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "cmops.h"
-#include "inner_dot.h"
+//#include "inner_dot.h"
 
 // this will compute sub-block matrix product: Cij += Aik * Bkj using
 // successive inner vector product (DOT) function.
