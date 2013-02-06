@@ -130,36 +130,32 @@ void colcpy_trans(double *dst, int ldD, const double *src, int ldS, int nL, int 
     // incrementing Dr with ldD follows the dst row
     // and incrementing Sr with one follows the column
     for (i = 0; i <nL-3; i += 4) {
-      *Dr = *Sr;
+      Dr[0] = Sr[0];
       Dr += ldD;
-      Sr++;
-      *Dr = *Sr;
+      Dr[0] = Sr[1];
       Dr += ldD;
-      Sr++;
-      *Dr = *Sr;
+      Dr[0] = Sr[2];
       Dr += ldD;
-      Sr++;
-      *Dr = *Sr;
+      Dr[0] = Sr[3];
       Dr += ldD;
-      Sr++;
+      Sr += 4;
     }
     if (i == nL) {
       goto increment;
     }
     if (i < nL-1) {
-      *Dr = *Sr;
+      Dr[0] = Sr[0];
       Dr += ldD;
-      Sr++;
-      *Dr = *Sr;
+      Dr[0] = Sr[1];
       Dr += ldD;
-      Sr++;
+      Sr += 2;
       i += 2;
     }
     if (i < nL) {
       *Dr = *Sr;
       Dr += ldD;
       Sr++;
-      i += 2;
+      i++;
     }
   increment:
     // moves Dc pointer to next row on dst
