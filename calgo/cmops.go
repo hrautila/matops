@@ -278,6 +278,27 @@ func MultMVTransA(Y, A, X []float64, alpha, beta float64, incY, ldA, incX, S, L,
         C.int(H), C.int(MB))
 }
 
+// A = A + alpha * x * y.T; A is M*N, x is M*1, Y is N*1, 0 < R < E <= M, 0 < S < L <= N
+func RankMV(A, X, Y []float64, alpha float64, ldA, incX, incY, S, L, R, E, H, NB, MB int) {
+    var Yv C.mvec_t;
+    var Xv C.mvec_t;
+    var Am C.mdata_t;
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.drank_mv(
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        C.double(alpha), 
+        C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
+
 
 
 func copy_trans(C, A []float64, ldC, ldA, M, N int) {

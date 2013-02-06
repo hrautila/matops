@@ -246,9 +246,15 @@ extern void _inner_vec_daxpy_sse(double *y0, const double *a0, const double *x0,
 extern void _inner_vec2_daxpy_sse(double *y0, const double *a0, const double *a1,
                                   const double *x0,
                                   int incX, double alpha, int nRE, int oddStart);
-extern void _inner_daxpy(double *Cr, const double *Ar, const double *Br, double alpha, int m);
 
-extern void _inner_daxpy_sse(double *Cr, const double *Ar, const double *Br, double alpha, int m);
+extern void _inner_daxpy(double *Cr, const double *Ar, const double *Br,
+                         double alpha, int m);
+
+extern void _inner_daxpy2(double *c0, double *c1, const double *Ar,
+                          const double *b0, const double *b1, double alpha, int m);
+
+extern void _inner_daxpy_sse(double *Cr, const double *Ar, const double *Br,
+                             double alpha, int m);
 
 extern void _inner_daxpy2_sse(double *c0, double *c1, const double *Ar,
                               const double *b0, const double *b1, double alpha, int m);
@@ -389,6 +395,11 @@ dmult_mv_transa(mvec_t *Y, const mdata_t *A, const mvec_t *X,
                 double alpha, double beta,
                 int S, int L, int R, int E,
                 int vlen, int MB);
+
+// A = A + alpha * x * y.T; A is M*N, x is M*1, Y is N*1
+extern void
+drank_mv(mdata_t *A, const mvec_t *X, const mvec_t *Y, double alpha, 
+         int S, int L, int R, int E, int vlen, int NB, int MB);
 
 #endif
 

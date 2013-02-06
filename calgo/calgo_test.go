@@ -536,7 +536,7 @@ func _TestMultMVTransA(t *testing.T) {
 }
 
 
-func TestMultSymmSmall(t *testing.T) {
+func _TestMultSymmSmall(t *testing.T) {
     //bM := 5
     bN := 5
     bP := 5
@@ -568,7 +568,7 @@ func TestMultSymmSmall(t *testing.T) {
     t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
-func TestMultSymmLowerSmall(t *testing.T) {
+func _TestMultSymmLowerSmall(t *testing.T) {
     //bM := 5
     bN := 5
     bP := 5
@@ -639,6 +639,56 @@ func TestMultSymmLower(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     //t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
+
+func TestRankSmall(t *testing.T) {
+    bM := 5
+    bN := 5
+    //bP := 5
+    Adata := [][]float64{
+     []float64{1.0, 1.0, 1.0, 1.0, 1.0},
+     []float64{2.0, 2.0, 2.0, 2.0, 2.0},
+     []float64{3.0, 3.0, 3.0, 3.0, 3.0},
+     []float64{4.0, 4.0, 4.0, 4.0, 4.0},
+     []float64{5.0, 5.0, 5.0, 5.0, 5.0}}
+
+    A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
+    A0 := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
+    X := matrix.FloatVector([]float64{1.0, 2.0, 3.0, 4.0, 5.0})
+    Y := matrix.FloatWithValue(bN, 1, 2.0)
+
+    Ar := A.FloatArray()
+    Xr := X.FloatArray()
+    Yr := Y.FloatArray()
+
+    t.Logf("A=\n%v\n", A)
+    blas.GerFloat(X, Y, A0, 1.0)
+    t.Logf("blas ger:\n%v\n", A0)
+
+    RankMV(Ar, Xr, Yr, 1.0, A.LeadingIndex(), 1, 1, 0,  bN, 0,  bM, 4, 4, 4)
+    t.Logf("A0 == A1: %v\n", A0.AllClose(A))
+    t.Logf("A1: \n%v\n", A)
+}
+
+func TestRank(t *testing.T) {
+    bM := M*100
+    bN := N*100
+    //bP := 5
+
+    A := matrix.FloatWithValue(bM, bN, 1.0);
+    A0 := matrix.FloatWithValue(bM, bN, 1.0);
+    X := matrix.FloatNormal(bM, 1);
+    Y := matrix.FloatNormal(bN, 1);
+
+    Ar := A.FloatArray()
+    Xr := X.FloatArray()
+    Yr := Y.FloatArray()
+
+    blas.GerFloat(X, Y, A0, 1.0)
+
+    RankMV(Ar, Xr, Yr, 1.0, A.LeadingIndex(), 1, 1, 0,  bN, 0,  bM, 4, 4, 4)
+    t.Logf("A0 == A1: %v\n", A0.AllClose(A))
+}
+
 
 // Local Variables:
 // tab-width: 4
