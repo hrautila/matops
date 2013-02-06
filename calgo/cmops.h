@@ -17,9 +17,9 @@
 #define MAX_UA_NB 128
 #define MAX_UA_VP 64
 
-#define MAX_MB_DDOT 64
-#define MAX_NB_DDOT 64
-#define MAX_VP_DDOT 192
+#define MAX_MB_DDOT 96
+#define MAX_NB_DDOT 96
+#define MAX_VP_DDOT 256
 
 #define MAX_MB 256
 #define MAX_NB 256
@@ -42,8 +42,6 @@ typedef struct mvec {
 
 extern void *memcpy(void *, const void *, size_t);
 
-// Copy nC columns of length nL from source to dest. Source row stride is nS and destination
-// row stride is nD.
 extern inline
 void colcpy(double *dst, int nD, const double *src, int nS, int nL, int nC)
 {
@@ -52,6 +50,69 @@ void colcpy(double *dst, int nD, const double *src, int nS, int nL, int nC)
     memcpy(dst, src, nL*sizeof(double));
     dst += nD;
     src += nS;
+  }
+}
+
+// Copy nC columns of length nL from source to dest. Source row stride is nS and destination
+// row stride is nD.
+extern inline
+void colcpy_unroll(double *dst, int nD, const double *src, int nS, int nL, int nC)
+{
+  register int i;
+  for (i = 0; i < nC-3; i += 4) {
+    memcpy(dst, src, nL*sizeof(double));
+    dst += nD;
+    src += nS;
+    memcpy(dst, src, nL*sizeof(double));
+    dst += nD;
+    src += nS;
+    memcpy(dst, src, nL*sizeof(double));
+    dst += nD;
+    src += nS;
+    memcpy(dst, src, nL*sizeof(double));
+    dst += nD;
+    src += nS;
+  }
+  if (i == nC)
+    return;
+  if (i < nC-1) {
+    memcpy(dst, src, nL*sizeof(double));
+    dst += nD;
+    src += nS;
+    memcpy(dst, src, nL*sizeof(double));
+    dst += nD;
+    src += nS;
+    i += 2;
+  }
+  if (i < nC) {
+    memcpy(dst, src, nL*sizeof(double));
+    dst += nD;
+    src += nS;
+    i++;
+  }
+}
+
+extern inline
+void colcpy_trans_nounroll(double *dst, int ldD, const double *src, int ldS, int nL, int nC)
+{
+  register double *Dc, *Dr;
+  register const double *Sc, *Sr;
+  register int j, i;
+  Dc = dst; Sc = src;
+  for (j = 0; j < nC; j++) {
+    Dr = Dc;
+    Sr = Sc;
+    // incrementing Dr with ldD follows the dst row
+    // and incrementing Sr with one follows the column
+    for (i = 0; i <nL; i++) {
+      *Dr = *Sr;
+      Dr += ldD;
+      Sr++;
+    }
+    // moves Dc pointer to next row on dst
+    Dc++;
+    // moves Sc pointer to next column on src
+    Sc += ldS;
   }
 }
 

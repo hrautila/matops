@@ -48,6 +48,63 @@ void _inner_daxpy(double *Cr, const double *Ar, const double *Br, double alpha, 
   }
 }
 
+void _inner_daxpy2(double *Cr0, double *Cr1, const double *Ar,
+                   const double *Br0, const double *Br1, double alpha, int m)
+{
+  register int i;
+  register double c0, c1, c2, c3, cf0, cf1;
+  cf0 = Br0[0] * alpha;
+  cf1 = Br1[0] * alpha;
+
+  for (i = 0; i < m-3; i += 4) {
+    c0 = Ar[0] * cf0;
+    c1 = Ar[1] * cf0;
+    Cr0[0] += c0;
+    c2 = Ar[0] * cf0;
+    Cr0[1] += c1;
+    c3 = Ar[1] * cf0;
+    Cr0[2] += c2;
+    c0 = Ar[0] * cf1;
+    Cr0[3] += c3;
+    c1 = Ar[1] * cf1;
+    Cr1[0] += c0;
+    c2 = Ar[2] * cf1;
+    Cr1[1] += c1;
+    c3 = Ar[3] * cf1;
+    Cr1[2] += c2;
+    Cr1[3] += c3;
+
+    Cr0 += 4;
+    Cr1 += 4;
+    Ar += 4;
+  }
+  if (i == m)
+    return;
+
+  if (i < m-1) {
+    c0 = Ar[0] * cf0;
+    c1 = Ar[1] * cf0;
+    Cr0[0] += c0;
+    c0 = Ar[0] * cf1;
+    Cr0[1] += c1;
+    c1 = Ar[1] * cf1;
+    Cr1[0] += c0;
+    Cr1[1] += c1;
+
+    Cr0 += 2;
+    Cr1 += 2;
+    Ar += 2;
+    i += 2;
+  }
+
+  if (i < m) {
+    c0 = Ar[0] * cf0;
+    Cr1[0] += c0;
+    c1 = Ar[0] * cf1;
+    Cr1[0] += c1;
+  }
+}
+
 // This will do efectively AXPY C[:,i] = w * A[:,k] + C[:,i] where w = alpha * B[k,i] 
 void _inner_daxpy_sse(double *Cr, const double *Ar, const double *Br, double alpha, int m)
 {
@@ -119,19 +176,19 @@ void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double *c3,
   for (i = 0; i < m-3; i += 4) {
     Av = _mm_load_pd(Ar);
     C0 = _mm_load_pd(c0);
-    C1 = _mm_load_pd(c1);
-    C2 = _mm_load_pd(c2);
-    C3 = _mm_load_pd(c3);
     T0 = Av * B0;
     C0 = C0 + T0;
+    C1 = _mm_load_pd(c1);
     _mm_store_pd(c0, C0);
 
     T1 = Av * B1;
     C1 = C1 + T1;
+    C2 = _mm_load_pd(c2);
     _mm_store_pd(c1, C1);
 
     T2 = Av * B2;
     C2 = C2 + T2;
+    C3 = _mm_load_pd(c3);
     _mm_store_pd(c2, C2);
 
     T3 = Av * B3;
@@ -146,15 +203,14 @@ void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double *c3,
 
     Av = _mm_load_pd(Ar);
     C0 = _mm_load_pd(c0);
-    C1 = _mm_load_pd(c1);
-    C2 = _mm_load_pd(c2);
-    C3 = _mm_load_pd(c3);
     T0 = Av * B0;
     C0 = C0 + T0;
+    C1 = _mm_load_pd(c1);
     _mm_store_pd(c0, C0);
 
     T1 = Av * B1;
     C1 = C1 + T1;
+    C2 = _mm_load_pd(c2);
     _mm_store_pd(c1, C1);
 
     T2 = Av * B2;
@@ -163,6 +219,7 @@ void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double *c3,
 
     T3 = Av * B3;
     C3 = C3 + T3;
+    C3 = _mm_load_pd(c3);
     _mm_store_pd(c3, C3);
 
     c0 += 2;
@@ -178,19 +235,19 @@ void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double *c3,
     // next 2
     Av = _mm_load_pd(Ar);
     C0 = _mm_load_pd(c0);
-    C1 = _mm_load_pd(c1);
-    C2 = _mm_load_pd(c2);
-    C3 = _mm_load_pd(c3);
     T0 = Av * B0;
     C0 = C0 + T0;
+    C1 = _mm_load_pd(c1);
     _mm_store_pd(c0, C0);
 
     T1 = Av * B1;
     C1 = C1 + T1;
+    C2 = _mm_load_pd(c2);
     _mm_store_pd(c1, C1);
 
     T2 = Av * B2;
     C2 = C2 + T2;
+    C3 = _mm_load_pd(c3);
     _mm_store_pd(c2, C2);
 
     T3 = Av * B3;
@@ -209,19 +266,19 @@ void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double *c3,
     // the last one and the extra for odd case. 
     Av = _mm_load_pd(Ar);
     C0 = _mm_load_pd(c0);
-    C1 = _mm_load_pd(c1);
-    C2 = _mm_load_pd(c2);
-    C3 = _mm_load_pd(c3);
     T0 = Av * B0;
     C0 = C0 + T0;
+    C1 = _mm_load_pd(c1);
     _mm_store_pd(c0, C0);
 
     T1 = Av * B1;
     C1 = C1 + T1;
+    C2 = _mm_load_pd(c2);
     _mm_store_pd(c1, C1);
 
     T2 = Av * B2;
     C2 = C2 + T2;
+    C3 = _mm_load_pd(c3);
     _mm_store_pd(c2, C2);
 
     T3 = Av * B3;
