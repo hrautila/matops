@@ -11,7 +11,6 @@
 
 #include "cmops.h"
 
-static inline
 void _inner_ddot4_trans_sse(double *c0, double *c1, double *c2, double *c3,
                             const double *Ar, const double *b0, const double *b1,
                             const double *b2, const double *b3, double alpha,
@@ -131,8 +130,7 @@ void _inner_ddot4_trans_sse(double *c0, double *c1, double *c2, double *c3,
   c3[0] += C3[1];
 }
 
-static inline void
-_inner_ddot2_trans_sse(double *c0, double *c1,
+void _inner_ddot2_trans_sse(double *c0, double *c1,
                        const double *Ar, const double *b0, const double *b1, 
                        double alpha, int nVP, int ldB)
 {
@@ -201,9 +199,9 @@ _inner_ddot2_trans_sse(double *c0, double *c1,
   c1[0] += C1[1];
 }
 
-static inline void
-_inner_ddot_trans_sse(double *Cr, const double *Ar, const double *Br,
-                      double alpha, int nVP, int ldB)
+
+void _inner_ddot_trans_sse(double *Cr, const double *Ar, const double *Br,
+                           double alpha, int nVP, int ldB)
 {
   register int k;
   register double f0, cval;
@@ -254,9 +252,9 @@ _inner_ddot_trans_sse(double *Cr, const double *Ar, const double *Br,
   Cr[0] += C0[1];
 }
 
-static inline void
-_inner_ddot_trans(double *Cr, const double *Ar, const double *Br,
-                  double alpha, int nVP, int ldB)
+
+void _inner_ddot_trans(double *Cr, const double *Ar, const double *Br,
+                       double alpha, int nVP, int ldB)
 {
   register int k, iB;
   register double f0, f1, f2, f3, cval;

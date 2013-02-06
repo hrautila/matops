@@ -10,7 +10,7 @@
 
 
 // This will do efectively AXPY C[:,i] = w * A[:,k] + C[:,i] where w = alpha * B[k,i] 
-static inline void _inner_daxpy(double *Cr, const double *Ar, const double *Br, double alpha, int m)
+void _inner_daxpy(double *Cr, const double *Ar, const double *Br, double alpha, int m)
 {
   register int i;
   register double c0, c1, cf;
@@ -49,8 +49,7 @@ static inline void _inner_daxpy(double *Cr, const double *Ar, const double *Br, 
 }
 
 // This will do efectively AXPY C[:,i] = w * A[:,k] + C[:,i] where w = alpha * B[k,i] 
-static inline void _inner_daxpy_sse(double *Cr, const double *Ar,
-				    const double *Br, double alpha, int m)
+void _inner_daxpy_sse(double *Cr, const double *Ar, const double *Br, double alpha, int m)
 {
   register int i;
   register __m128d Av, Bv, Cv, Tv, Al;
@@ -99,10 +98,10 @@ static inline void _inner_daxpy_sse(double *Cr, const double *Ar,
   }
 }
 
-static inline void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double *c3,
-				     const double *Ar, const double *b0, const double *b1,
-				     const double *b2, const double *b3,
-				     double alpha, int m)
+void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double *c3,
+                       const double *Ar, const double *b0, const double *b1,
+                       const double *b2, const double *b3,
+                       double alpha, int m)
 {
   register int i;
   register __m128d T0, T1, T2, T3, Av;
@@ -231,8 +230,8 @@ static inline void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double 
   }
 }
 
-static inline void _inner_daxpy2_sse(double *c0, double *c1, const double *Ar,
-				     const double *b0, const double *b1, double alpha, int m)
+void _inner_daxpy2_sse(double *c0, double *c1, const double *Ar,
+                       const double *b0, const double *b1, double alpha, int m)
 {
   register int i;
   register __m128d T0, T1, Av;

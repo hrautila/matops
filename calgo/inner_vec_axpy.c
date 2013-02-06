@@ -5,11 +5,7 @@
 // distributed under the terms of GNU Lesser General Public License Version 3, or
 // any later version. See the COPYING tile included in this archive.
 
-#ifndef __INNER_VEC_AXPY
-#define __INNER_VEC_AXPY 1
-
-// Seems that updating Y vector from 4 columns unrolled does not give any advantage.
-// These are stashed here for saving the code.
+#include <x86intrin.h>
 
 // Update Y with 4 columns of A
 void _inner_vec4_daxpy(double *y0, int incY, const double *a0, const double *a1,
@@ -237,4 +233,3 @@ void _inner_vec4_daxpy_sse(double *y0, const double *a0, const double *a1,
   }
 }
 
-#endif
