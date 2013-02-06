@@ -173,6 +173,60 @@ void colcpy_fill_up(double *dst, int ldD, const double *src, int ldS, int nL, in
 
 extern void print_tile(double *D, int ldD, int nR, int nC);
 
+extern void _inner_vec_daxpy(double *y0, int incY, const double *a0,
+                             const double *x0, int incX, double alpha, int nRE);
+
+extern void _inner_vec2_daxpy(double *y0, int incY, const double *a0, const double *a1,
+                              const double *x0, int incX, double alpha, int nRE);
+
+extern void _inner_vec_daxpy_sse(double *y0, const double *a0, const double *x0,
+                                 int incX, double alpha, int nRE, int oddStart);
+
+extern void _inner_vec2_daxpy_sse(double *y0, const double *a0, const double *a1,
+                                  const double *x0,
+                                  int incX, double alpha, int nRE, int oddStart);
+extern void _inner_daxpy(double *Cr, const double *Ar, const double *Br, double alpha, int m);
+
+extern void _inner_daxpy_sse(double *Cr, const double *Ar, const double *Br, double alpha, int m);
+
+extern void _inner_daxpy2_sse(double *c0, double *c1, const double *Ar,
+                              const double *b0, const double *b1, double alpha, int m);
+
+extern void _inner_daxpy4_sse(double *c0, double *c1, double *c2, double *c3,
+                              const double *Ar, const double *b0, const double *b1,
+                              const double *b2, const double *b3,
+                              double alpha, int m);
+
+extern void _inner_ddot(double *Cr, const double *Ar, const double *Br, double alpha, int nVP);
+
+extern void _inner_ddot4_sse(double *c0, double *c1, double *c2, double *c3,
+                             const double *Ar, const double *b0, const double *b1,
+                             const double *b2, const double *b3, double alpha, int nVP);
+
+extern void _inner_ddot2_sse(double *c0, double *c1,
+                             const double *Ar, const double *b0, const double *b1, 
+                             double alpha, int nVP);
+
+extern void _inner_ddot_sse(double *Cr, const double *Ar, const double *Br, double alpha, int nVP);
+
+extern void _inner_ddot4_trans_sse(double *c0, double *c1, double *c2, double *c3,
+                                   const double *Ar, const double *b0, const double *b1,
+                                   const double *b2, const double *b3, double alpha,
+                                   int nVP, int ldB);
+
+extern void _inner_ddot2_trans_sse(double *c0, double *c1,
+                                   const double *Ar, const double *b0, const double *b1, 
+                                   double alpha, int nVP, int ldB);
+
+extern void _inner_ddot_trans_sse(double *Cr, const double *Ar, const double *Br,
+                                  double alpha, int nVP, int ldB);
+
+extern void _inner_ddot_trans(double *Cr, const double *Ar, const double *Br,
+                              double alpha, int nVP, int ldB);
+
+
+
+
 extern double
 ddot_vec(const double *X, const double *Y, int incX, int incY, int N);
 
