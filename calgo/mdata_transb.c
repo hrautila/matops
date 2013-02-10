@@ -8,7 +8,8 @@
 #include <stdio.h>
 
 #include "cmops.h"
-//#include "inner_axpy.h"
+#include "inner_axpy.h"
+#include "colcpy.h"
 
 // this will compute sub-block matrix product: Cij += Aik * Bkj using
 // successive vector scaling (AXPY) operations. Multipliers on a row.
@@ -40,7 +41,9 @@ void vpur_daxpy_trans(double *Cc, const double *Aroot, const double *Bc, double 
       __builtin_prefetch(Br2+ldB, 0, 1);
       __builtin_prefetch(Br3+ldB, 0, 1);
 
-      _inner_daxpy4_sse(c0, c1, c2, c3, Ac, Br0, Br1, Br2, Br3, alpha, nRE);
+      //_inner_daxpy4_sse(c0, c1, c2, c3, Ac, Br0, Br1, Br2, Br3, alpha, nRE);
+      _inner_daxpy2_ssen(c0, c1, Ac, Br0, Br1, alpha, nRE);
+      _inner_daxpy2_ssen(c2, c3, Ac, Br2, Br3, alpha, nRE);
       Br0 += ldB;
       Br1 += ldB;
       Br2 += ldB;
@@ -66,7 +69,8 @@ void vpur_daxpy_trans(double *Cc, const double *Aroot, const double *Bc, double 
     for (k = 0; k < nVP; k++) {
       __builtin_prefetch(Br0+ldB, 0, 1);
       __builtin_prefetch(Br1+ldB, 0, 1);
-      _inner_daxpy2_sse(c0, c1, Ac, Br0, Br1, alpha, nRE);
+      //_inner_daxpy2_sse(c0, c1, Ac, Br0, Br1, alpha, nRE);
+      _inner_daxpy2_ssen(c0, c1, Ac, Br0, Br1, alpha, nRE);
       Br0 += ldB;
       Br1 += ldB;
       Ac += ldA;
@@ -84,7 +88,7 @@ void vpur_daxpy_trans(double *Cc, const double *Aroot, const double *Bc, double 
     c0 = Cc;
     for (k = 0; k < nVP; k++) {
       __builtin_prefetch(Br0+ldB, 0, 1);
-      _inner_daxpy(c0, Ac, Br0,  alpha, nRE);
+      _inner_daxpyn(c0, Ac, Br0,  alpha, nRE);
       Br0 += ldB;
       Ac += ldA;
     }
@@ -96,7 +100,7 @@ void vpur_daxpy_trans(double *Cc, const double *Aroot, const double *Bc, double 
 }
 
 // print copied tile
-void print_tile(double *D, int ldD, int nR, int nC)
+void print_tile(const double *D, int ldD, int nR, int nC)
 {
   register int i, j;
   for (i = 0; i < nR; i++) {
@@ -116,11 +120,11 @@ void dvpur_unaligned_transb(mdata_t *C, const mdata_t *A, const mdata_t *B,
 {
   int j, k, vpS, vpL, nC, nB, nA;
   const double *Bc, *Ac, *AvpS;
-  const double *Br0, *Br1, *Br2, *Br3;
-  double *Cc, *c0, *c1, *c2, *c3;
-  double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(16)));
-  double Acpy[MAX_VP_DDOT*MAX_MB_DDOT] __attribute__((aligned(16)));
-  double Bcpy[MAX_VP_DDOT*MAX_NB_DDOT] __attribute__((aligned(16)));
+  //const double *Br0, *Br1, *Br2, *Br3;
+  double *Cc; //, *c0, *c1, *c2, *c3;
+  //double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(64)));
+  double Acpy[MAX_VP_DDOT*MAX_MB_DDOT] __attribute__((aligned(64)));
+  double Bcpy[MAX_VP_DDOT*MAX_NB_DDOT] __attribute__((aligned(64)));
 
 
   if (vlen > nP || vlen <= 0) {
@@ -134,10 +138,11 @@ void dvpur_unaligned_transb(mdata_t *C, const mdata_t *A, const mdata_t *B,
 
   // Copy C block to local buffer
   Cc = &C->md[S*C->step+R];
-  colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
+  //colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
 
   // TODO: scaling with beta ....
-  dscale_tile(Cpy, nC, beta, E-R, L-S);
+  //dscale_tile(Cpy, nC, beta, E-R, L-S);
+  dscale_tile(Cc, C->step, beta, E-R, L-S);
 
   //nA = E - R;
   //nA += (nA & 0x1);
@@ -154,10 +159,11 @@ void dvpur_unaligned_transb(mdata_t *C, const mdata_t *A, const mdata_t *B,
     // copy (vpL-vpS) columns of (E-R) length
 
     // Copy A and B blocs and transpose on copy 
-    colcpy_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
-    colcpy_trans(Bcpy, nB, Bc, B->step, L-S, vpL-vpS);
+    nA = nB = MAX_VP_DDOT;
+    colcpy4_trans(Bcpy, nB, Bc, B->step, L-S, vpL-vpS);
+    colcpy4_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, C->step, nA, nB, L-S, E-R, vpL-vpS);
 
     vpS = vpL;
     vpL += vlen;
@@ -166,7 +172,7 @@ void dvpur_unaligned_transb(mdata_t *C, const mdata_t *A, const mdata_t *B,
     }
   }
   // copy back.
-  colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
+  //colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
 }
 
 // Use this when rows of C and A are not aligned to 16bytes, ie C or A row strides

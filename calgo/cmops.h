@@ -13,17 +13,17 @@
 
 
 // max values of block sizes for unaligned cases.
-#define MAX_UA_MB 128
-#define MAX_UA_NB 128
-#define MAX_UA_VP 64
+#define MAX_UA_MB 130
+#define MAX_UA_NB 130
+#define MAX_UA_VP 66
 
-#define MAX_MB_DDOT 96
-#define MAX_NB_DDOT 96
-#define MAX_VP_DDOT 256
+#define MAX_MB_DDOT 94
+#define MAX_NB_DDOT 94
+#define MAX_VP_DDOT 194
 
-#define MAX_MB 256
-#define MAX_NB 256
-#define MAX_VP 192
+#define MAX_MB 254
+#define MAX_NB 254
+#define MAX_VP 194
 
 #define OFFSET(a,b) ((unsigned int)(a-b))
 
@@ -42,194 +42,12 @@ typedef struct mvec {
 
 extern void *memcpy(void *, const void *, size_t);
 
-extern inline
-void colcpy(double *dst, int nD, const double *src, int nS, int nL, int nC)
-{
-  register int i;
-  for (i = 0; i < nC; i++) {
-    memcpy(dst, src, nL*sizeof(double));
-    dst += nD;
-    src += nS;
-  }
-}
 
-// Copy nC columns of length nL from source to dest. Source row stride is nS and destination
-// row stride is nD.
-extern inline
-void colcpy_unroll(double *dst, int nD, const double *src, int nS, int nL, int nC)
-{
-  register int i;
-  for (i = 0; i < nC-3; i += 4) {
-    memcpy(dst, src, nL*sizeof(double));
-    dst += nD;
-    src += nS;
-    memcpy(dst, src, nL*sizeof(double));
-    dst += nD;
-    src += nS;
-    memcpy(dst, src, nL*sizeof(double));
-    dst += nD;
-    src += nS;
-    memcpy(dst, src, nL*sizeof(double));
-    dst += nD;
-    src += nS;
-  }
-  if (i == nC)
-    return;
-  if (i < nC-1) {
-    memcpy(dst, src, nL*sizeof(double));
-    dst += nD;
-    src += nS;
-    memcpy(dst, src, nL*sizeof(double));
-    dst += nD;
-    src += nS;
-    i += 2;
-  }
-  if (i < nC) {
-    memcpy(dst, src, nL*sizeof(double));
-    dst += nD;
-    src += nS;
-    i++;
-  }
-}
 
-extern inline
-void colcpy_trans_nounroll(double *dst, int ldD, const double *src, int ldS, int nL, int nC)
-{
-  register double *Dc, *Dr;
-  register const double *Sc, *Sr;
-  register int j, i;
-  Dc = dst; Sc = src;
-  for (j = 0; j < nC; j++) {
-    Dr = Dc;
-    Sr = Sc;
-    // incrementing Dr with ldD follows the dst row
-    // and incrementing Sr with one follows the column
-    for (i = 0; i <nL; i++) {
-      *Dr = *Sr;
-      Dr += ldD;
-      Sr++;
-    }
-    // moves Dc pointer to next row on dst
-    Dc++;
-    // moves Sc pointer to next column on src
-    Sc += ldS;
-  }
-}
 
-extern inline
-void colcpy_trans(double *dst, int ldD, const double *src, int ldS, int nL, int nC)
-{
-  register double *Dc, *Dr;
-  register const double *Sc, *Sr;
-  register int j, i;
-  Dc = dst; Sc = src;
-  for (j = 0; j < nC; j++) {
-    Dr = Dc;
-    Sr = Sc;
-    __builtin_prefetch(Sr+ldS, 0, 1);
-    // incrementing Dr with ldD follows the dst row
-    // and incrementing Sr with one follows the column
-    for (i = 0; i <nL-3; i += 4) {
-      Dr[0] = Sr[0];
-      Dr += ldD;
-      Dr[0] = Sr[1];
-      Dr += ldD;
-      Dr[0] = Sr[2];
-      Dr += ldD;
-      Dr[0] = Sr[3];
-      Dr += ldD;
-      Sr += 4;
-    }
-    if (i == nL) {
-      goto increment;
-    }
-    if (i < nL-1) {
-      Dr[0] = Sr[0];
-      Dr += ldD;
-      Dr[0] = Sr[1];
-      Dr += ldD;
-      Sr += 2;
-      i += 2;
-    }
-    if (i < nL) {
-      *Dr = *Sr;
-      Dr += ldD;
-      Sr++;
-      i++;
-    }
-  increment:
-    // moves Dc pointer to next row on dst
-    Dc++;
-    // moves Sc pointer to next column on src
-    Sc += ldS;
-  }
-}
+extern void print_tile(const double *D, int ldD, int nR, int nC);
 
-extern inline
-void colcpy_fill_low(double *dst, int ldD, const double *src, int ldS, int nL, int nC)
-{
-  //assert(nL == nC);
-  register double *Dcu, *Dcl, *Drl, *Dru;
-  register const double *Sc, *Sr;
-  register int j, i;
-  Dcu = dst; Sc = src;
-  Dcl = dst;
-  // fill dst row and column at the same time, following src columns
-  for (j = 0; j < nC; j++) {
-    Dru = Dcu;
-    Drl = Dcl;
-    Sr = Sc;
-    for (i = 0; i <= j; i++) {
-      // when i==j then Dru == Drl and *Sr copied twice to same location.
-      *Dru = *Sr;
-      *Drl = *Sr;
-      Sr++;
-      Dru++; 
-      Drl += ldD;
-    }
-    // next column in source
-    Sc += ldS;
-    // next column for upper triagonal
-    Dcu += ldD;
-    // next row for lower triagonal
-    Dcl++;
-  }
-}
-
-extern inline
-void colcpy_fill_up(double *dst, int ldD, const double *src, int ldS, int nL, int nC)
-{
-  //assert(nL == nC);
-  register double *Dcu, *Dcl, *Drl, *Dru;
-  register const double *Sc, *Sr;
-  register int j, i;
-  Dcu = dst; Sc = src;
-  Dcl = dst;
-  // fill dst row and column at the same time, following src columns
-  for (j = 0; j < nC; j++) {
-    // start at same point and diverge down (Drl) and right (Dru)
-    Dru = Dcu + j;
-    Drl = Dcl + j;
-    // start of data on column, j'th row
-    Sr = Sc + j;
-    for (i = 0; i < nC-j; i++) {
-      *Dru = *Sr;
-      *Drl = *Sr;
-      Sr++;
-      Dru += ldD;       // next column in row
-      Drl++;            // next row in column 
-    }
-    // NEXT column in source
-    Sc += ldS;
-    // next column for upper triagonal
-    Dcu += ldD;
-    // next column for lower triagonal
-    Dcl += ldD;
-  }
-}
-
-extern void print_tile(double *D, int ldD, int nR, int nC);
-
+/*
 extern void _inner_vec_daxpy(double *y0, int incY, const double *a0,
                              const double *x0, int incX, double alpha, int nRE);
 
@@ -287,6 +105,7 @@ extern void _inner_ddot_trans_sse(double *Cr, const double *Ar, const double *Br
 extern void _inner_ddot_trans(double *Cr, const double *Ar, const double *Br,
                               double alpha, int nVP, int ldB);
 
+*/
 
 
 

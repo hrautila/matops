@@ -33,7 +33,7 @@ func TestMakeData(t *testing.T) {
     C = matrix.FloatZeros(M, N)
 }
 
-func _TestUnAlignedSmall(t *testing.T) {
+func TestUnAlignedSmall(t *testing.T) {
     bM := 7
     bN := 7
     bP := 7
@@ -426,8 +426,8 @@ func _TestUnAlignedTransAB(t *testing.T) {
 func _TestCopyTrans(t *testing.T) {
     A := matrix.FloatNormal(4, 5);
     C := matrix.FloatZeros(6, 4);
-    copy_trans(C.FloatArray(), A.FloatArray(), C.LeadingIndex(),
-        A.LeadingIndex(), A.Rows(), A.Cols())
+    //copy_trans(C.FloatArray(), A.FloatArray(), C.LeadingIndex(),
+    //A.LeadingIndex(), A.Rows(), A.Cols())
 
     t.Logf("A:\n%v\nC:\n%v\n", A, C);
 }

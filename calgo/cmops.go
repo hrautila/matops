@@ -301,6 +301,7 @@ func RankMV(A, X, Y []float64, alpha float64, ldA, incX, incY, S, L, R, E, H, NB
 
 
 
+/*
 func copy_trans(C, A []float64, ldC, ldA, M, N int) {
     var Cr *C.double
     var Ar *C.double
@@ -308,7 +309,7 @@ func copy_trans(C, A []float64, ldC, ldA, M, N int) {
     Ar =  (*C.double)(unsafe.Pointer(&A[0]))
     C.colcpy_trans(Cr, C.int(ldC), Ar, C.int(ldA), C.int(M), C.int(N))
 }
-
+*/
 
 
 

@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "cmops.h"
-
+#include "colcpy.h"
 
 void dvpur_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
                               double alpha, double beta,
@@ -118,8 +118,8 @@ void dvpur_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     AvpS = &A->md[vpS*A->step + R];
 
     // transpose A on copy to be able to DOT operations.
-    colcpy_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
+    colcpy4_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
 
     vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
     //printf("3. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
@@ -214,7 +214,7 @@ void dvpur_symm_ua_low_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     AvpS = &A->md[vpS*A->step + R];
 
     // transpose A on copy to be able to DOT operations.
-    colcpy_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
+    colcpy4_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
     //printf("1. update: A=\n"); print_tile(Acpy, nA, vpL-vpS, E-R);
     //printf("1. update: B=\n"); print_tile(Bcpy, nB, vpL-vpS, L-S);

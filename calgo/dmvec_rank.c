@@ -11,6 +11,7 @@
 #include "cmops.h"
 
 // update 1 column of A matrix (a0) with vector X scaled with elements y0
+static inline
 void _inner_mv_daxpy(double *a0, const double *x, int incX,
 		     const double *y0, double alpha, int nRE)
 {
@@ -48,6 +49,7 @@ void _inner_mv_daxpy(double *a0, const double *x, int incX,
 }
 
 // update 2 columns of A matrix (a0, a1) with vector X scaled with elements y0, y1
+static inline
 void _inner_mv_daxpy2(double *a0, double *a1, const double *x, int incX,
 		      const double *y0, const double *y1, double alpha, int nRE)
 {

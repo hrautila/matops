@@ -8,8 +8,10 @@
 #include <stdio.h>
 
 #include "cmops.h"
-//#include "inner_axpy.h"
+#include "inner_axpy.h"
+#include "colcpy.h"
 
+//#include "prefetch.h"
 
 // This will compute sub-block matrix product: Cij += Aik * Bkj using succesive
 // vector scaling (AXPY) operations.
@@ -33,7 +35,9 @@ void vpur_daxpy(double *Cc, const double *Aroot, const double *Bc, double alpha,
     c3 = c2 + ldC;
 
     for (k = 0; k < nVP; k++) {
-      _inner_daxpy4_sse(c0, c1, c2, c3, Ac, Br0, Br1, Br2, Br3, alpha, nRE);
+      //_inner_daxpy4_sse(c0, c1, c2, c3, Ac, Br0, Br1, Br2, Br3, alpha, nRE);
+      _inner_daxpy2_ssen(c0, c1, Ac, Br0, Br1, alpha, nRE);
+      _inner_daxpy2_ssen(c2, c3, Ac, Br2, Br3, alpha, nRE);
       Br0++;
       Br1++;
       Br2++;
@@ -57,7 +61,7 @@ void vpur_daxpy(double *Cc, const double *Aroot, const double *Bc, double alpha,
     c0 = Cc;
     c1 = c0 + ldC;
     for (k = 0; k < nVP; k++) {
-      _inner_daxpy2_sse(c0, c1, Ac, Br0, Br1, alpha, nRE);
+      _inner_daxpy2_ssen(c0, c1, Ac, Br0, Br1, alpha, nRE);
       Br0++;
       Br1++;
       Ac += ldA;
@@ -74,7 +78,7 @@ void vpur_daxpy(double *Cc, const double *Aroot, const double *Bc, double alpha,
     Br0 = Bc;
     c0 = Cc;
     for (k = 0; k < nVP; k++) {
-      _inner_daxpy_sse(c0, Ac, Br0,  alpha, nRE);
+      _inner_daxpy_ssen(c0, Ac, Br0,  alpha, nRE);
       Br0++;
       Ac += ldA;
     }
@@ -110,6 +114,8 @@ void dvpur_aligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     Bc = &B->md[S*B->step + vpS];
     // row viewport start A[R,:]
     AvpS = &A->md[vpS*A->step + R];
+    //printf("A=\n"); print_tile(AvpS, A->step, E-R, vpL-vpS);
+    //printf("B=\n"); print_tile(Bc,   B->step, vpL-vpS, L-S);
 
     vpur_daxpy(Cc, AvpS, Bc, alpha, C->step, A->step, B->step, L-S, E-R, vpL-vpS);
 
@@ -150,16 +156,17 @@ void dmult_aligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, doubl
 }
 
 // nP is panel length
-void dvpur_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, double alpha, double beta,
-                                  int nP, int S, int L, int R, int E, int vlen)
+void dvpur_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                             double alpha, double beta,
+                             int nP, int S, int L, int R, int E, int vlen)
 {
   int j, k, vpS, vpL, nC, nB, nA;
   const double *Bc, *Ac, *AvpS;
-  const double *Br0, *Br1, *Br2, *Br3;
-  double *Cc, *c0, *c1, *c2, *c3;
-  double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(16)));
-  double Acpy[MAX_VP_DDOT*MAX_MB_DDOT] __attribute__((aligned(16)));
-  double Bcpy[MAX_VP_DDOT*MAX_NB_DDOT] __attribute__((aligned(16)));
+  //const double *Br0, *Br1, *Br2, *Br3;
+  double *Cc; //, *c0, *c1, *c2, *c3;
+  //double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(64)));
+  double Acpy[MAX_VP_DDOT*MAX_MB_DDOT] __attribute__((aligned(64)));
+  double Bcpy[MAX_VP_DDOT*MAX_NB_DDOT] __attribute__((aligned(64)));
 
 
   if (vlen > nP || vlen <= 0) {
@@ -173,10 +180,10 @@ void dvpur_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, dou
 
   // Copy C block to local buffer
   Cc = &C->md[S*C->step+R];
-  colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
+  //colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
 
   // TODO: scaling with beta ....
-  dscale_tile(Cpy, nC, beta, E-R, L-S);
+  dscale_tile(Cc, C->step, beta, E-R, L-S);
 
   //nA = E - R;
   //nA += (nA & 0x1);
@@ -192,10 +199,13 @@ void dvpur_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, dou
     AvpS = &A->md[vpS*A->step + R];
 
     // transpose A on copy to be able to DOT operations.
-    colcpy_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
+    nA = nB = MAX_VP_DDOT;
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
+    colcpy4_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
+    //printf("A=\n"); print_tile(Acpy, nA, vpL-vpS, E-R);
+    //printf("B=\n"); print_tile(Bcpy, nB, vpL-vpS, L-S);
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, C->step, nA, nB, L-S, E-R, vpL-vpS);
 
     vpS = vpL;
     vpL += vlen;
@@ -204,7 +214,7 @@ void dvpur_unaligned_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B, dou
     }
   }
   // copy back.
-  colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
+  //colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
 }
 
 

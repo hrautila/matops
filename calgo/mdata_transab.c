@@ -8,7 +8,8 @@
 #include <stdio.h>
 
 #include "cmops.h"
-//#include "inner_dot_trans.h"
+#include "inner_dot_trans.h"
+#include "colcpy.h"
 
 // this will compute sub-block matrix product: Cij += Aik * Bkj using
 // successive vector scaling (AXPY) operations. Multipliers on a row.
@@ -104,7 +105,7 @@ void dvpur_unaligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
   const double *Bc, *Ac, *AvpS;
   const double *Br0, *Br1, *Br2, *Br3;
   double *Cc, *c0, *c1, *c2, *c3;
-  double Cpy[MAX_UA_NB*MAX_UA_MB]  __attribute__((aligned(16)));
+  //double Cpy[MAX_UA_NB*MAX_UA_MB]  __attribute__((aligned(16)));
   double Acpy[MAX_UA_VP*MAX_UA_MB] __attribute__((aligned(16)));
   double Bcpy[MAX_UA_VP*MAX_UA_NB] __attribute__((aligned(16)));
 
@@ -120,10 +121,10 @@ void dvpur_unaligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
 
   // Copy C block to local buffer
   Cc = &C->md[S*C->step+R];
-  colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
+  //colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
 
   // scaling with beta ....
-  dscale_tile(Cpy, nC, beta, E-R, L-S);
+  dscale_tile(Cc, C->step, beta, E-R, L-S);
 
   //nA = E - R;
   //nA += (nA & 0x1);
@@ -138,10 +139,11 @@ void dvpur_unaligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
     AvpS = &A->md[R*A->step + vpS];
 
     // Copy A and B blocs and transpose B on copy 
+    nA = nB = MAX_UA_VP;
     colcpy(Acpy, nA, AvpS, A->step, vpL-vpS, E-R);
-    colcpy_trans(Bcpy, nB, Bc, B->step, L-S, vpL-vpS);
+    colcpy4_trans(Bcpy, nB, Bc, B->step, L-S, vpL-vpS);
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
 
     vpS = vpL;
     vpL += vlen;
@@ -150,7 +152,7 @@ void dvpur_unaligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
     }
   }
   // copy back.
-  colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
+  //colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
 }
 
 // Use this when rows of C and A are not aligned to 16bytes, ie C or A row strides
