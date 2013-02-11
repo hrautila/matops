@@ -163,30 +163,30 @@ void _inner_vec2_daxpy(double *y0, int incY, const double *a0, const double *a1,
                       const double *x0, int incX, double alpha, int nRE)
 {
   register int i;
-  register double cf0, cf1, ytmp;
+  register double cf0, cf1, ytmp0, ytmp1;
 
   cf0 = alpha * x0[0];
   cf1 = alpha * x0[incX];
 
   for (i = 0; i < nRE-3; i += 4) {
-    ytmp = a0[0] * cf0;
-    ytmp += a1[0] * cf1;
-    y0[0] += ytmp;
+    ytmp0 = a0[0] * cf0;
+    ytmp1 = a1[0] * cf1;
+    y0[0] += ytmp0 + ytmp1;
     y0 += incY;
 
-    ytmp = a0[1] * cf0;
-    ytmp += a1[1] * cf1;
-    y0[0] += ytmp;
+    ytmp0 = a0[1] * cf0;
+    ytmp1 = a1[1] * cf1;
+    y0[0] += ytmp0 + ytmp1;
     y0 += incY;
 
-    ytmp = a0[2] * cf0;
-    ytmp += a1[2] * cf1;
-    y0[0] += ytmp;
+    ytmp0 = a0[2] * cf0;
+    ytmp1 = a1[2] * cf1;
+    y0[0] += ytmp0 + ytmp1;
     y0 += incY;
 
-    ytmp = a0[3] * cf0;
-    ytmp += a1[3] * cf1;
-    y0[0] += ytmp;
+    ytmp0 = a0[3] * cf0;
+    ytmp1 = a1[3] * cf1;
+    y0[0] += ytmp0 + ytmp1;
     y0 += incY;
 
     a0 += 4;
@@ -196,14 +196,14 @@ void _inner_vec2_daxpy(double *y0, int incY, const double *a0, const double *a1,
     return;
       
   if (i < nRE-1) {
-    ytmp = a0[0] * cf0;
-    ytmp += a1[0] * cf1;
-    y0[0] += ytmp;
+    ytmp0 = a0[0] * cf0;
+    ytmp1 = a1[0] * cf1;
+    y0[0] += ytmp0 + ytmp1;
     y0 += incY;
 
-    ytmp = a0[1] * cf0;
-    ytmp += a1[1] * cf1;
-    y0[0] += ytmp;
+    ytmp0 = a0[1] * cf0;
+    ytmp1 = a1[1] * cf1;
+    y0[0] += ytmp0 + ytmp1;
     y0 += incY;
 
     a0 += 2;
@@ -212,9 +212,9 @@ void _inner_vec2_daxpy(double *y0, int incY, const double *a0, const double *a1,
   }
 
   if (i < nRE) {
-    ytmp = a0[0] * cf0;
-    ytmp += a1[0] * cf1;
-    y0[0] += ytmp;
+    ytmp0 = a0[0] * cf0;
+    ytmp1 = a1[0] * cf1;
+    y0[0] += ytmp0 + ytmp1;
   }
 }
 
@@ -283,7 +283,7 @@ void _inner_vec2_daxpy_sse(double *y0, const double *a0, const double *a1,
                           int incX, double alpha, int nRE, int oddStart)
 {
   register int i;
-  register double cf0, cf1, ytmp;
+  register double cf0, cf1, ytmp0, ytmp1;
   register __m128d CF0, CF1, Y0, A0, A1;
 
   cf0 = alpha * x0[0];
@@ -293,16 +293,16 @@ void _inner_vec2_daxpy_sse(double *y0, const double *a0, const double *a1,
   CF1 = _mm_set1_pd(cf1);
 
   if (oddStart) {
-    ytmp = a0[0] * cf0;
-    ytmp += a1[0] * cf1;
-    y0[0] += ytmp;
+    ytmp0 = a0[0] * cf0;
+    ytmp1 = a1[0] * cf1;
+    y0[0] += ytmp0 + ytmp1;
     y0++;
     a0++;
     a1++;
     nRE--;
   }
 
-  for (i = 0; i < nRE-3; i += 4) {
+  for (i = nRE-1; i > 0; i -= 2) {
     Y0 = _mm_load_pd(y0);
     A0 = _mm_load_pd(a0);
     A1 = _mm_load_pd(a1);
@@ -315,42 +315,13 @@ void _inner_vec2_daxpy_sse(double *y0, const double *a0, const double *a1,
     a0 += 2;
     a1 += 2;
 
-    Y0 = _mm_load_pd(y0);
-    A0 = _mm_load_pd(a0);
-    A1 = _mm_load_pd(a1);
-    A0 = A0 * CF0;
-    Y0 = Y0 + A0;
-    A1 = A1 * CF1;
-    Y0 = Y0 + A1;
-    _mm_store_pd(y0, Y0);
-    y0 += 2;
-    a0 += 2;
-    a1 += 2;
   }
-  if (i == nRE)
+  if (i != 0)
     return;
 
-  if (i < nRE-1) {
-    Y0 = _mm_load_pd(y0);
-    A0 = _mm_load_pd(a0);
-    A1 = _mm_load_pd(a1);
-    A0 = A0 * CF0;
-    Y0 = Y0 + A0;
-    A1 = A1 * CF1;
-    Y0 = Y0 + A1;
-    _mm_store_pd(y0, Y0);
-    y0 += 2;
-    a0 += 2;
-    a1 += 2;
-    i += 2;
-  }
-
-  if (i < nRE) {
-    ytmp = a0[0] * cf0;
-    ytmp += a1[0] * cf1;
-    y0[0] += ytmp;
-    i++;
-  }
+  ytmp0 = a0[0] * cf0;
+  ytmp1 = a1[0] * cf1;
+  y0[0] += ytmp0 + ytmp1;
 }
 
 // Update Y with 4 columns of A
@@ -360,7 +331,7 @@ void _inner_vec4_daxpy_sse(double *y0, const double *a0, const double *a1,
                            int incX, double alpha, int nRE, int oddStart)
 {
   register int i, ix;
-  register double cf0, cf1, cf2, cf3, ytmp;
+  register double cf0, cf1, cf2, cf3, ytmp0, ytmp1;
   register __m128d CF0, CF1, CF2, CF3, Y0, A0, A1, A2, A3;
 
   ix = 0;
@@ -372,20 +343,17 @@ void _inner_vec4_daxpy_sse(double *y0, const double *a0, const double *a1,
   ix += incX;
   cf3 = alpha * x0[ix];
 
-  //cf0 = alpha * x0[0];
-  //cf1 = alpha * x0[incX];
-
   CF0 = _mm_set1_pd(cf0);
   CF1 = _mm_set1_pd(cf1);
   CF2 = _mm_set1_pd(cf2);
   CF3 = _mm_set1_pd(cf3);
 
   if (oddStart) {
-    ytmp = a0[0] * cf0;
-    ytmp += a1[0] * cf1;
-    ytmp += a2[0] * cf2;
-    ytmp += a3[0] * cf3;
-    y0[0] += ytmp;
+    ytmp0 = a0[0] * cf0;
+    ytmp1 = a1[0] * cf1;
+    ytmp0 += a2[0] * cf2;
+    ytmp1 += a3[0] * cf3;
+    y0[0] += ytmp0 + ytmp1;
     y0++;
     a0++;
     a1++;
@@ -394,27 +362,7 @@ void _inner_vec4_daxpy_sse(double *y0, const double *a0, const double *a1,
     nRE--;
   }
 
-  for (i = 0; i < nRE-3; i += 4) {
-    Y0 = _mm_load_pd(y0);
-    A0 = _mm_load_pd(a0);
-    A1 = _mm_load_pd(a1);
-    A2 = _mm_load_pd(a2);
-    A3 = _mm_load_pd(a3);
-    A0 = A0 * CF0;
-    Y0 = Y0 + A0;
-    A1 = A1 * CF1;
-    Y0 = Y0 + A1;
-    A2 = A2 * CF2;
-    Y0 = Y0 + A2;
-    A3 = A3 * CF3;
-    Y0 = Y0 + A3;
-    _mm_store_pd(y0, Y0);
-    y0 += 2;
-    a0 += 2;
-    a1 += 2;
-    a2 += 2;
-    a3 += 2;
-
+  for (i = nRE-1; i > 0; i -= 2) {
     Y0 = _mm_load_pd(y0);
     A0 = _mm_load_pd(a0);
     A1 = _mm_load_pd(a1);
@@ -436,40 +384,14 @@ void _inner_vec4_daxpy_sse(double *y0, const double *a0, const double *a1,
     a3 += 2;
 
   }
-  if (i == nRE)
+  if (i != 0)
     return;
 
-  if (i < nRE-1) {
-    Y0 = _mm_load_pd(y0);
-    A0 = _mm_load_pd(a0);
-    A1 = _mm_load_pd(a1);
-    A2 = _mm_load_pd(a2);
-    A3 = _mm_load_pd(a3);
-    A0 = A0 * CF0;
-    Y0 = Y0 + A0;
-    A1 = A1 * CF1;
-    Y0 = Y0 + A1;
-    A2 = A2 * CF2;
-    Y0 = Y0 + A2;
-    A3 = A3 * CF3;
-    Y0 = Y0 + A3;
-    _mm_store_pd(y0, Y0);
-    y0 += 2;
-    a0 += 2;
-    a1 += 2;
-    a2 += 2;
-    a3 += 2;
-    i += 2;
-  }
-
-  if (i < nRE) {
-    ytmp = a0[0] * cf0;
-    ytmp += a1[0] * cf1;
-    ytmp += a2[0] * cf2;
-    ytmp += a3[0] * cf3;
-    y0[0] += ytmp;
-    i++;
-  }
+  ytmp0 = a0[0] * cf0;
+  ytmp1 = a1[0] * cf1;
+  ytmp0 += a2[0] * cf2;
+  ytmp1 += a3[0] * cf3;
+  y0[0] += ytmp0 + ytmp1;
 }
 
 #endif

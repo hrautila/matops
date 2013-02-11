@@ -227,15 +227,16 @@ void _inner_vec2_ddot_sse(double *y0, int incY, const double *a0, const double *
     i++;
   }
  update:
-  ytmp0 += Y0[0];
-  ytmp0 += Y0[1];
-  ytmp0 *= alpha;
-  y0[0] += ytmp0;
+  TMP1 = _mm_hadd_pd(Y0, Y1);
+  //ytmp0 += Y0[0];
+  //ytmp0 += Y0[1];
+  //ytmp0 *= alpha;
+  y0[0] += TMP1[1] * alpha;
 
-  ytmp1 += Y1[0];
-  ytmp1 += Y1[1];
-  ytmp1 *= alpha;
-  y0[incY] += ytmp1;
+  //ytmp1 += Y1[0];
+  //ytmp1 += Y1[1];
+  //ytmp1 *= alpha;
+  y0[incY] += TMP1[0] * alpha;
   
 }
 

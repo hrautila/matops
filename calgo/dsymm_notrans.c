@@ -18,7 +18,7 @@ void dvpur_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
   const double *Bc, *Ac, *AvpS;
   const double *Br0, *Br1, *Br2, *Br3;
   double *Cc, *c0, *c1, *c2, *c3;
-  double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(16)));
+  //double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(16)));
   double Acpy[MAX_VP_DDOT*MAX_MB_DDOT] __attribute__((aligned(16)));
   double Bcpy[MAX_VP_DDOT*MAX_NB_DDOT] __attribute__((aligned(16)));
 
@@ -30,15 +30,16 @@ void dvpur_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
   //printf("0. nP=%d, L=%d, S=%d, E=%d, R=%d, vlen=%d\n", nP, L, S, E, R, vlen);
 
   // row stride in Cpy 
-  nC = E - R;
-  nC += (nC & 0x1); // increments by 1 if not even.
+  //nC = E - R;
+  //nC += (nC & 0x1); // increments by 1 if not even.
 
   // Copy C block to local buffer
   Cc = &C->md[S*C->step+R];
-  colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
+  //colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
+  nC = C->step;
 
   // TODO: scaling with beta ....
-  dscale_tile(Cpy, nC, beta, E-R, L-S);
+  dscale_tile(Cc, nC, beta, E-R, L-S);
 
   // nP is columns in A, 
   vpS = 0;
@@ -55,12 +56,12 @@ void dvpur_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     Bc = &B->md[S*B->step + vpS];
     AvpS = &A->md[R*A->step + vpS];
 
-    colcpy(Acpy, nA, AvpS, A->step, vpL-vpS, E-R); //, vpL-vpS);
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
+    colcpy(Acpy, nA, AvpS, A->step, vpL-vpS, E-R); //, vpL-vpS);
     //printf("1. update: A=\n"); print_tile(Acpy, nA, vpL-vpS, E-R);
     //printf("1. update: B=\n"); print_tile(Bcpy, nB, vpL-vpS, L-S);
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
     //printf("1. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
@@ -85,11 +86,11 @@ void dvpur_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     AvpS = &A->md[vpS*A->step + R];
 
     // copy part of diagonal block and fill lower part
-    colcpy_fill_low(Acpy, nA, AvpS, A->step, E-R, E-R);
     //print_tile(Acpy, nA, E-R, E-R);
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
+    colcpy_fill_low(Acpy, nA, AvpS, A->step, E-R, E-R);
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
     //printf("2. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
@@ -121,7 +122,7 @@ void dvpur_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
     colcpy4_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
     //printf("3. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
@@ -131,7 +132,7 @@ void dvpur_symm_ua_up_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     }
   }
   // copy back.
-  colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
+  //colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
 }
 
 // Use this when rows of C and A are not aligned to 16bytes, ie C or A row strides
@@ -176,7 +177,7 @@ void dvpur_symm_ua_low_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
   const double *Bc, *Ac, *AvpS;
   const double *Br0, *Br1, *Br2, *Br3;
   double *Cc, *c0, *c1, *c2, *c3;
-  double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(16)));
+  //double Cpy[MAX_NB_DDOT*MAX_MB_DDOT]  __attribute__((aligned(16)));
   double Acpy[MAX_VP_DDOT*MAX_MB_DDOT] __attribute__((aligned(16)));
   double Bcpy[MAX_VP_DDOT*MAX_NB_DDOT] __attribute__((aligned(16)));
 
@@ -188,15 +189,16 @@ void dvpur_symm_ua_low_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
   //printf("0. nP=%d, L=%d, S=%d, E=%d, R=%d, vlen=%d\n", nP, L, S, E, R, vlen);
 
   // row stride in Cpy 
-  nC = E - R;
-  nC += (nC & 0x1); // increments by 1 if not even.
+  //nC = E - R;
+  //nC += (nC & 0x1); // increments by 1 if not even.
 
   // Copy C block to local buffer
   Cc = &C->md[S*C->step+R];
-  colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
+  //colcpy(Cpy, nC, Cc, C->step, E-R, L-S);
+  nC = C->step;
 
   // TODO: scaling with beta ....
-  dscale_tile(Cpy, nC, beta, E-R, L-S);
+  dscale_tile(Cc, nC, beta, E-R, L-S);
 
   // nP is columns in A, 
   vpS = 0;
@@ -214,12 +216,12 @@ void dvpur_symm_ua_low_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     AvpS = &A->md[vpS*A->step + R];
 
     // transpose A on copy to be able to DOT operations.
-    colcpy4_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
+    colcpy4_trans(Acpy, nA, AvpS, A->step, E-R, vpL-vpS);
     //printf("1. update: A=\n"); print_tile(Acpy, nA, vpL-vpS, E-R);
     //printf("1. update: B=\n"); print_tile(Bcpy, nB, vpL-vpS, L-S);
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
     //printf("1. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
@@ -243,11 +245,11 @@ void dvpur_symm_ua_low_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     Bc = &B->md[S*B->step + vpS];
     AvpS = &A->md[vpS*A->step + R];
     // copy part of diagonal block and fill upper part
-    colcpy_fill_up(Acpy, nA, AvpS, A->step, E-R, E-R);
     //print_tile(Acpy, nA, E-R, E-R);
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
+    colcpy_fill_up(Acpy, nA, AvpS, A->step, E-R, E-R);
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
     //printf("2. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
@@ -275,10 +277,10 @@ void dvpur_symm_ua_low_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     // row viewport start A[R,:]
     AvpS = &A->md[R*A->step + vpS];
 
-    colcpy(Acpy, nA, AvpS, A->step, vpL-vpS, E-R); 
     colcpy(Bcpy, nB, Bc, B->step, vpL-vpS, L-S);
+    colcpy(Acpy, nA, AvpS, A->step, vpL-vpS, E-R); 
 
-    vpur_ddot(Cpy, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
+    vpur_ddot(Cc, Acpy, Bcpy, alpha, nC, nA, nB, L-S, E-R, vpL-vpS);
     //printf("3. post update: C=\n"); print_tile(Cpy, nC, E-R, L-S);
 
     vpS = vpL;
@@ -288,7 +290,7 @@ void dvpur_symm_ua_low_notrans(mdata_t *C, const mdata_t *A, const mdata_t *B,
     }
   }
   // copy back.
-  colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
+  //colcpy(Cc, C->step, Cpy, nC, E-R, L-S);
 }
 
 
