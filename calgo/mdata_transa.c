@@ -23,7 +23,6 @@ void vpur_ddot(double *Cc, const double *Aroot, const double *Bc, double alpha,
   double *Cx = Cc;
   const double *Bx = Bc;
 
-  //printf("ldA=%d, ldB=%d, ldC=%d, nSL=%d, nRE=%d, nVP=%d\n", ldA, ldB, ldC, nSL, nRE, nVP);
   for (j = 0; j < nSL-3; j += 4) {
     Ac = Aroot;
     Br0 = Bc;
@@ -63,7 +62,6 @@ void vpur_ddot(double *Cc, const double *Aroot, const double *Bc, double alpha,
     c1 = c0 + ldC;
     for (i = 0; i < nRE; i++) {
       _inner_ddot2_ssen(c0, c1, Ac, Br0, Br1, alpha, nVP);
-      //_inner_ddot2_sse(c0, c1, Ac, Br0, Br1, alpha, nVP);
       Ac += ldA;
       c0++;
       c1++;
@@ -81,7 +79,6 @@ void vpur_ddot(double *Cc, const double *Aroot, const double *Bc, double alpha,
     c0 = Cc;
     for (i = 0; i < nRE; i++) {
       _inner_ddot_ssen(c0, Ac, Br0, alpha, nVP);
-      //_inner_ddot_sse(c0, Ac, Br0, alpha, nVP);
       Ac += ldA;
       c0++;
     }

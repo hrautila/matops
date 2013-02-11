@@ -8,7 +8,7 @@
 
 package calgo
 
-// #cgo CFLAGS: -O3 -msse2 -funroll-loops -fomit-frame-pointer -ffast-math 
+// #cgo CFLAGS: -O3 -msse4.1 -funroll-loops -fomit-frame-pointer -ffast-math 
 // #include "cmops.h"
 import "C"
 import "unsafe"

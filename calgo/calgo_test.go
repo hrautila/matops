@@ -37,10 +37,10 @@ func TestUnAlignedSmall(t *testing.T) {
     bM := 7
     bN := 7
     bP := 7
-    D := matrix.FloatNormal(bM, bP)
-    E := matrix.FloatNormal(bP, bN)
-    //D := matrix.FloatWithValue(bM, bP, 2.0)
-    //E := matrix.FloatWithValue(bP, bN, 1.0)
+    //D := matrix.FloatNormal(bM, bP)
+    //E := matrix.FloatNormal(bP, bN)
+    D := matrix.FloatWithValue(bM, bP, 2.0)
+    E := matrix.FloatWithValue(bP, bN, 1.0)
     C0 := matrix.FloatZeros(bM, bN)
     C1 := matrix.FloatZeros(bM, bN)
 
@@ -600,7 +600,7 @@ func _TestMultSymmLowerSmall(t *testing.T) {
     t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
-func TestMultSymmUpper(t *testing.T) {
+func _TestMultSymmUpper(t *testing.T) {
     //bM := 5
     bN := 100*N
     bP := 100*P
@@ -620,7 +620,7 @@ func TestMultSymmUpper(t *testing.T) {
     //t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
-func TestMultSymmLower(t *testing.T) {
+func _TestMultSymmLower(t *testing.T) {
     //bM := 5
     bN := 100*N
     bP := 100*P
@@ -640,7 +640,7 @@ func TestMultSymmLower(t *testing.T) {
     //t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
-func TestRankSmall(t *testing.T) {
+func _TestRankSmall(t *testing.T) {
     bM := 5
     bN := 5
     //bP := 5
@@ -669,7 +669,7 @@ func TestRankSmall(t *testing.T) {
     t.Logf("A1: \n%v\n", A)
 }
 
-func TestRank(t *testing.T) {
+func _TestRank(t *testing.T) {
     bM := M*100
     bN := N*100
     //bP := 5
