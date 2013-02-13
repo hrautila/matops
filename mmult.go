@@ -21,9 +21,9 @@ var nBaxpy int = 256
 var mBaxpy int = 256
 
 // blocking parameter size for DOT based algorithms
-var vpLenDot int = 192
-var nBdot int = 64
-var mBdot int = 64
+var vpLenDot int = 196
+var nBdot int = 68
+var mBdot int = 68
 
 // Number of parallel workers to use.
 var nWorker int = 1
@@ -128,14 +128,14 @@ func MMMult(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
     ldC := C.LeadingIndex()
 
     if nWorker <= 1 || psize <= limitOne {
-        calgo.MultUnAligned(Cr, Ar, Br, alpha, beta, ldC, ldA, ldB, B.Rows(),
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.NOTRANS, ldC, ldA, ldB, B.Rows(),
             0, C.Cols(), 0, C.Rows(),
             vpLenDot, nBdot, mBdot)
         return nil
     } 
     // here we have more than one worker available
     worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.MultUnAligned(Cr, Ar, Br, alpha, beta, ldC, ldA, ldB, B.Rows(),
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.NOTRANS, ldC, ldA, ldB, B.Rows(),
             cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
         ready <- 1
     }
@@ -154,14 +154,14 @@ func MMMultTransA(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
     Cr := C.FloatArray()
     ldC := C.LeadingIndex()
     if nWorker <= 1 || psize <= limitOne {
-        calgo.MultUnAlignedTransA(Cr, Ar, Br, alpha, beta, ldC, ldA, ldB,
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSA, ldC, ldA, ldB,
             B.Rows(), 0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
         return nil
     }
 
     // here we have more than one worker available
     worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.MultUnAlignedTransA(Cr, Ar, Br, alpha, beta, ldC, ldA, ldB, B.Rows(),
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSA, ldC, ldA, ldB, B.Rows(),
             cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
         ready <- 1
     }
@@ -181,14 +181,14 @@ func MMMultTransB(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
     Cr := C.FloatArray()
     ldC := C.LeadingIndex()
     if nWorker <= 1 || psize <= limitOne {
-        calgo.MultUnAlignedTransB(Cr, Ar, Br, alpha, beta, ldC, ldA, ldB,
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSB, ldC, ldA, ldB,
             B.Rows(), 0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
         return nil
     }
 
     // here we have more than one worker available
     worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.MultUnAlignedTransB(Cr, Ar, Br, alpha, beta, ldC, ldA, ldB, B.Rows(),
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSB, ldC, ldA, ldB, B.Rows(),
             cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
         ready <- 1
     }
@@ -208,15 +208,15 @@ func MMMultTransAB(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
     Cr := C.FloatArray()
     ldC := C.LeadingIndex()
     if nWorker <= 1 || psize <= limitOne{
-        calgo.MultUnAlignedTransAB(Cr, Ar, Br, alpha, beta, ldC, ldA, ldB,
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSA|calgo.TRANSB, ldC, ldA, ldB,
             B.Rows(), 0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
         return nil
     }
 
     // here we have more than one worker available
     worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.MultUnAlignedTransAB(Cr, Ar, Br, alpha, beta, ldC, ldA, ldB, B.Rows(),
-            cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSA|calgo.TRANSB, ldC, ldA, ldB,
+            B.Rows(), cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
         ready <- 1
     }
     colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)

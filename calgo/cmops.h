@@ -11,6 +11,16 @@
 
 #include <stdio.h>
 
+enum {
+  MTX_NOTRANS = 0,
+  MTX_TRANSA = 1,
+  MTX_TRANSB = 2,
+};
+  
+// multiples of 4 but not powers of 2
+#define MAX_VP_ROWS 196
+#define MAX_VP_COLS 68
+
 
 // max values of block sizes for unaligned cases.
 #define MAX_UA_MB 130
@@ -183,6 +193,11 @@ dmult_aligned_transab(mdata_t *C, const mdata_t *A, const mdata_t *B,
                       int P, int S, int L, int R, int E,
                       int vlen, int NB, int MB);
 
+extern void
+dmult_mm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                 double alpha, double beta, int flags,
+                 int P, int S, int L, int R, int E, 
+                 int vlen, int NB, int MB);
 
 // C = alpha*A*B + beta*C, A is symmetric, upper matrix, unaligned
 extern void

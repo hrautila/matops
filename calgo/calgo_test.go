@@ -33,25 +33,38 @@ func TestMakeData(t *testing.T) {
     C = matrix.FloatZeros(M, N)
 }
 
-func TestUnAlignedSmall(t *testing.T) {
-    bM := 7
-    bN := 7
-    bP := 7
-    //D := matrix.FloatNormal(bM, bP)
-    //E := matrix.FloatNormal(bP, bN)
-    D := matrix.FloatWithValue(bM, bP, 2.0)
-    E := matrix.FloatWithValue(bP, bN, 1.0)
-    C0 := matrix.FloatZeros(bM, bN)
-    C1 := matrix.FloatZeros(bM, bN)
+func _TestUnAlignedSmall(t *testing.T) {
+    bM := 5
+    bN := 5
+    bP := 5
+    /*
+    Ddata := [][]float64{
+        []float64{1.0, 1.0, 1.0, 1.0, 1.0},
+        []float64{2.0, 2.0, 2.0, 2.0, 2.0},
+        []float64{3.0, 3.0, 3.0, 3.0, 3.0},
+        []float64{4.0, 4.0, 4.0, 4.0, 4.0},
+        []float64{5.0, 5.0, 5.0, 5.0, 5.0}}
+    D := matrix.FloatMatrixFromTable(Ddata, matrix.RowOrder)
+    E := matrix.FloatMatrixFromTable(Ddata, matrix.RowOrder)
+     */
+    D := matrix.FloatNormal(bM, bP)
+    E := matrix.FloatNormal(bP, bN)
+    //D := matrix.FloatWithValue(bM, bP, 1.0)
+    //E := matrix.FloatWithValue(bP, bN, 1.0)
+    //C0 := matrix.FloatZeros(bM, bN)
+    //C1 := matrix.FloatZeros(bM, bN)
+    C0 := matrix.FloatWithValue(bM, bN, 1.0)
+    C1 := C0.Copy()
 
     Dr := D.FloatArray()
     Er := E.FloatArray()
     C1r := C1.FloatArray()
+    //t.Logf("E=\n%v\n", E)
 
-    blas.GemmFloat(D, E, C0, 1.0, 1.0)
+    blas.GemmFloat(D, E, C0, 1.0, 2.0)
     t.Logf("blas: C=D*E\n%v\n", C0)
 
-    MultUnAligned(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
+    DMult(C1r, Dr, Er, 1.0, 2.0, NOTRANS, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1=D*E\n%v\n", C1)
 }
@@ -64,8 +77,8 @@ func _TestAlignedSmall(t *testing.T) {
     E := matrix.FloatNormal(bP, bN)
     //D := matrix.FloatWithValue(bM, bP, 2.0)
     //E := matrix.FloatWithValue(bP, bN, 1.0)
-    C0 := matrix.FloatZeros(bM, bN)
-    C1 := matrix.FloatZeros(bM, bN)
+    C0 := matrix.FloatWithValue(bM, bN, 1.0)
+    C1 := C0.Copy()
 
     Dr := D.FloatArray()
     Er := E.FloatArray()
@@ -119,34 +132,36 @@ func _TestUnAligned(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func _TestUnAlignedSmallTransA(t *testing.T) {
+func TestUnAlignedSmallTransA(t *testing.T) {
     bM := 5
     bN := 5
     bP := 5
-    //Ddata := [][]float64{
-    //[]float64{1.0, 1.0, 1.0, 1.0, 1.0},
-    //[]float64{2.0, 2.0, 2.0, 2.0, 2.0},
-    //[]float64{3.0, 3.0, 3.0, 3.0, 3.0},
-    //[]float64{4.0, 4.0, 4.0, 4.0, 4.0},
-    //[]float64{5.0, 5.0, 5.0, 5.0, 5.0}}
-
-    D := matrix.FloatNormal(bM, bP)
-    E := matrix.FloatNormal(bP, bN)
+    Ddata := [][]float64{
+        []float64{1.0, 1.0, 1.0, 1.0, 1.0},
+        []float64{2.0, 2.0, 2.0, 2.0, 2.0},
+        []float64{3.0, 3.0, 3.0, 3.0, 3.0},
+        []float64{4.0, 4.0, 4.0, 4.0, 4.0},
+        []float64{5.0, 5.0, 5.0, 5.0, 5.0}}
+    D := matrix.FloatMatrixFromTable(Ddata, matrix.RowOrder)
+    //D := matrix.FloatNormal(bM, bP)
+    //E := matrix.FloatNormal(bP, bN)
     //D := matrix.FloatWithValue(bM, bP, 2.0)
-    //E := matrix.FloatWithValue(bP, bN, 2.0)
-    C0 := matrix.FloatZeros(bM, bN)
-    C1 := matrix.FloatZeros(bM, bN)
+    E := matrix.FloatWithValue(bP, bN, 2.0)
+    //C0 := matrix.FloatZeros(bM, bN)
+    //C1 := matrix.FloatZeros(bM, bN)
+    C0 := matrix.FloatWithValue(bM, bN, 0.0)
+    C1 := C0.Copy()
     Dt := D.Transpose()
 
     Dr := Dt.FloatArray()
     Er := E.FloatArray()
     C1r := C1.FloatArray()
-    t.Logf("Dt:\n%v\n", Dt)
-    t.Logf("E:\n%v\n", E)
+    //t.Logf("Dt:\n%v\n", Dt)
+    //t.Logf("E:\n%v\n", E)
     blas.GemmFloat(Dt, E, C0, 1.0, 1.0, linalg.OptTransA)
     t.Logf("blas: C=D*E\n%v\n", C0)
 
-    MultUnAlignedTransA(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    DMult(C1r, Dr, Er, 1.0, 1.0, TRANSA, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1=D*E\n%v\n", C1)
 }
@@ -217,7 +232,7 @@ func _TestUnAlignedTransA(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func _TestUnAlignedSmallTransB(t *testing.T) {
+func TestUnAlignedSmallTransB(t *testing.T) {
     bM := 5
     bN := 5
     bP := 5
@@ -225,18 +240,20 @@ func _TestUnAlignedSmallTransB(t *testing.T) {
     E := matrix.FloatNormal(bP, bN)
     //D := matrix.FloatWithValue(bM, bP, 2.0)
     //E := matrix.FloatWithValue(bP, bN, 1.0)
-    C0 := matrix.FloatZeros(bM, bN)
-    C1 := matrix.FloatZeros(bM, bN)
+    //C0 := matrix.FloatZeros(bM, bN)
+    //C1 := matrix.FloatZeros(bM, bN)
+    C0 := matrix.FloatWithValue(bP, bN, 1.0)
+    C1 := C0.Copy()
     Et := E.Transpose()
 
     Dr := D.FloatArray()
     Er := Et.FloatArray()
     C1r := C1.FloatArray()
 
-    blas.GemmFloat(D, Et, C0, 1.0, 1.0, linalg.OptTransA)
+    blas.GemmFloat(D, Et, C0, 1.0, 1.0, linalg.OptTransB)
     t.Logf("blas: C=D*E.T\n%v\n", C0)
 
-    MultUnAlignedTransB(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    DMult(C1r, Dr, Er, 1.0, 1.0, TRANSB, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1=D*E.T\n%v\n", C1)
 }
@@ -308,7 +325,7 @@ func _TestUnAlignedTransB(t *testing.T) {
 }
 
 
-func _TestUnAlignedSmallTransAB(t *testing.T) {
+func TestUnAlignedSmallTransAB(t *testing.T) {
     bM := 5
     bN := 5
     bP := 5
@@ -328,7 +345,7 @@ func _TestUnAlignedSmallTransAB(t *testing.T) {
     blas.GemmFloat(Dt, Et, C0, 1.0, 1.0, linalg.OptTransA, linalg.OptTransB)
     t.Logf("blas: C=D.T*E.T\n%v\n", C0)
 
-    MultUnAlignedTransAB(C1r, Dr, Er, 1.0, 1.0, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    DMult(C1r, Dr, Er, 1.0, 1.0, TRANSA|TRANSB, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1=D.T*E.T\n%v\n", C1)
 }

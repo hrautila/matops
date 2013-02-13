@@ -13,6 +13,47 @@ package calgo
 import "C"
 import "unsafe"
 
+type Flags int
+const (
+    TRANSA = (1 << iota)
+    TRANSB
+    LEFT
+    RIGHT
+    NOTRANS = 0
+)
+
+// Generic matrix-matrix multiplication for block [R:E, S:L] with panel length P.
+//
+// if trans is NOTRANS then calculates
+//   C = alpha*A*B + beta*C; C is M*N, A is M*P and B is P*N; 
+// if trans is TRANSA then calculates
+//   C = alpha*A.T*B + beta*C; C is M*N, A is P*M and B is P*N; 
+// if trans is TRANSB then calculates
+//   C = alpha*A*B.T + beta*C; C is M*N, A is M*P and B is N*P; 
+// if trans is TRANSA|TRANSB then calculates
+//   C = alpha*A.T*B.T + beta*C; C is M*N, A is P*M and B is N*P; 
+//
+func DMult(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
+
+    var Cm C.mdata_t
+    var Am C.mdata_t
+    var Bm C.mdata_t
+
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmult_mm_blocked(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta), C.int(trans),
+        C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
 
 // C = alpha*A*B + beta*C; C is M*N, A is M*P and B is P*N; all data aligned to 16 bytesf
 func MultAligned(C, A, B []float64, alpha, beta float64, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
