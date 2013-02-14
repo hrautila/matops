@@ -187,8 +187,8 @@ void _inner_vec2_ddot_sse(double *y0, int incY, const double *a0, const double *
     A1 = _mm_load_pd(a1);
     X0 = _mm_load_pd(x0);
     TMP0 = A0 * X0;
-    Y0 = Y0 + TMP0;
     TMP1 = A1 * X0;
+    Y0 = Y0 + TMP0;
     Y1 = Y1 + TMP1;
     x0 += 2;
     a0 += 2;
@@ -198,8 +198,8 @@ void _inner_vec2_ddot_sse(double *y0, int incY, const double *a0, const double *
     A1 = _mm_load_pd(a1);
     X0 = _mm_load_pd(x0);
     TMP0 = A0 * X0;
-    Y0 = Y0 + TMP0;
     TMP1 = A1 * X0;
+    Y0 = Y0 + TMP0;
     Y1 = Y1 + TMP1;
     x0 += 2;
     a0 += 2;
@@ -213,8 +213,8 @@ void _inner_vec2_ddot_sse(double *y0, int incY, const double *a0, const double *
     A1 = _mm_load_pd(a1);
     X0 = _mm_load_pd(x0);
     TMP0 = A0 * X0;
-    Y0 = Y0 + TMP0;
     TMP1 = A1 * X0;
+    Y0 = Y0 + TMP0;
     Y1 = Y1 + TMP1;
     x0 += 2;
     a0 += 2;
@@ -228,14 +228,7 @@ void _inner_vec2_ddot_sse(double *y0, int incY, const double *a0, const double *
   }
  update:
   TMP1 = _mm_hadd_pd(Y0, Y1);
-  //ytmp0 += Y0[0];
-  //ytmp0 += Y0[1];
-  //ytmp0 *= alpha;
-  y0[0] += TMP1[1] * alpha;
-
-  //ytmp1 += Y1[0];
-  //ytmp1 += Y1[1];
-  //ytmp1 *= alpha;
+  y0[0]    += TMP1[1] * alpha;
   y0[incY] += TMP1[0] * alpha;
   
 }
