@@ -13,8 +13,12 @@
 
 enum {
   MTX_NOTRANS = 0,
-  MTX_TRANSA = 1,
-  MTX_TRANSB = 2,
+  MTX_TRANSA = 0x1,
+  MTX_TRANSB = 0x2,
+  MTX_LOWER  = 0x4,
+  MTX_UPPER  = 0x8,
+  MTX_LEFT   = 0x10,
+  MTX_RIGHT  = 0x20
 };
   
 // multiples of 4 but not powers of 2
@@ -198,6 +202,13 @@ dmult_mm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
                  double alpha, double beta, int flags,
                  int P, int S, int L, int R, int E, 
                  int vlen, int NB, int MB);
+
+
+extern void 
+dmult_symm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                   double alpha, double beta, int flags,
+                   int P, int S, int L, int R, int E,
+                   int vlen, int NB, int MB);
 
 // C = alpha*A*B + beta*C, A is symmetric, upper matrix, unaligned
 extern void

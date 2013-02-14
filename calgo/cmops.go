@@ -15,10 +15,12 @@ import "unsafe"
 
 type Flags int
 const (
-    TRANSA = (1 << iota)
-    TRANSB
-    LEFT
-    RIGHT
+    TRANSA = (1 << iota)        // 0x1
+    TRANSB                      // 0x2
+    LOWER                       // 0x4
+    UPPER                       // 0x8
+    LEFT                        // 0x10
+    RIGHT                       // 0x20
     NOTRANS = 0
 )
 
@@ -51,6 +53,29 @@ func DMult(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, P
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         C.double(alpha), C.double(beta), C.int(trans),
+        C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
+
+
+func DMultSymm(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
+
+    var Cm C.mdata_t
+    var Am C.mdata_t
+    var Bm C.mdata_t
+
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmult_symm_blocked(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta), C.int(flags),
         C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
         C.int(H), C.int(NB), C.int(MB))
 }

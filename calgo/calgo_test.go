@@ -553,7 +553,7 @@ func _TestMultMVTransA(t *testing.T) {
 }
 
 
-func _TestMultSymmSmall(t *testing.T) {
+func TestMultSymmSmall(t *testing.T) {
     //bM := 5
     bN := 5
     bP := 5
@@ -580,12 +580,12 @@ func _TestMultSymmSmall(t *testing.T) {
     blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptUpper)
     t.Logf("blas: C=A*B\n%v\n", C0)
 
-    MultSymmUpper(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 4, 4, 4)
+    DMultSymm(C1r, Ar, Br, 1.0, 1.0, UPPER|LEFT, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
-func _TestMultSymmLowerSmall(t *testing.T) {
+func TestMultSymmLowerSmall(t *testing.T) {
     //bM := 5
     bN := 5
     bP := 5
@@ -612,7 +612,7 @@ func _TestMultSymmLowerSmall(t *testing.T) {
     blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptLower)
     t.Logf("blas: C=A*B\n%v\n", C0)
 
-    MultSymmLower(C1r, Ar, Br, 1.0, 1.0, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 4, 4, 4)
+    DMultSymm(C1r, Ar, Br, 1.0, 1.0, LOWER|LEFT, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
