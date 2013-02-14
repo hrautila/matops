@@ -394,6 +394,9 @@ void dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
     if (MB <= 0) {
       MB = E - R;
     }
+    if (vlen <= 0) {
+      vlen = 256;
+    }
     y_aligned = ((uintptr_t)Y->md & 0xF);
     if (lda_even && Y->inc == 1 && a_aligned == y_aligned) {
       for (i = R; i < E; i += MB) {
