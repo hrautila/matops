@@ -10,7 +10,7 @@ package matops
 import (
     "github.com/hrautila/matrix"
     "github.com/hrautila/matops/calgo"
-    //"errors"
+    "errors"
     "math"
     //"fmt"
 )
@@ -222,6 +222,161 @@ func MMMultTransAB(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
     colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
     scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
     //scheduleWork(colworks, rowworks, worker)
+    return nil
+}
+
+
+// Calculate C = alpha*A*B + beta*C, C is M*N, A is M*M and B is M*N
+func MMSymm(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
+
+    if A.Rows() != A.Cols() {
+        return errors.New("A matrix not square matrix.");
+    }
+    psize := C.NumElements()
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    Cr := C.FloatArray()
+    ldC := C.LeadingIndex()
+
+    if nWorker <= 1 || psize <= limitOne {
+        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.LEFT|calgo.LOWER, ldC, ldA, ldB,
+            A.Cols(),  0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
+        return nil
+    } 
+    // here we have more than one worker available
+    worker := func(cstart, cend, rstart, rend int, ready chan int) {
+        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.LEFT|calgo.LOWER, ldC, ldA, ldB,
+            A.Cols(), cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
+        ready <- 1
+    }
+    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
+    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
+    return nil
+}
+
+// Calculate C = alpha*A*B + beta*C, C is M*N, A is M*M and B is M*N
+func MMSymmUpper(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
+
+    if A.Rows() != A.Cols() {
+        return errors.New("A matrix not square matrix.");
+    }
+    psize := C.NumElements()
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    Cr := C.FloatArray()
+    ldC := C.LeadingIndex()
+
+    if nWorker <= 1 || psize <= limitOne {
+        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.LEFT|calgo.UPPER, ldC, ldA, ldB,
+            A.Cols(), 0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
+        return nil
+    } 
+    // here we have more than one worker available
+    worker := func(cstart, cend, rstart, rend int, ready chan int) {
+        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.LEFT|calgo.UPPER, ldC, ldA, ldB,
+            A.Cols(), cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
+        ready <- 1
+    }
+    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
+    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
+    return nil
+}
+
+// Y = alpha*A*X + beta*Y
+func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
+
+    if Y.Rows() != 1 && Y.Cols() != 1 {
+        return errors.New("Y not a vector.");
+    }
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Yr := Y.FloatArray()
+    incY := 1
+    lenY := Y.Rows()
+    if Y.Rows() == 1 {
+        // row vector
+        incY = Y.LeadingIndex()
+        lenY = Y.Cols()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    lenX := X.Rows()
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+        lenX = X.Cols()
+    }
+    calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.NULL, incY, ldA, incX,
+        0, lenX, 0, lenY, 0, 0)
+    return nil
+}
+
+// Y = alpha*A.T*X + beta*Y
+func MVMultTransA(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
+
+    if Y.Rows() != 1 && Y.Cols() != 1 {
+        return errors.New("Y not a vector.");
+    }
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Yr := Y.FloatArray()
+    incY := 1
+    lenY := Y.Rows()
+    if Y.Rows() == 1 {
+        // row vector
+        incY = Y.LeadingIndex()
+        lenY = Y.Cols()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    lenX := X.Rows()
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+        lenX = X.Cols()
+    }
+    calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.TRANSA, incY, ldA, incX,
+        0, lenX, 0, lenY, 0, 0)
+    return nil
+}
+
+// A = A + alpha*X*Y.T
+func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
+
+    if Y.Rows() != 1 && Y.Cols() != 1 {
+        return errors.New("Y not a vector.");
+    }
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Rows() == 1 {
+        // row vector
+        incY = Y.LeadingIndex()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+    }
+    calgo.DRankMV(Ar, Xr, Yr, alpha, ldA, incY, incX, 0, A.Cols(), 0, A.Rows(), 0, 0, 0)
     return nil
 }
 
