@@ -12,7 +12,7 @@ import (
     "github.com/hrautila/linalg/blas"
     "github.com/hrautila/linalg"
     "github.com/hrautila/mperf"
-    "github.com/hrautila/matops/calgo"
+    //"github.com/hrautila/matops/calgo"
     "github.com/hrautila/matops"
     "fmt"
     "os"
@@ -81,28 +81,22 @@ func TestTemplate(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
 }
 
 
-func CTestMultMV(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
+func CTestMVMult(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
     A = matrix.FloatNormal(m, n)
     X = matrix.FloatNormal(n, 1)
     Y = matrix.FloatZeros(m, 1)
     fnc = func() {
-        Ar := A.FloatArray()
-        Xr := X.FloatArray()
-        Yr := Y.FloatArray()
-        calgo.MultMV(Yr, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0, n, 0, m, VPsize, MB)
+        matops.MVMult(Y, A, X, 1.0, 1.0)
     }
     return
 }
 
-func CTestMultMVTransA(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
+func CTestMVMultTransA(m, n, p int) (fnc func(), A, X, Y *matrix.FloatMatrix) {
     A = matrix.FloatNormal(n, m)
     X = matrix.FloatNormal(n, 1)
     Y = matrix.FloatZeros(m, 1)
     fnc = func() {
-        Ar := A.FloatArray()
-        Xr := X.FloatArray()
-        Yr := Y.FloatArray()
-        calgo.MultMVTransA(Yr, Ar, Xr, 1.0, 1.0, 1, A.LeadingIndex(), 1, 0, n, 0, m, VPsize, MB)
+        matops.MVMultTransA(Y, A, X, 1.0, 1.0)
     }
     return
 }
@@ -139,8 +133,8 @@ func CheckTransA(A, X, Y *matrix.FloatMatrix) {
 
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
-    "MultMV": CTestMultMV,
-    "MultMVTransA": CTestMultMVTransA,
+    "MVMult": CTestMVMult,
+    "MVMultTransA": CTestMVMultTransA,
     "GemvTransA": CTestGemvTransA,
     "Gemv": CTestGemv}
 

@@ -12,7 +12,7 @@ import (
     "github.com/hrautila/linalg/blas"
     "github.com/hrautila/linalg"
     "github.com/hrautila/mperf"
-    "github.com/hrautila/matops/calgo"
+    //"github.com/hrautila/matops/calgo"
     "github.com/hrautila/matops"
     "fmt"
     "os"
@@ -85,11 +85,7 @@ func CTestSymmUpper(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     B = matrix.FloatNormal(m, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        Ar := A.FloatArray()
-        Br := B.FloatArray()
-        Cr := C.FloatArray()
-        calgo.MultSymmUpper(Cr, Ar, Br, 1.0, 1.0, C.LeadingIndex(), A.LeadingIndex(),
-            B.LeadingIndex(), m, 0, n, 0, m, VPsize, NB, MB)
+        matops.MMSymmUpper(C, A, B, 1.0, 1.0)
     }
     return fnc, A, B, C
 }
@@ -99,11 +95,7 @@ func CTestSymmLower(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     B = matrix.FloatNormal(m, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        Ar := A.FloatArray()
-        Br := B.FloatArray()
-        Cr := C.FloatArray()
-        calgo.MultSymmLower(Cr, Ar, Br, 1.0, 1.0, C.LeadingIndex(), A.LeadingIndex(),
-            B.LeadingIndex(), m, 0, n, 0, m, VPsize, NB, MB)
+        matops.MMSymm(C, A, B, 1.0, 1.0)
     }
     return fnc, A, B, C
 }
