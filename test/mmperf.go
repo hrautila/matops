@@ -236,7 +236,12 @@ func main() {
         }
         }
         //sec, _ := mperf.SingleTest(testName, testFunc, M, N, P, check, verbose)
-        fmt.Printf("%vs\n", tm.Seconds())
+        if asGflops {
+            gflops := 2.0*float64(int64(M)*int64(N)*int64(P))/tm.Seconds() * 1e-9
+            fmt.Printf("%.4f Gflops\n", gflops)
+        } else {
+            fmt.Printf("%vs\n", tm.Seconds())
+        }
         return
     } 
 

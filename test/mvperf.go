@@ -182,7 +182,7 @@ func main() {
                 fmt.Fprintf(os.Stderr, "%s: %v\n", testName, tm)
                 fmt.Fprintf(os.Stderr, "Reference: [%v] %v (%.2f) \n",
                     ok, reftime, tm.Seconds()/reftime.Seconds())
-        }
+            }
         }
         //sec, _ := mperf.SingleTest(testName, testFunc, M, N, P, check, verbose)
         fmt.Printf("%vs\n", tm.Seconds())
