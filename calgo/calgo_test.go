@@ -284,8 +284,8 @@ func TestMultMV(t *testing.T) {
 }
 
 func TestMultMVTransASmall(t *testing.T) {
-    bM := 5
-    bN := 5
+    bM := 10
+    bN := 10
     /*
     Adata := [][]float64{
      []float64{1.0, 1.0, 1.0, 1.0, 1.0},
@@ -295,24 +295,52 @@ func TestMultMVTransASmall(t *testing.T) {
      []float64{5.0, 5.0, 5.0, 5.0, 5.0}}
     A := matrix.FloatMatrixFromTable(Adata)
      */
-    A := matrix.FloatNormal(bM, bN)
+    A := matrix.FloatNormal(bN, bM)
     //X := matrix.FloatNormal(bN, 1)
+    X := matrix.FloatWithValue(bN, 1, 1.0)
     //A := matrix.FloatWithValue(bM, bN, 2.0)
-    X := matrix.FloatVector([]float64{1.0, 2.0, 3.0, 4.0, 5.0})
-    At := A.Transpose()
+    //X := matrix.FloatVector([]float64{1.0, 2.0, 3.0, 4.0, 5.0})
+    //At := A.Transpose()
     Y1 := matrix.FloatZeros(bM, 1)
     Y0 := matrix.FloatZeros(bM, 1)
 
-    Ar := At.FloatArray()
+    Ar := A.FloatArray()
     Xr := X.FloatArray()
     Y1r := Y1.FloatArray()
 
-    blas.GemvFloat(At, X, Y0, 1.0, 1.0, linalg.OptTrans)
+    blas.GemvFloat(A, X, Y0, 1.0, 1.0, linalg.OptTrans)
     t.Logf("blas: Y=A.T*X\n%v\n", Y0)
 
-    DMultMV(Y1r, Ar, Xr, 1.0, 1.0, TRANSA, 1, At.LeadingIndex(), 1, 0,  bN, 0,  bM, 4, 4)
+    DMultMV(Y1r, Ar, Xr, 1.0, 1.0, TRANSA, 1, A.LeadingIndex(), 1, 0,  bN, 0,  bM, 4, 4)
     t.Logf("Y0 == Y1: %v\n", Y0.AllClose(Y1))
     t.Logf("Y1: Y1 = A*X\n%v\n", Y1)
+}
+
+func _TestMultMVTransA(t *testing.T) {
+    bM := 1000*M
+    bN := 1000*N
+    A := matrix.FloatNormal(bN, bM)
+    //X := matrix.FloatNormal(bN, 1)
+    X := matrix.FloatWithValue(bN, 1, 1.0)
+    Y1 := matrix.FloatZeros(bM, 1)
+    Y0 := matrix.FloatZeros(bM, 1)
+
+    Ar := A.FloatArray()
+    Xr := X.FloatArray()
+    Y1r := Y1.FloatArray()
+
+    blas.GemvFloat(A, X, Y0, 1.0, 1.0, linalg.OptTrans)
+    //t.Logf("blas: Y=A.T*X\n%v\n", Y0)
+
+    DMultMV(Y1r, Ar, Xr, 1.0, 1.0, TRANSA, 1, A.LeadingIndex(), 1, 0,  bN, 0,  bM, 4, 4)
+    ok := Y0.AllClose(Y1)
+    t.Logf("Y0 == Y1: %v\n", ok)
+    if ! ok {
+        y1 := Y1.SubMatrix(0, 0, 5, 1)
+        t.Logf("Y1[0:5]:\n%v\n", y1)
+        y0 := Y0.SubMatrix(0, 0, 5, 1)
+        t.Logf("Y0[0:5]:\n%v\n", y0)
+    }
 }
 
 
@@ -445,7 +473,7 @@ func _TestRankSmall(t *testing.T) {
     blas.GerFloat(X, Y, A0, 1.0)
     t.Logf("blas ger:\n%v\n", A0)
 
-    RankMV(Ar, Xr, Yr, 1.0, A.LeadingIndex(), 1, 1, 0,  bN, 0,  bM, 4, 4, 4)
+    DRankMV(Ar, Xr, Yr, 1.0, A.LeadingIndex(), 1, 1, 0,  bN, 0,  bM, 4, 4)
     t.Logf("A0 == A1: %v\n", A0.AllClose(A))
     t.Logf("A1: \n%v\n", A)
 }
@@ -466,10 +494,74 @@ func _TestRank(t *testing.T) {
 
     blas.GerFloat(X, Y, A0, 1.0)
 
-    RankMV(Ar, Xr, Yr, 1.0, A.LeadingIndex(), 1, 1, 0,  bN, 0,  bM, 4, 4, 4)
+    DRankMV(Ar, Xr, Yr, 1.0, A.LeadingIndex(), 1, 1, 0,  bN, 0,  bM, 4, 4)
     t.Logf("A0 == A1: %v\n", A0.AllClose(A))
 }
 
+func TestMultSyrSmall(t *testing.T) {
+    bN := 7
+    //A := matrix.FloatNormal(bN, bN)
+    //B := matrix.FloatNormal(bN, bP)
+    //A := matrix.FloatWithValue(bM, bP, 1.0)
+    X := matrix.FloatWithValue(bN, 1, 1.0)
+    C0 := matrix.FloatZeros(bN, bN)
+    C1 := matrix.FloatZeros(bN, bN)
+    for i := 0; i < bN; i++ {
+        X.Add(1.0+float64(i), i)
+    }
+    t.Logf("X=\n%v\n", X)
+
+    Xr := X.FloatArray()
+    C1r := C1.FloatArray()
+
+    blas.SyrFloat(X, C0, 1.0, linalg.OptUpper)
+    t.Logf("blas: C0\n%v\n", C0)
+
+    DSymmRankMV(C1r, Xr, 1.0, UPPER, C1.LeadingIndex(), 1, 0,  bN, 4)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    t.Logf("C1: C1 = A*X\n%v\n", C1)
+
+    blas.SyrFloat(X, C0, 1.0, linalg.OptLower)
+    t.Logf("blas: C0\n%v\n", C0)
+
+    DSymmRankMV(C1r, Xr, 1.0, LOWER, C1.LeadingIndex(), 1, 0,  bN, 4)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    t.Logf("C1: C1 = A*X\n%v\n", C1)
+}
+
+func TestMultSyr2Small(t *testing.T) {
+    bN := 7
+    //A := matrix.FloatNormal(bN, bN)
+    //B := matrix.FloatNormal(bN, bP)
+    //A := matrix.FloatWithValue(bM, bP, 1.0)
+    X := matrix.FloatWithValue(bN, 1, 1.0)
+    Y := matrix.FloatWithValue(bN, 1, 1.0)
+    C0 := matrix.FloatZeros(bN, bN)
+    C1 := matrix.FloatZeros(bN, bN)
+    for i := 0; i < bN; i++ {
+        X.Add(1.0+float64(i), i)
+        Y.Add(2.0+float64(i), i)
+    }
+    t.Logf("X=\n%v\nY=\n%v\n", X, Y)
+
+    Xr := X.FloatArray()
+    Yr := Y.FloatArray()
+    C1r := C1.FloatArray()
+
+    blas.Syr2Float(X, Y, C0, 1.0, linalg.OptUpper)
+    t.Logf("blas: C0\n%v\n", C0)
+
+    DSymmRank2MV(C1r, Xr, Yr, 1.0, UPPER, C1.LeadingIndex(), 1, 1, 0,  bN, 4)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    t.Logf("C1: C1 = A*X\n%v\n", C1)
+
+    blas.Syr2Float(X, Y, C0, 1.0, linalg.OptLower)
+    t.Logf("blas: C0\n%v\n", C0)
+
+    DSymmRank2MV(C1r, Xr, Yr, 1.0, LOWER, C1.LeadingIndex(), 1, 1, 0,  bN, 4)
+    t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    t.Logf("C1: C1 = A*X\n%v\n", C1)
+}
 
 // Local Variables:
 // tab-width: 4

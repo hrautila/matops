@@ -314,8 +314,9 @@ func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
         incX = X.LeadingIndex()
         lenX = X.Cols()
     }
+    // NOTE: This could diveded to parallel tasks by rows.
     calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.NULL, incY, ldA, incX,
-        0, lenX, 0, lenY, 0, 0)
+        0, lenX, 0, lenY, vpLenDot, mBdot)
     return nil
 }
 
@@ -348,11 +349,12 @@ func MVMultTransA(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
         lenX = X.Cols()
     }
     calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.TRANSA, incY, ldA, incX,
-        0, lenX, 0, lenY, 0, 0)
+        0, lenX, 0, lenY, vpLenDot, mBdot)
     return nil
 }
 
-// A = A + alpha*X*Y.T
+// A = A + alpha*X*Y.T; A is M*N, X is row or column vector of length M and
+// Y is row or column vector of legth N.
 func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
 
     if Y.Rows() != 1 && Y.Cols() != 1 {
@@ -376,7 +378,106 @@ func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
         // row vector
         incX = X.LeadingIndex()
     }
-    calgo.DRankMV(Ar, Xr, Yr, alpha, ldA, incY, incX, 0, A.Cols(), 0, A.Rows(), 0, 0, 0)
+    // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
+    calgo.DRankMV(Ar, Xr, Yr, alpha, ldA, incY, incX, 0, A.Cols(), 0, A.Rows(), 0, 0)
+    return nil
+}
+
+// A = A + alpha*X*Y.T; A is N*N symmetric, X is row or column vector of length N.
+func MVSymmUpdate(A, X, *matrix.FloatMatrix, alpha float64) error {
+
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+    }
+    // NOTE: This could diveded to parallel tasks per column.
+    calgo.DSymmRankMV(Ar, Xr, alpha, calgo.LOWER, ldA, incX, 0, A.Cols(), 0)
+    return nil
+}
+
+// A = A + alpha*X*Y.T; A is N*N symmetric, X is row or column vector of length N.
+func MVSymmUpdateUpper(A, X, *matrix.FloatMatrix, alpha float64) error {
+
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+    }
+    // NOTE: This could diveded to parallel tasks per column.
+    calgo.DSymmRankMV(Ar, Xr, alpha, calgo.UPPER, ldA, incX, 0, A.Cols(), 0)
+    return nil
+}
+
+// A = A + alpha*X*Y.T; A is M*N, X is row or column vector of length M and
+// Y is row or column vector of legth N.
+func MVSymm2Update(A, X, Y *matrix.FloatMatrix, alpha float64) error {
+
+    if Y.Rows() != 1 && Y.Cols() != 1 {
+        return errors.New("Y not a vector.");
+    }
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Rows() == 1 {
+        // row vector
+        incY = Y.LeadingIndex()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+    }
+    // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
+    calgo.DSymmRank2MV(Ar, Xr, Yr, alpha, calgo.LOWER, ldA, incY, incX, 0, A.Cols(), 0)
+    return nil
+}
+
+func MVSymm2UpdateUpper(A, X, Y *matrix.FloatMatrix, alpha float64) error {
+
+    if Y.Rows() != 1 && Y.Cols() != 1 {
+        return errors.New("Y not a vector.");
+    }
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Rows() == 1 {
+        // row vector
+        incY = Y.LeadingIndex()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+    }
+    // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
+    calgo.DSymmRank2MV(Ar, Xr, Yr, alpha, calgo.UPPER, ldA, incY, incX, 0, A.Cols(), 0)
     return nil
 }
 

@@ -97,8 +97,169 @@ void _inner_mv_daxpy2(double *a0, double *a1, const double *x, int incX,
   }
 }
 
-void dmvec_vpur_rank(mdata_t *A, const mvec_t *X, const mvec_t *Y,  double alpha, 
-		     int S, int L, int R, int E, int vlen)
+static void
+_dmvec_vpur_rank(mdata_t *A, const mvec_t *X, const mvec_t *Y,  double alpha, 
+                 int S, int L, int R, int E)
+{
+  register const double *y, *x;
+  register double *Ac;
+  int j, nRE, nSL;
+
+  Ac = &A->md[S*A->step + R];
+  y  = &Y->md[S*Y->inc];
+  nRE = E - R;
+  nSL = L - S;
+
+  for (j = 0; j < nSL; j += 2) {
+    x  = &X->md[R*X->inc];
+    //Ar = Ac;
+    _inner_mv_daxpy2(Ac, Ac+A->step, x, X->inc, y, y+Y->inc, alpha, nRE);
+    y += 2*Y->inc;
+    Ac += 2*A->step;
+  }
+  if (j == nSL)
+    return;
+  if (j < nSL) {
+    _inner_mv_daxpy(Ac, x, X->inc, y, alpha, nRE);
+  }
+}
+
+// A = A + alpha * x * y.T; A is M*N, x is M*1, Y is N*1
+void dmvec_rank(mdata_t *A, const mvec_t *X,  const mvec_t *Y, double alpha, 
+                int S, int L, int R, int E,
+                int NB, int MB)
+{
+  int i, j, nI, nJ;
+
+  if (NB <= 0) {
+    NB = L - S;
+  }
+  if (MB <= 0) {
+    MB = E - R;
+  }
+  for (j = S; j < L; j += NB) {
+    nJ = L - j < NB ? L - j : NB;
+    for (i = R; i < E; i += MB) {
+      nI = E - i < MB ? E - i : MB;
+      _dmvec_vpur_rank(A, X, Y, alpha, j, j+nJ, i, i+nI);
+    }
+  }
+}
+
+
+static void
+_dmvec_vpur_syr_upper(mdata_t *A, const mvec_t *X0, const mvec_t *X1,
+                      double alpha, int S, int L, int R, int E)
+{
+  // assert(S==R && L==E)
+  register int i, j, nRE, nSL;
+  register double *Ac, *Ar0, *Ar1, *At, cf;
+  register const double *x0, *x1, *Xc;
+  
+  Xc = &X0->md[R*X0->inc];
+  x1 = &X1->md[S*X1->inc];
+  //At = &A->md[S*A->step+R];
+  nRE = E - R;
+  nSL = L - S;
+
+  //printf("R=%d, E=%d, E-R: %d, S=%d, L=%d, L-S: %d\n", R, E, E-R, S, L, L-S);
+
+  Ac = &A->md[S*A->step+R];
+  for (j = 0; j < nSL-1; j += 2) {
+    x0  = Xc;
+    Ar0 = Ac;
+    Ar1 = Ar0 + A->step;
+    // add to 2 columns
+    _inner_mv_daxpy2(Ac, Ac+A->step, x0, X0->inc, x1, x1+X1->inc, alpha, S+j+1);
+    
+    // diagonal entry on 2nd column is missing ... row j
+    cf = alpha * x1[X1->inc];
+    Ar1[S+j+1] += x0[(S+j+1)*X0->inc] * cf;
+    
+    //printf("A=\n"); print_tile(At, A->step, E-R, L-S);
+    x1 += 2*X1->inc;
+    Ac += 2*A->step;
+  }
+  if (j == nSL)
+    return;
+  if (j < nSL) {
+    x0 = Xc;
+    _inner_mv_daxpy(Ac, x0, X0->inc, x1, alpha, nRE);
+  }
+}
+
+static void
+_dmvec_vpur_syr_lower(mdata_t *A, const mvec_t *X0, const mvec_t *X1,
+                      double alpha, int S, int L, int R, int E)
+{
+  // assert(S==R && L==E)
+  register int i, j, nRE, nSL, nSE;
+  register double *Ac, *Ar0, *Ar1, *At, cf;
+  register const double *x0, *x1, *Xc;
+  
+  Xc = &X0->md[R*X0->inc];
+  x1 = &X1->md[R*X1->inc];
+  At = &A->md[S*A->step+R];
+  nRE = E - R;
+  nSL = L - S;
+  nSE = E - S;
+
+  //printf("start: Xc[%d] = %.1f\n", R, Xc[0]);
+  Ac = &A->md[S*A->step + R];
+  for (j = 0; j < nSL-1; j += 2) {
+    x0 = Xc;
+    Ar0 = Ac + j;
+    //printf("j=%d, x0=%.1f, x1=%.1f\n", j, x0[0], x1[0]);
+
+    // do diagonal entry on 1st column ... row j
+    cf = alpha * x1[0];
+    Ar0[0] += x0[0] * cf;
+    Ar0++;
+    x0 += X0->inc;
+
+    // add to 2 columns
+    _inner_mv_daxpy2(Ar0, Ar0+A->step, x0, X0->inc, x1, x1+X1->inc, alpha, nSE-j-1);
+    
+    printf("A=\n"); print_tile(At, A->step, E-R, L-S);
+    x1 += 2*X1->inc;
+    Ac += 2*A->step;
+    Xc += 2*X0->inc;
+  }
+  if (j == nSL)
+    return;
+  if (j < nSL) {
+    x0 = Xc;
+    //x1 = Xc;
+    //printf("last column: j=%d, nSE=%d\n", j, nSE);
+    _inner_mv_daxpy(Ac+j, x0, X0->inc, x1, alpha, nSE-j);
+  }
+}
+
+// A = A + alpha * x * y.T; A is N*N symmetric lower|upper, x is N*1
+void dmvec_symv_rank(mdata_t *A, const mvec_t *X,  double alpha, int flags,
+                     int S, int L, int NB)
+{
+  int i, j, nI, nJ, sR, sE;
+
+  if (NB <= 0) {
+    NB = L - S;
+  }
+  if (flags & MTX_UPPER) {
+    for (j = S; j < L; j += NB) {
+      nJ = L - j < NB ? L - j : NB;
+      _dmvec_vpur_syr_upper(A, X, X, alpha, j, j+nJ, 0, j+nJ);
+    }
+  } else {
+    for (j = S; j < L; j += NB) {
+      nJ = L - j < NB ? L - j : NB;
+      _dmvec_vpur_syr_lower(A, X, X, alpha, j, j+nJ, j, L);
+    }
+  }
+}
+
+static void
+_dmvec_vpur_syr2(mdata_t *A, const mvec_t *X, const mvec_t *Y,  double alpha, 
+                 int flags, int S, int L, int R, int E)
 {
   register int i, j, nRE, nSL;
   register double *Ac, *Ar, cf;
@@ -123,36 +284,28 @@ void dmvec_vpur_rank(mdata_t *A, const mvec_t *X, const mvec_t *Y,  double alpha
   }
 }
 
-// A = A + alpha * x * y.T; A is M*N, x is M*1, Y is N*1
-void drank_mv(mdata_t *A, const mvec_t *X,  const mvec_t *Y, double alpha, 
-	      int S, int L, int R, int E,
-	      int vlen, int NB, int MB)
+// A = A + alpha * x * y.T; A is N*N symmetric lower|upper,
+// x is N*1 or 1*N, Y is N*1 or 1*N
+void dmvec_symv_rank2(mdata_t *A, const mvec_t *X,  const mvec_t *Y,
+                      double alpha, int flags,
+                      int S, int L, int NB)
 {
-  int i, j, nI, nJ, x_aligned, y_aligned, lda_even;
-
-  if (MB <= 0) {
-    MB = E - R;
-  }
-
-  x_aligned = ((uintptr_t)X->md & 0xF);
-  y_aligned = ((uintptr_t)Y->md & 0xF);
-  lda_even = (A->step & 0x1) == 0;
+  int i, j, nI, nJ, sR, sE;
 
   if (NB <= 0) {
     NB = L - S;
   }
-  if (MB <= 0) {
-    MB = E - R;
-  }
-  if (vlen <= 0) {
-    vlen = MAX_VP_DDOT;
-  }
-
-  for (j = S; j < L; j += NB) {
-    nJ = L - j < NB ? L - j : NB;
-    for (i = R; i < E; i += MB) {
-      nI = E - i < MB ? E - i : MB;
-      dmvec_vpur_rank(A, X, Y, alpha, j, j+nJ, i, i+nI, vlen);
+  if (flags & MTX_UPPER) {
+    for (j = S; j < L; j += NB) {
+      nJ = L - j < NB ? L - j : NB;
+      _dmvec_vpur_syr_upper(A, X, Y, alpha, j, j+nJ, 0, j+nJ);
+      _dmvec_vpur_syr_upper(A, Y, X, alpha, j, j+nJ, 0, j+nJ);
+    }
+  } else {
+    for (j = S; j < L; j += NB) {
+      nJ = L - j < NB ? L - j : NB;
+      _dmvec_vpur_syr_lower(A, X, Y, alpha, j, j+nJ, j, L);
+      _dmvec_vpur_syr_lower(A, Y, X, alpha, j, j+nJ, j, L);
     }
   }
 }

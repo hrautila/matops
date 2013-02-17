@@ -109,10 +109,11 @@ void _inner_vec_ddot_sse(double *y0, int incY, const double *a0,
 {
   register int i;
   register double ytmp;
-  register __m128d Y0, A0, X0, TMP;
+  register __m128d Y0, Y1, A0, X0, TMP0, TMP1;
 
   ytmp = 0.0;
   Y0 = _mm_set1_pd(0.0);
+  Y1 = Y0;
 
   if (oddstart) {
     ytmp += a0[0] * x0[0];
@@ -124,15 +125,15 @@ void _inner_vec_ddot_sse(double *y0, int incY, const double *a0,
   for (i = 0; i < nC-3; i += 4) {
     A0 = _mm_load_pd(a0);
     X0 = _mm_load_pd(x0);
-    TMP = A0 * X0;
-    Y0 = Y0 + TMP;
+    TMP0 = A0 * X0;
+    Y0 = Y0 + TMP0;
     x0 += 2;
     a0 += 2;
 
     A0 = _mm_load_pd(a0);
     X0 = _mm_load_pd(x0);
-    TMP = A0 * X0;
-    Y0 = Y0 + TMP;
+    TMP1 = A0 * X0;
+    Y1 = Y1 + TMP1;
     x0 += 2;
     a0 += 2;
   }
@@ -142,8 +143,8 @@ void _inner_vec_ddot_sse(double *y0, int incY, const double *a0,
   if (i < nC-1) {
     A0 = _mm_load_pd(a0);
     X0 = _mm_load_pd(x0);
-    TMP = A0 * X0;
-    Y0 = Y0 + TMP;
+    TMP0 = A0 * X0;
+    Y0 = Y0 + TMP0;
     x0 += 2;
     a0 += 2;
     i += 2;
@@ -153,6 +154,7 @@ void _inner_vec_ddot_sse(double *y0, int incY, const double *a0,
     i++;
   }
  update:
+  Y0 = _mm_hadd_pd(Y0, Y1);
   ytmp += Y0[0];
   ytmp += Y0[1];
   ytmp *= alpha;
@@ -228,8 +230,8 @@ void _inner_vec2_ddot_sse(double *y0, int incY, const double *a0, const double *
   }
  update:
   TMP1 = _mm_hadd_pd(Y0, Y1);
-  y0[0]    += TMP1[1] * alpha;
-  y0[incY] += TMP1[0] * alpha;
+  y0[0]    += TMP1[0] * alpha;
+  y0[incY] += TMP1[1] * alpha;
   
 }
 

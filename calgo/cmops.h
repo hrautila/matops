@@ -107,8 +107,16 @@ dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
 
 // A = A + alpha * x * y.T; A is M*N, x is M*1, Y is N*1
 extern void
-drank_mv(mdata_t *A, const mvec_t *X, const mvec_t *Y, double alpha, 
-         int S, int L, int R, int E, int vlen, int NB, int MB);
+dmvec_rank(mdata_t *A, const mvec_t *X, const mvec_t *Y, double alpha, 
+           int S, int L, int R, int E, int NB, int MB);
+
+extern void
+dmvec_symv_rank(mdata_t *A, const mvec_t *X,  double alpha, int flags,
+                int S, int L, int NB);
+
+extern void
+dmvec_symv_rank2(mdata_t *A, const mvec_t *X,  const mvec_t *Y,
+                 double alpha, int flags, int S, int L, int NB);
 
 #endif
 

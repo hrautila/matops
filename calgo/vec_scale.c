@@ -5,6 +5,7 @@
 // distributed under the terms of GNU Lesser General Public License Version 3, or
 // any later version. See the COPYING tile included in this archive.
 
+#include <stdio.h>
 
 // Kahan summation for DOT product:
 //    http://en.wikipedia.org/wiki/Kahan_summation_algorithm
@@ -159,6 +160,19 @@ void dscale_tile(double *X, int ldX, double f0, int M, int N)
 
 }
 
+void print_tile(const double *D, int ldD, int nR, int nC)
+{
+  register int i, j;
+  for (i = 0; i < nR; i++) {
+    printf("[");
+    for (j = 0; j < nC; j++) {
+      if (j != 0)
+        printf(", ");
+      printf("%9.2e", D[j*ldD+i]);
+    }
+    printf("]\n");
+  }
+}
 
 // Local Variables:
 // indent-tabs-mode: nil

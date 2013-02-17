@@ -242,7 +242,7 @@ void _dmvec_daxpy_unaligned(mvec_t *Y, const mdata_t *A, const mvec_t *X,
 
   while (vpS < L) {
     AvpS = &A->md[vpS*A->step + R];
-    Xc = &X->md[vpS*Y->inc];
+    Xc = &X->md[vpS*X->inc];
 
     //printf("  vpS=%d, vpL=%d\n", vpS, vpL);
     _dmvec_daxpy(Yc, AvpS, Xc, alpha, Y->inc, A->step, X->inc, E-R, vpL-vpS);
@@ -329,7 +329,7 @@ void _dmvec_daxpy_aligned(mvec_t *Y, const mdata_t *A, const mvec_t *X,
 
   while (vpS < L) {
     AvpS = &A->md[vpS*A->step + R];
-    Xc = &X->md[vpS*Y->inc];
+    Xc = &X->md[vpS*X->inc];
 
     _dmvec_daxpy_sse(Yc, AvpS, Xc, alpha, A->step, X->inc, E-R, vpL-vpS, oddStart);
 
