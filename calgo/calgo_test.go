@@ -560,7 +560,42 @@ func TestMultSyr2Small(t *testing.T) {
 
     DSymmRank2MV(C1r, Xr, Yr, 1.0, LOWER, C1.LeadingIndex(), 1, 1, 0,  bN, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
+    
     t.Logf("C1: C1 = A*X\n%v\n", C1)
+}
+
+func TestSolveForwardSmall(t *testing.T) {
+    //bM := 5
+    bN := 5
+    Adata := [][]float64{
+        []float64{1.0, 0.0, 0.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 0.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 5.0}}
+
+    //A := matrix.FloatNormal(bN, bN)
+    A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
+    //B := matrix.FloatNormal(bN, bP)
+    //A := matrix.FloatWithValue(bM, bP, 2.0)
+    X0 := matrix.FloatWithValue(bN, 1, 0.0)
+    xsum := 0.0
+    for i := 0; i < bN; i++ {
+        xsum += float64(i) + 1.0
+        X0.Add(xsum, i)
+    }
+    X1 := X0.Copy()
+
+    Ar := A.FloatArray()
+    Xr := X1.FloatArray()
+
+    t.Logf("X0=\n%v\n", X0)
+    blas.TrsvFloat(A, X0, linalg.OptLower)
+    t.Logf("blas: X0\n%v\n", X0)
+
+    DSolveFwd(Xr, Ar, 1, A.LeadingIndex(), bN, 4)
+    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
+    t.Logf("X1:\n%v\n", X1)
 }
 
 // Local Variables:

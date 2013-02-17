@@ -118,6 +118,10 @@ extern void
 dmvec_symv_rank2(mdata_t *A, const mvec_t *X,  const mvec_t *Y,
                  double alpha, int flags, int S, int L, int NB);
 
+
+extern void
+dmvec_solve(mvec_t *X, const mdata_t *A, int flags, int N, int NB);
+
 #endif
 
 // Local Variables:
