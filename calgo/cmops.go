@@ -170,10 +170,25 @@ func DSolveFwd(X, A []float64, incX, ldA, N, NB int) {
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
-    C.dmvec_solve(
+    C.dmvec_solve_unb(
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
-        C.int(LOWER), C.int(N), C.int(NB))
+        C.int(LOWER), C.int(N))
+
+}
+
+func DSolveBackwd(X, A []float64, incX, ldA, N, NB int) {
+    var Xv C.mvec_t
+    var Am C.mdata_t
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.dmvec_solve_unb(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.int(UPPER), C.int(N))
 
 }
 

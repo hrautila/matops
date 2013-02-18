@@ -120,7 +120,7 @@ dmvec_symv_rank2(mdata_t *A, const mvec_t *X,  const mvec_t *Y,
 
 
 extern void
-dmvec_solve(mvec_t *X, const mdata_t *A, int flags, int N, int NB);
+dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N);
 
 #endif
 
