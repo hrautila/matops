@@ -103,9 +103,9 @@ void dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N)
 
   memset(Y.md, 0, N*sizeof(double));
   if (flags & MTX_LOWER) {
-    _dmvec_solve_forward(&X->md[i], &A->md[i*A->step+i], Y.md, X->inc, A->step, 1, N);
+    _dmvec_solve_forward(X->md, A->md, Y.md, X->inc, A->step, 1, N);
   } else {
-    _dmvec_solve_backward(&X->md[i], &A->md[i*A->step+i], Y.md, X->inc, A->step, 1, N);
+    _dmvec_solve_backward(X->md, A->md, Y.md, X->inc, A->step, 1, N);
   }
   if (N > MAX_VEC_NB) {
     free(Y.md);
