@@ -384,7 +384,7 @@ func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
 }
 
 // A = A + alpha*X*Y.T; A is N*N symmetric, X is row or column vector of length N.
-func MVSymmUpdate(A, X, *matrix.FloatMatrix, alpha float64) error {
+func MVSymmUpdate(A, X *matrix.FloatMatrix, alpha float64) error {
 
     if X.Rows() != 1 && X.Cols() != 1 {
         return errors.New("X not a vector.");
@@ -404,7 +404,7 @@ func MVSymmUpdate(A, X, *matrix.FloatMatrix, alpha float64) error {
 }
 
 // A = A + alpha*X*Y.T; A is N*N symmetric, X is row or column vector of length N.
-func MVSymmUpdateUpper(A, X, *matrix.FloatMatrix, alpha float64) error {
+func MVSymmUpdateUpper(A, X *matrix.FloatMatrix, alpha float64) error {
 
     if X.Rows() != 1 && X.Cols() != 1 {
         return errors.New("X not a vector.");
