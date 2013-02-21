@@ -105,22 +105,29 @@ dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
                    int vlen, int MB);
 
 
-// A = A + alpha * x * y.T; A is M*N, x is M*1, Y is N*1
+// A = A + alpha * x * y.T; A is M*N, x is M*1, Y is N*1 (GER)
 extern void
 dmvec_rank(mdata_t *A, const mvec_t *X, const mvec_t *Y, double alpha, 
            int S, int L, int R, int E, int NB, int MB);
 
+// A = A + alpha * X * X.T; (SYR)
 extern void
 dmvec_symv_rank(mdata_t *A, const mvec_t *X,  double alpha, int flags,
                 int S, int L, int NB);
 
+// A = A + alpha*X*X.T + alpha*X.T*X; (SYR2)
 extern void
 dmvec_symv_rank2(mdata_t *A, const mvec_t *X,  const mvec_t *Y,
                  double alpha, int flags, int S, int L, int NB);
 
 
+// for TRSV
 extern void
 dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N);
+
+// for TRMV
+extern void
+dmvec_trid_unb(mvec_t *X, const mdata_t *A, double alpha, int flags, int N);
 
 #endif
 

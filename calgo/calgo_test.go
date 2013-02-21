@@ -617,6 +617,95 @@ func TestSolveForwardSmall(t *testing.T) {
 
 }
 
+func TestTridiagSmall(t *testing.T) {
+    //bM := 5
+    bN := 5
+    Adata := [][]float64{
+        []float64{1.0, 0.0, 0.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 0.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 5.0}}
+
+    //A := matrix.FloatNormal(bN, bN)
+    A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
+    //A := matrix.FloatWithValue(bM, bP, 2.0)
+    //Z := matrix.FloatNormal(bN, 1);
+    X0 := matrix.FloatWithValue(bN, 1, 1.0)
+    X2 := matrix.FloatWithValue(bN, 1, 1.0)
+    xsum := 0.0
+    for i := 0; i < bN; i++ {
+        xsum += float64(i) + 1.0
+        //X0.Add(xsum, i)
+        X2.Add(xsum, -(i+1))
+    }
+    //X0.Mul(Z)
+    X1 := X0.Copy()
+    //X2.Mul(Z)
+    //X3 := X2.Copy()
+    At := A.Transpose()
+
+    t.Logf("X0=\n%v\n", X0)
+    t.Logf("A.t=\n%v\n", At)
+    t.Logf("A=\n%v\n", A)
+    //t.Logf("Z=\n%v\n", Z)
+    blas.TrmvFloat(A, X0, linalg.OptUpper)
+    t.Logf("blas(upper): X0 = A*X0\n%v\n", X0)
+
+    Ar := A.FloatArray()
+    Xr := X1.FloatArray()
+    DTridiagFwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
+    t.Logf("X1(fwd) = A*X1:\n%v\n", X1)
+    
+    X0.SetIndexes(1.0)
+    X1.SetIndexes(1.0)
+
+    blas.TrmvFloat(At, X0, linalg.OptUpper)
+    t.Logf("blas(upper): X0 = A.t*X0\n%v\n", X0)
+
+    Ar = At.FloatArray()
+    Xr = X1.FloatArray()
+    DTridiagFwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
+    t.Logf("X1(fwd) = A.t*X1:\n%v\n", X1)
+
+    X0.SetIndexes(1.0)
+    X1.SetIndexes(1.0)
+    blas.TrmvFloat(A, X0, linalg.OptLower)
+    t.Logf("blas(lower): X0 = A*X0\n%v\n", X0)
+
+    Ar = A.FloatArray()
+    Xr = X1.FloatArray()
+    DTridiagBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
+    t.Logf("X1(backwd) = A*X1:\n%v\n", X1)
+
+    X0.SetIndexes(1.0)
+    X1.SetIndexes(1.0)
+    blas.TrmvFloat(At, X0, linalg.OptLower)
+    t.Logf("blas(lower): X0 = A.t*X0\n%v\n", X0)
+
+    Ar = At.FloatArray()
+    Xr = X1.FloatArray()
+    DTridiagBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
+    t.Logf("X1(backwd) = A.t*X1:\n%v\n", X1)
+
+/*
+    t.Logf("X2=\n%v\n", X2)
+    //t.Logf("At=\n%v\n", At)
+    blas.TrsvFloat(At, X2, linalg.OptUpper)
+    t.Logf("blas: X2\n%v\n", X2)
+
+    Xr = X3.FloatArray()
+    Ar = At.FloatArray()
+    DSolveBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    t.Logf("X2 == X1: %v\n", X2.AllClose(X3))
+    t.Logf("X3:\n%v\n", X3)
+*/
+}
+
 // Local Variables:
 // tab-width: 4
 // indent-tabs-mode: nil
