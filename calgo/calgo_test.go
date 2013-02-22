@@ -564,7 +564,7 @@ func TestMultSyr2Small(t *testing.T) {
     t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
-func TestSolveForwardSmall(t *testing.T) {
+func TestSolveSmall(t *testing.T) {
     //bM := 5
     bN := 5
     Adata := [][]float64{
@@ -646,64 +646,76 @@ func TestTridiagSmall(t *testing.T) {
     At := A.Transpose()
 
     t.Logf("X0=\n%v\n", X0)
-    t.Logf("A.t=\n%v\n", At)
-    t.Logf("A=\n%v\n", A)
+    t.Logf("A(upper)=\n%v\n", At)
+    t.Logf("A(lower)=\n%v\n", A)
     //t.Logf("Z=\n%v\n", Z)
     blas.TrmvFloat(A, X0, linalg.OptUpper)
-    t.Logf("blas(upper): X0 = A*X0\n%v\n", X0)
+    t.Logf("A(lower), blas(upper): X0 = A*X0\n%v\n", X0)
 
     Ar := A.FloatArray()
     Xr := X1.FloatArray()
-    DTridiagFwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    DTrimvFwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
     t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
-    t.Logf("X1(fwd) = A*X1:\n%v\n", X1)
+    t.Logf("A(lower), X1(fwd) = A*X1:\n%v\n", X1)
     
     X0.SetIndexes(1.0)
     X1.SetIndexes(1.0)
 
     blas.TrmvFloat(At, X0, linalg.OptUpper)
-    t.Logf("blas(upper): X0 = A.t*X0\n%v\n", X0)
+    t.Logf("A(upper), blas(upper): X0 = A.t*X0\n%v\n", X0)
 
     Ar = At.FloatArray()
     Xr = X1.FloatArray()
-    DTridiagFwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    DTrimvFwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
     t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
-    t.Logf("X1(fwd) = A.t*X1:\n%v\n", X1)
+    t.Logf("A(upper), X1(fwd) = A.t*X1:\n%v\n", X1)
 
     X0.SetIndexes(1.0)
     X1.SetIndexes(1.0)
     blas.TrmvFloat(A, X0, linalg.OptLower)
-    t.Logf("blas(lower): X0 = A*X0\n%v\n", X0)
+    t.Logf("A(lower), blas(lower): X0 = A*X0\n%v\n", X0)
 
     Ar = A.FloatArray()
     Xr = X1.FloatArray()
-    DTridiagBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    DTrimvBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
     t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
-    t.Logf("X1(backwd) = A*X1:\n%v\n", X1)
+    t.Logf("A(lower), X1(backwd) = A*X1:\n%v\n", X1)
 
     X0.SetIndexes(1.0)
     X1.SetIndexes(1.0)
     blas.TrmvFloat(At, X0, linalg.OptLower)
-    t.Logf("blas(lower): X0 = A.t*X0\n%v\n", X0)
+    t.Logf("A(upper), blas(lower): X0 = A.t*X0\n%v\n", X0)
 
     Ar = At.FloatArray()
     Xr = X1.FloatArray()
-    DTridiagBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    DTrimvBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
     t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
-    t.Logf("X1(backwd) = A.t*X1:\n%v\n", X1)
+    t.Logf("A(upper), X1(backwd) = A.t*X1:\n%v\n", X1)
 
-/*
-    t.Logf("X2=\n%v\n", X2)
-    //t.Logf("At=\n%v\n", At)
-    blas.TrsvFloat(At, X2, linalg.OptUpper)
-    t.Logf("blas: X2\n%v\n", X2)
+    X0.SetIndexes(1.0)
+    X1.SetIndexes(1.0)
 
-    Xr = X3.FloatArray()
+    blas.TrmvFloat(At, X0, linalg.OptUpper, linalg.OptTrans)
+    t.Logf("A(upper), blas(upper,trans): X0 = A.t*X0\n%v\n", X0)
+
     Ar = At.FloatArray()
-    DSolveBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
-    t.Logf("X2 == X1: %v\n", X2.AllClose(X3))
-    t.Logf("X3:\n%v\n", X3)
-*/
+    Xr = X1.FloatArray()
+    DTrimvFwdTransA(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
+    t.Logf("A(upper), X1(fwd,transA) = A.t*X1:\n%v\n", X1)
+
+    X0.SetIndexes(1.0)
+    X1.SetIndexes(1.0)
+
+    t.Logf("A(upper)=\n%v\n", At)
+    blas.TrmvFloat(A, X0, linalg.OptTrans)
+    t.Logf("A(upper), blas(lower,trans): X0 = A*X0\n%v\n", X0)
+
+    Ar = At.FloatArray()
+    Xr = X1.FloatArray()
+    DTrimvBackwdTransA(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
+    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
+    t.Logf("A(upper), X1(backwd,transA) = A*X1:\n%v\n", X1)
 }
 
 // Local Variables:

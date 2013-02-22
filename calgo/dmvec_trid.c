@@ -11,11 +11,16 @@
 
 #include "cmops.h"
 #include "inner_vec_axpy.h"
+#include "inner_vec_dot.h"
+
+// Functions here implement various versions of TRMV operation. Functions named
+// *_forward operate on UPPER tridiagonal matrix and functions named *_backward
+// operate on LOWER tridiagonal matrices.
 
 // calculates backward a diagonal block and updates Xc values. (lower tridiagonal)
 static void
-_dmvec_trid_backward(double *Xc, const double *Ac, double alpha,
-                     int incX, int ldA, int nRE)
+_dmvec_trid_axpy_backward(double *Xc, const double *Ac, double alpha,
+                          int incX, int ldA, int nRE)
 {
   // Y is 
   register int i;
@@ -45,10 +50,41 @@ _dmvec_trid_backward(double *Xc, const double *Ac, double alpha,
   }
 }
 
+// calculates backward a diagonal block and updates Xc values. (lower tridiagonal)
+static void
+_dmvec_trid_dot_backward(double *Xc, const double *Ac, double alpha,
+                         int incX, int ldA, int nRE)
+{
+  // Y is 
+  register int i;
+  double *xr, *yr, xtmp;
+  const double *Ar, *Acl;
+
+  // lower diagonal matrix of nRE rows/cols and vector X of length nRE
+  // move to point to last column and last entry of X.
+  Acl = Ac + (nRE-1)*ldA;
+  xr = Xc + (nRE-1)*incX;
+
+  // xr is the current X element, Ar is row in current A column.
+  for (i = nRE; i > 0; i--) {
+    Ar = Acl + i - 1; // move on diagonal
+
+    // update all x-values below with the current A column and current X
+    xtmp = 0.0;
+    _inner_vec_ddot(&xtmp, 1, Ar, xr, incX, alpha, nRE-i+1);
+    xr[0] = xtmp * alpha;
+    printf("X:\n"); print_tile(Xc, 1, nRE, 1);
+
+    // previous X, previous column in A 
+    xr  -= incX;
+    Acl -= ldA;
+  }
+}
+
 // calculate forward a diagonal block and updates Xc values. (upper tridiagonal)
 static void
-_dmvec_trid_forward(double *Xc, const double *Ac, double alpha,
-                    int incX, int ldA, int nRE)
+_dmvec_trid_axpy_forward(double *Xc, const double *Ac, double alpha,
+                         int incX, int ldA, int nRE)
 {
   // Y is 
   register int i;
@@ -75,6 +111,34 @@ _dmvec_trid_forward(double *Xc, const double *Ac, double alpha,
   }
 }
 
+static void
+_dmvec_trid_dot_forward(double *Xc, const double *Ac, double alpha,
+                         int incX, int ldA, int nRE)
+{
+  // Y is 
+  register int i;
+  double *xr, *yr, xtmp;
+  const double *Ar;
+
+  // upper diagonal matrix of nRE rows/cols and vector X, Y of length nRE
+  Ar = Ac;
+  xr = Xc;
+
+  // xr is the current X element, Ar is row in current A column.
+  // Xc is start of X;
+  for (i = 0; i < nRE; i++) {
+    Ar = Ac + i;
+    // update all previous x-values with current A column and current X
+    _inner_vec_ddot(&xtmp, 1, Ar, xr, incX, alpha, nRE-i);
+    //printf("i: %d, xr[0]: %.1f, Ar[0]: %.1f\n", i, xr[0], Ar[0]);
+    xr[0] = xtmp;
+    //printf("X:\n"); print_tile(Xc, 1, nRE, 1);
+    // next X, next column in A 
+    xr += incX;
+    Ac += ldA;
+  }
+}
+
 //extern void memset(void *, int, size_t);
 
 #define MAX_VEC_NB 256
@@ -85,9 +149,17 @@ void dmvec_trid_unb(mvec_t *X, const mdata_t *A, double alpha, int flags, int N)
   int i, nI;
 
   if (flags & MTX_UPPER) {
-    _dmvec_trid_forward(X->md, A->md, alpha, X->inc, A->step, N);
+    if (flags & MTX_TRANSA) {
+      _dmvec_trid_dot_forward(X->md, A->md, alpha, X->inc, A->step, N);
+    } else {
+      _dmvec_trid_axpy_forward(X->md, A->md, alpha, X->inc, A->step, N);
+    }
   } else {
-    _dmvec_trid_backward(X->md, A->md, alpha, X->inc, A->step, N);
+    if (flags & MTX_TRANSA) {
+      _dmvec_trid_dot_backward(X->md, A->md, alpha, X->inc, A->step, N);
+    } else {
+      _dmvec_trid_axpy_backward(X->md, A->md, alpha, X->inc, A->step, N);
+    }
   }
 }
 
@@ -106,7 +178,7 @@ void dmvec_trid_blocked(mvec_t *X, const mdata_t *A, double alpha, int flags, in
     for (i = 0; i < N; i += NB) {
       nI = N - i < NB ? N - i : NB;
       // solve forward using Y values 
-      _dmvec_trid_forward(&X->md[i], &A->md[i*A->step+i], alpha, X->inc, A->step, nI);
+      _dmvec_trid_axpy_forward(&X->md[i], &A->md[i*A->step+i], alpha, X->inc, A->step, nI);
     }
   }
 }

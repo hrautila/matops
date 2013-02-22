@@ -192,7 +192,7 @@ func DSolveBackwd(X, A []float64, incX, ldA, N, NB int) {
 
 }
 
-func DTridiagFwd(X, A []float64, incX, ldA, N, NB int) {
+func DTrimvFwd(X, A []float64, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -207,7 +207,22 @@ func DTridiagFwd(X, A []float64, incX, ldA, N, NB int) {
 
 }
 
-func DTridiagBackwd(X, A []float64, incX, ldA, N, NB int) {
+func DTrimvFwdTransA(X, A []float64, incX, ldA, N, NB int) {
+    var Xv C.mvec_t
+    var Am C.mdata_t
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.dmvec_trid_unb(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.double(1.0), C.int(UPPER|TRANSA), C.int(N))
+
+}
+
+func DTrimvBackwd(X, A []float64, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -219,6 +234,21 @@ func DTridiagBackwd(X, A []float64, incX, ldA, N, NB int) {
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         (*C.mdata_t)(unsafe.Pointer(&Am)), 
         C.double(1.0), C.int(LOWER), C.int(N))
+
+}
+
+func DTrimvBackwdTransA(X, A []float64, incX, ldA, N, NB int) {
+    var Xv C.mvec_t
+    var Am C.mdata_t
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.dmvec_trid_unb(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)), 
+        C.double(1.0), C.int(LOWER|TRANSA), C.int(N))
 
 }
 
