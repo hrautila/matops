@@ -18,7 +18,8 @@ enum {
   MTX_LOWER  = 0x4,
   MTX_UPPER  = 0x8,
   MTX_LEFT   = 0x10,
-  MTX_RIGHT  = 0x20
+  MTX_RIGHT  = 0x20,
+  MTX_UNIT   = 0x40
 };
   
 // multiples of 4 but not powers of 2
@@ -127,7 +128,7 @@ dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N);
 
 // for TRMV
 extern void
-dmvec_trid_unb(mvec_t *X, const mdata_t *A, double alpha, int flags, int N);
+dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N);
 
 #endif
 
