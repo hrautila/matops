@@ -220,7 +220,7 @@ _dmvec_vpur_syr_lower(mdata_t *A, const mvec_t *X0, const mvec_t *X1,
     // add to 2 columns
     _inner_mv_daxpy2(Ar0, Ar0+A->step, x0, X0->inc, x1, x1+X1->inc, alpha, nSE-j-1);
     
-    printf("A=\n"); print_tile(At, A->step, E-R, L-S);
+    //printf("A=\n"); print_tile(At, A->step, E-R, L-S);
     x1 += 2*X1->inc;
     Ac += 2*A->step;
     Xc += 2*X0->inc;
