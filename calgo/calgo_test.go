@@ -564,9 +564,57 @@ func TestMultSyr2Small(t *testing.T) {
     t.Logf("C1: C1 = A*X\n%v\n", C1)
 }
 
-func TestSolveSmall(t *testing.T) {
-    //bM := 5
-    bN := 5
+func solveForwardTest(t *testing.T, A, X0 *matrix.FloatMatrix, unit bool, bN, bNB int) {
+    X1 := X0.Copy()
+    Ar := A.FloatArray()
+    Xr := X1.FloatArray()
+
+    if bN < 8 {
+        t.Logf("A=\n%v\n", A)
+        t.Logf("X0=\n%v\n", X0)
+    }
+    blas.TrsvFloat(A, X0, linalg.OptLower)
+    if bN < 8 {
+        t.Logf("blas: X0\n%v\n", X0)
+    }
+
+    if bN == bNB {
+        DSolveFwd(Xr, Ar, unit, 1, A.LeadingIndex(), bN, bN)
+    } else {
+        DSolveFwdBlocked(Xr, Ar, unit, 1, A.LeadingIndex(), bN, bNB)
+    }
+    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
+    if bN < 8 {
+        t.Logf("X1:\n%v\n", X1)
+    }
+
+}
+
+func solveBackwardTest(t *testing.T, A, X0 *matrix.FloatMatrix, unit bool, bN, bNB int) {
+    X1 := X0.Copy()
+    Ar := A.FloatArray()
+    Xr := X1.FloatArray()
+
+    if bN < 8 {
+        t.Logf("A=\n%v\n", A)
+        t.Logf("X0=\n%v\n", X0)
+    }
+    blas.TrsvFloat(A, X0, linalg.OptUpper)
+    if bN < 8 {
+        t.Logf("blas: X0\n%v\n", X0)
+    }
+
+    Xr = X1.FloatArray()
+    Ar = A.FloatArray()
+    DSolveBackwd(Xr, Ar, unit,  1, A.LeadingIndex(), bN, bN)
+    t.Logf("X1 == X0: %v\n", X1.AllClose(X0))
+    if bN < 8 {
+        t.Logf("X0:\n%v\n", X0)
+    }
+}
+
+
+func _TestSolveSmall(t *testing.T) {
     Adata := [][]float64{
         []float64{1.0, 0.0, 0.0, 0.0, 0.0},
         []float64{1.0, 2.0, 0.0, 0.0, 0.0},
@@ -574,48 +622,66 @@ func TestSolveSmall(t *testing.T) {
         []float64{1.0, 2.0, 3.0, 4.0, 0.0},
         []float64{1.0, 2.0, 3.0, 4.0, 5.0}}
 
-    //A := matrix.FloatNormal(bN, bN)
     A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
-    //B := matrix.FloatNormal(bN, bP)
-    //A := matrix.FloatWithValue(bM, bP, 2.0)
-    Z := matrix.FloatNormal(bN, 1);
-    X0 := matrix.FloatWithValue(bN, 1, 0.0)
-    X2 := matrix.FloatWithValue(bN, 1, 0.0)
+    bN := A.Rows()
+    At := A.Transpose()
+    X0 := matrix.FloatWithValue(A.Rows(), 1, 1.0)
+    X1 := X0.Copy()
     xsum := 0.0
     for i := 0; i < bN; i++ {
-        xsum += float64(i) + 1.0
+        xsum += float64(i)
+        X0.Add(xsum, i)
+        X1.Add(xsum, -(i+1))
+    }
+    X2 := X0.Copy()
+    X3 := X0.Copy()
+
+    t.Logf("-- SOLVE NON-UNIT ---\n")
+    solveForwardTest(t, A, X0, false, A.Rows(), A.Rows())
+    t.Logf("-- SOLVE UNIT ---\n")
+    A.Diag().SetIndexes(1.0)
+    solveForwardTest(t, A, X1, true, A.Rows(), A.Rows())
+
+    t.Logf("-- SOLVE NON-UNIT BACKWARD ---\n")
+    solveBackwardTest(t, At, X2, false, At.Rows(), At.Rows())
+    t.Logf("-- SOLVE UNIT BACKWARD ---\n")
+    At.Diag().SetIndexes(1.0)
+    solveBackwardTest(t, At, X3, true, At.Rows(), At.Rows())
+}
+
+func TestSolveBlockedSmall(t *testing.T) {
+    Adata := [][]float64{
+        []float64{1.0, 0.0, 0.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 0.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 5.0}}
+
+    A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
+    X0 := matrix.FloatWithValue(A.Rows(), 1, 1.0)
+    X2 := X0.Copy()
+    xsum := 0.0
+    for i := 0; i < A.Rows(); i++ {
+        xsum += float64(i)
         X0.Add(xsum, i)
         X2.Add(xsum, -(i+1))
     }
-    X0.Mul(Z)
-    X1 := X0.Copy()
-    X2.Mul(Z)
-    X3 := X2.Copy()
-    At := A.Transpose()
-    Ar := A.FloatArray()
-    Xr := X1.FloatArray()
-
-    t.Logf("X0=\n%v\n", X0)
-    t.Logf("Z=\n%v\n", Z)
-    blas.TrsvFloat(A, X0, linalg.OptLower)
-    t.Logf("blas: X0\n%v\n", X0)
-
-    DSolveFwd(Xr, Ar, 1, A.LeadingIndex(), bN, bN)
-    t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
-    t.Logf("X1:\n%v\n", X1)
-
-    t.Logf("X2=\n%v\n", X2)
-    //t.Logf("At=\n%v\n", At)
-    blas.TrsvFloat(At, X2, linalg.OptUpper)
-    t.Logf("blas: X2\n%v\n", X2)
-
-    Xr = X3.FloatArray()
-    Ar = At.FloatArray()
-    DSolveBackwd(Xr, Ar, 1, At.LeadingIndex(), bN, bN)
-    t.Logf("X2 == X1: %v\n", X2.AllClose(X3))
-    t.Logf("X3:\n%v\n", X3)
-
+    t.Logf("-- SOLVE NON-UNIT ---\n")
+    solveForwardTest(t, A, X0, false, A.Rows(), 4)
+    
+    t.Logf("-- SOLVE UNIT ---\n")
+    A.Diag().SetIndexes(1.0)
+    solveForwardTest(t, A, X2, true, A.Rows(), 4)
 }
+
+func TestSolveRandom(t *testing.T) {
+    bN := 22
+    A := matrix.FloatNormalSymmetric(bN, matrix.Lower)
+    X0 := matrix.FloatWithValue(A.Rows(), 1, 1.0)
+    t.Logf("-- SOLVE NON-UNIT ---\n")
+    solveForwardTest(t, A, X0, false, bN, 4)
+}
+
 
 func tridiagSmall(t *testing.T, unit bool) {
     //bM := 5
@@ -752,11 +818,11 @@ func tridiagSmall(t *testing.T, unit bool) {
 
 }
 
-func TestTridiagNonUnitSmall(t *testing.T) {
+func _TestTridiagNonUnitSmall(t *testing.T) {
     tridiagSmall(t, false) 
 }
 
-func TestTridiagUnitSmall(t *testing.T) {
+func _TestTridiagUnitSmall(t *testing.T) {
     tridiagSmall(t, true) 
 }
 

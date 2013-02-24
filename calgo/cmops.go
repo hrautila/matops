@@ -163,7 +163,7 @@ func DSymmRank2MV(A, X, Y []float64, alpha float64, flags Flags, ldA, incX, incY
 }
 
 
-func DSolveFwd(X, A []float64, incX, ldA, N, NB int) {
+func DSolveFwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -171,14 +171,18 @@ func DSolveFwd(X, A []float64, incX, ldA, N, NB int) {
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
+    var flags Flags = LOWER
+    if unit {
+        flags |= UNIT
+    }
     C.dmvec_solve_unb(
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
-        C.int(LOWER), C.int(N))
+        C.int(flags), C.int(N))
 
 }
 
-func DSolveBackwd(X, A []float64, incX, ldA, N, NB int) {
+func DSolveFwdBlocked(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -186,10 +190,33 @@ func DSolveBackwd(X, A []float64, incX, ldA, N, NB int) {
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
+    var flags Flags = LOWER
+    if unit {
+        flags |= UNIT
+    }
+    C.dmvec_solve_blocked(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.int(flags), C.int(N), C.int(NB))
+
+}
+
+func DSolveBackwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
+    var Xv C.mvec_t
+    var Am C.mdata_t
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    var flags Flags = UPPER
+    if unit {
+        flags |= UNIT
+    }
     C.dmvec_solve_unb(
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
-        C.int(UPPER), C.int(N))
+        C.int(flags), C.int(N))
 
 }
 
