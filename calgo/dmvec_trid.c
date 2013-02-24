@@ -53,7 +53,8 @@ _dmvec_trid_dot_backward(double *Xc, const double *Ac, int unit,
 {
   // Y is 
   register int i;
-  register double *xr, xtmp;
+  register double *xr;
+  double xtmp;
   register const double *Ar, *Acl;
 
   // lower diagonal matrix (transposed) of nRE rows/cols and vector X of length nRE
@@ -107,7 +108,8 @@ _dmvec_trid_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ld
 {
   // Y is 
   register int i;
-  register double *xr, xtmp;
+  register double *xr;
+  double xtmp;
   register const double *Ar;
 
   xr = Xc;
@@ -163,7 +165,6 @@ void dmvec_trid_blocked(mvec_t *X, const mdata_t *A, double alpha, int flags, in
   if (flags & MTX_UPPER) {
     for (i = 0; i < N; i += NB) {
       nI = N - i < NB ? N - i : NB;
-      // solve forward using Y values 
       _dmvec_trid_axpy_forward(&X->md[i], &A->md[i*A->step+i], unit, X->inc, A->step, nI);
     }
   }
