@@ -220,6 +220,25 @@ func DSolveBackwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
+func DSolveBackwdBlocked(X, A []float64, unit bool, incX, ldA, N, NB int) {
+    var Xv C.mvec_t
+    var Am C.mdata_t
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    var flags Flags = UPPER
+    if unit {
+        flags |= UNIT
+    }
+    C.dmvec_solve_blocked(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.int(flags), C.int(N), C.int(NB))
+
+}
+
 func DTrimvFwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t

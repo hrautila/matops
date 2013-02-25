@@ -606,7 +606,11 @@ func solveBackwardTest(t *testing.T, A, X0 *matrix.FloatMatrix, unit bool, bN, b
 
     Xr = X1.FloatArray()
     Ar = A.FloatArray()
-    DSolveBackwd(Xr, Ar, unit,  1, A.LeadingIndex(), bN, bN)
+    if bN == bNB {
+        DSolveBackwd(Xr, Ar, unit,  1, A.LeadingIndex(), bN, bN)
+    } else {
+        DSolveBackwdBlocked(Xr, Ar, unit,  1, A.LeadingIndex(), bN, bNB)
+    }
     t.Logf("X1 == X0: %v\n", X1.AllClose(X0))
     if bN < 8 {
         t.Logf("X0:\n%v\n", X0)
@@ -614,7 +618,7 @@ func solveBackwardTest(t *testing.T, A, X0 *matrix.FloatMatrix, unit bool, bN, b
 }
 
 
-func _TestSolveSmall(t *testing.T) {
+func TestSolveSmall(t *testing.T) {
     Adata := [][]float64{
         []float64{1.0, 0.0, 0.0, 0.0, 0.0},
         []float64{1.0, 2.0, 0.0, 0.0, 0.0},
@@ -677,9 +681,17 @@ func TestSolveBlockedSmall(t *testing.T) {
 func TestSolveRandom(t *testing.T) {
     bN := 22
     A := matrix.FloatNormalSymmetric(bN, matrix.Lower)
+    At := A.Transpose()
     X0 := matrix.FloatWithValue(A.Rows(), 1, 1.0)
-    t.Logf("-- SOLVE NON-UNIT ---\n")
+    X1 := X0.Copy()
+    X2 := X0.Copy()
+    t.Logf("-- BLOCKED SOLVE FORWARD NON-UNIT ---\n")
     solveForwardTest(t, A, X0, false, bN, 4)
+    t.Logf("-- BLOCKED SOLVE FORWARD UNIT ---\n")
+    A.Diag().SetIndexes(1.0)
+    solveForwardTest(t, A, X1, true, bN, 4)
+    t.Logf("-- BLOCKED SOLVE BACKWARD NON-UNIT ---\n")
+    solveBackwardTest(t, At, X2, false, bN, 4)
 }
 
 
