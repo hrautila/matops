@@ -31,6 +31,7 @@ var randomData bool
 var check bool
 var verbose bool
 var asGflops bool
+var asEps bool
 var singleTest bool
 var nWorker int
 var testName string
@@ -50,6 +51,7 @@ func init() {
     flag.BoolVar(&check, "C", false, "Check result against reference (gemm).")
     flag.BoolVar(&verbose, "v", false, "Be verbose.")
     flag.BoolVar(&asGflops, "g", false, "Report as Gflops.")
+    flag.BoolVar(&asEps, "e", false, "Report as result elements per second.")
     flag.BoolVar(&randomData, "R", true, "Generate random data.")
     flag.BoolVar(&singleTest, "s", false, "Run single test run for given matrix sizes.")
     flag.IntVar(&testCount, "n", 5, "Number of test runs.")
@@ -185,7 +187,15 @@ func main() {
             }
         }
         //sec, _ := mperf.SingleTest(testName, testFunc, M, N, P, check, verbose)
-        fmt.Printf("%vs\n", tm.Seconds())
+        if asGflops {
+            gflops := 2.0*float64(int64(M)*int64(N)*int64(P))/tm.Seconds() * 1e-9
+            fmt.Printf("%.4f Gflops\n", gflops)
+        } else if asEps {
+            eps := float64(int64(M)*int64(N))/tm.Seconds()
+            fmt.Printf("%.4f Eps\n", eps)
+        } else {
+            fmt.Printf("%vs\n", tm.Seconds())
+        }
         return
     } 
 
@@ -194,13 +204,17 @@ func main() {
         sizes = parseSizeList(sizeList)
     }
     times := mperf.MultipleSizeTests(testFunc, sizes, testCount, verbose)
-    if asGflops {
+    if asGflops || asEps {
         if verbose {
             fmt.Printf("calculating Gflops ...\n")
         }
         for sz := range times {
             n := int64(sz)
-            times[sz] = 2.0*float64(n*n) / times[sz] * 1e-9
+            if asGflops {
+                times[sz] = 2.0*float64(n*n) / times[sz] * 1e-9
+            } else {
+                times[sz] = float64(n) / times[sz]
+            }
         }
     }
     // print out as python dictionary
