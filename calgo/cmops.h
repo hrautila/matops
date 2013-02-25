@@ -129,9 +129,13 @@ dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N);
 extern void
 dmvec_solve_blocked(mvec_t *X, const mdata_t *A, int flags, int N, int NB);
 
-// for TRMV
+// for TRMV (unblocked)
 extern void
 dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N);
+
+// for TRMM (unblocked)
+extern void
+dmmat_trid_unb(mdata_t *B, const mdata_t *A, int flags, int N, int S, int L);
 
 #endif
 

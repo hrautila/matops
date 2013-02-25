@@ -13,6 +13,51 @@
 #include "inner_vec_axpy.h"
 #include "inner_vec_dot.h"
 
+/*
+  A: N*N, lower          X: N*1
+     A00 | a01 | A02       x0
+     ---------------      ----   
+     a10 | a11 | a12       x1
+     ---------------      ----
+     A20 | a21 | A22       x2
+
+   i = n: dimensions,
+       a11 = 1*1, a10 = 1*n, a01 = n*1, a12 = N-(n+1)*1, A00 = n*n
+       x1  = 1*1, x0  = n*1, x2  = N-(n+1)*1  
+
+   A02, a12, a01 are zeros, A00, A22 are lower tridiagonal
+
+   if A lower, notrans:
+      if A diagonal is NON-UNIT:
+          x0 = x0 + a01*x1; (V2) x1 = x1/a11 + a12*x0.T
+          x1 = x1/a11     
+      else
+          x0 = x0 + a01*x1; (V2) x1 = x1 + a12*x0.T
+
+    else if A lower, transA
+      if A diagonal is NON-UNIT:
+          x1 = x1 + a21*x0.T
+          x1 = x1/a11
+      else
+          x1 = x1 + a21*x0.T
+
+   if A upper, notrans
+      if A diagonal is NON-UNIT:
+          x2 = x2 + a21*x1
+          x1 = x1/a11
+      else
+          x2 = x2 + a21*x1
+
+   else if A, upper, transA
+      if A diagonal is NON-UNIT:
+          x1 = x1/a11 + a21.T*x2
+      else
+          x1 = x1 + a21.T*x2
+
+   I am suspicions of the above!!!, the code below produces correct result,
+   checked against ATLAS trmv.
+ */
+
 // Functions here implement various versions of TRMV operation.
 
 // Calculates backward a diagonal block and updates Xc values from last to first.

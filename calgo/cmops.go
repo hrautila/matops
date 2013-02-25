@@ -315,6 +315,26 @@ func DTrimvBackwdTransA(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
+func DTrmmFwd(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+    var Bm C.mdata_t
+    var Am C.mdata_t
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    var flags Flags = UPPER
+    if unit {
+        flags |= UNIT
+    }
+    C.dmmat_trid_unb(
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.int(flags), C.int(N), C.int(S), C.int(L))
+
+}
+
+
 /*
 func copy_trans(C, A []float64, ldC, ldA, M, N int) {
     var Cr *C.double

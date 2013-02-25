@@ -838,6 +838,40 @@ func _TestTridiagUnitSmall(t *testing.T) {
     tridiagSmall(t, true) 
 }
 
+func trmmForward(t *testing.T, A *matrix.FloatMatrix, unit bool) {
+    B0 := matrix.FloatWithValue(A.Rows(), 2, 1.0)
+    B1 := B0.Copy()
+    diag := linalg.OptNonUnit
+    if unit {
+        diag = linalg.OptUnit
+    }
+
+    blas.TrmmFloat(A, B0, 1.0, linalg.OptUpper, diag)
+    if A.Rows() < 8 {
+        t.Logf("1. A(lower), blas(lower): B0 = A*B0\n%v\n", B0)
+    }
+
+    Ar := A.FloatArray()
+    Br := B1.FloatArray()
+    DTrmmFwd(Br, Ar, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
+    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
+    if A.Rows() < 8 {
+        t.Logf("1. A(lower), B1(fwd): B1 = A*B1\n%v\n", B1)
+    }
+}
+
+func TestTrmm(t *testing.T) {
+    //bN := 5
+    Adata := [][]float64{
+        []float64{1.0, 0.0, 0.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 0.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 0.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 5.0}}
+
+    A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
+    trmmForward(t, A.Transpose(), false)
+}
 
 // Local Variables:
 // tab-width: 4

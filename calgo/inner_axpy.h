@@ -11,7 +11,7 @@
 
 // This will do efectively AXPY C[:,i] = w * A[:,k] + C[:,i] where w = alpha * B[k,i] 
 static inline
-void _inner_daxpyn(double *Cr, const double *Ar, const double *Br, double alpha, int m)
+void _inner_daxpy(double *Cr, const double *Ar, const double *Br, double alpha, int m)
 {
   register int i, k;
   register double cf;
@@ -35,7 +35,7 @@ void _inner_daxpyn(double *Cr, const double *Ar, const double *Br, double alpha,
 }
 
 static inline
-void _inner_daxpy2n(double *Cr0, double *Cr1, const double *Ar,
+void _inner_daxpy2(double *Cr0, double *Cr1, const double *Ar,
                    const double *Br0, const double *Br1, double alpha, int m)
 {
   register int i, k;
@@ -76,7 +76,7 @@ void _inner_daxpy2n(double *Cr0, double *Cr1, const double *Ar,
 
 // This will do efectively AXPY C[:,i] = w * A[:,k] + C[:,i] where w = alpha * B[k,i] 
 static inline
-void _inner_daxpy_ssen(double *Cr, const double *Ar, const double *Br, double alpha, int m)
+void _inner_daxpy_sse(double *Cr, const double *Ar, const double *Br, double alpha, int m)
 {
   register int i, k;
   register double cf;
@@ -113,7 +113,7 @@ void _inner_daxpy_ssen(double *Cr, const double *Ar, const double *Br, double al
 }
 
 static inline
-void _inner_daxpy2_ssen(double *c0, double *c1, const double *Ar,
+void _inner_daxpy2_sse(double *c0, double *c1, const double *Ar,
                        const double *b0, const double *b1, double alpha, int m)
 {
   register int i, k;
