@@ -14,54 +14,49 @@
 #include "inner_vec_dot.h"
 
 /*
-  A: N*N, lower          X: N*1
-     A00 | a01 | A02       x0
-     ---------------      ----   
-     a10 | a11 | a12       x1
-     ---------------      ----
-     A20 | a21 | A22       x2
-
    i = n: dimensions,
        a11 = 1*1, a10 = 1*n, a01 = n*1, a12 = N-(n+1)*1, A00 = n*n
        x1  = 1*1, x0  = n*1, x2  = N-(n+1)*1  
 
-   A02, a12, a01 are zeros, A00, A22 are lower tridiagonal
+ TRMV UPPER, TRANSA
 
-   if A lower, notrans:
-      if A diagonal is NON-UNIT:
-          x0 = x0 + a01*x1; (V2) x1 = x1/a11 + a12*x0.T
-          x1 = x1/a11     
-      else
-          x0 = x0 + a01*x1; (V2) x1 = x1 + a12*x0.T
+     A00 :  0  |  0        x0
+     ---------------      ----   
+     a10 : a11 |  0        x1
+     ===============      ====
+     A20 : a12 | A22       x2
 
-    else if A lower, transA
-      if A diagonal is NON-UNIT:
-          x1 = x1 + a21*x0.T
-          x1 = x1/a11
-      else
-          x1 = x1 + a21*x0.T
-
-   if A upper, notrans
-      if A diagonal is NON-UNIT:
-          x2 = x2 + a21*x1
-          x1 = x1/a11
-      else
-          x2 = x2 + a21*x1
-
-   else if A, upper, transA
-      if A diagonal is NON-UNIT:
-          x1 = x1/a11 + a21.T*x2
-      else
-          x1 = x1 + a21.T*x2
-
+   if A diagonal is NON-UNIT:
+       x1 = x1 + a10*x0.T
+       x1 = x1/a11
+   else
+       x1 = x1 + a21*x0.T
    I am suspicions of the above!!!, the code below produces correct result,
    checked against ATLAS trmv.
  */
 
 // Functions here implement various versions of TRMV operation.
 
-// Calculates backward a diagonal block and updates Xc values from last to first.
-// Updates are calculated in breadth first manner by with successive AXPY operations.
+
+/*
+
+ TRMV LOWER, NOTRANS
+
+     A00 |  0  :  0        x0
+     ===============      ====        Xt
+     a10 | a11 :  0        x1   ---> ----
+     ---------------      ----        Xl
+     A20 | a12 : A22       x2
+
+   if A diagonal is NON-UNIT:
+       x2 = x2 + a12*x1
+       x1 = x1/a11
+   else
+       x2 = x2 + a12*x1
+
+ Calculates backward a diagonal block and updates Xc values from last to first.
+ Updates are calculated in breadth first manner by with successive AXPY operations.
+ */
 static void
 _dmvec_trid_axpy_backward(double *Xc, const double *Ac, int unit,
                           int incX, int ldA, int nRE)
@@ -90,6 +85,25 @@ _dmvec_trid_axpy_backward(double *Xc, const double *Ac, int unit,
   }
 }
 
+/*
+ TRMV LOWER, TRANSA
+
+   A: N*N, upper          X: N*1
+
+     A00 | a01 : A02       x0
+     ===============      ====   
+      0  | a11 : a12       x1
+     ---------------      ----
+      0  |  0  : A22       x2
+
+   if A diagonal is NON-UNIT:
+       x1 = x1/a11 + a01*x0.T;
+   else
+       x1 = x1 + a01*x0.T;
+
+ Calculate forward a diagonal block and updates x0 values from first to last.
+ x0 updated in breadth first manner with successive AXPY operations.
+ */
 // Calculates backward a diagonal block and updates Xc values from last to first.
 // Updates are calculated in depth first manner with DOT operations.
 static void
@@ -112,7 +126,7 @@ _dmvec_trid_dot_backward(double *Xc, const double *Ac, int unit,
     Ar = Ac + i; // move on diagonal
 
     // update all x-values below with the current A column and current X
-    xtmp = unit ? 1.0 : 0.0;
+    xtmp = unit ? xr[0] : 0.0;
     _inner_vec_ddot(&xtmp, 1, Acl, Xc, incX, 1.0, nRE-unit-i);
     xr[0] = xtmp;
 
@@ -122,7 +136,26 @@ _dmvec_trid_dot_backward(double *Xc, const double *Ac, int unit,
   }
 }
 
-// Calculate forward a diagonal block and updates Xc values from first to last.
+/*
+ TRMV UPPER, NOTRANS
+
+   A: N*N, upper          X: N*1
+
+     A00 : a01 | A02       x0
+     ---------------      ----   
+      0  : a11 | a12       x1
+     ===============      ====
+      0  :  0  | A22       x2
+
+   if A diagonal is NON-UNIT:
+       x0 = x0 + a01*x1;
+       x1 = x1/a11     
+   else
+       x0 = x0 + a01*x1;
+
+ Calculate forward a diagonal block and updates x0 values from first to last.
+ x0 updated in breadth first manner with successive AXPY operations.
+ */
 static void
 _dmvec_trid_axpy_forward(double *Xc, const double *Ac, double unit,
                          int incX, int ldA, int nRE)
@@ -147,7 +180,24 @@ _dmvec_trid_axpy_forward(double *Xc, const double *Ac, double unit,
   }
 }
 
-// Calculate forward a diagonal block and updates Xc values from first to last.
+/*
+  TRMV LOWER, TRANSA
+
+     A00 :  0  |  0        x0
+     ---------------      ----   
+     a10 : a11 |  0        x1
+     ===============      ====
+     A20 : a21 | A22       x2
+
+   if A diagonal is NON-UNIT:
+       x1 = x1/a11 + a21*x2.T
+   else
+       x1 = x1 + a21*x2.T
+
+ Calculate forward a diagonal block and updates Xc values from first to last.
+ The code below does it right, in comparison to ATLAS, but there is something
+ fishy, lower tridiagonal transposed is same as upper tridiagonal.
+ */
 static void
 _dmvec_trid_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ldA, int nRE)
 {
@@ -162,7 +212,7 @@ _dmvec_trid_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ld
   for (i = 0; i < nRE; i++) {
     Ar = Ac + i + unit;
     // update all previous x-values with current A column and current X
-    xtmp = unit ? 1.0 : 0.0;
+    xtmp = unit ? xr[0] : 0.0;
     _inner_vec_ddot(&xtmp, 1, Ar, xr, incX, 1.0, nRE-unit-i);
     xr[0] = xtmp;
     // next X, next column in A 
@@ -179,6 +229,9 @@ void dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N)
   // indicates if diagonal entry is unit (=1.0) or non-unit.
   int unit = flags & MTX_UNIT ? 1 : 0;
 
+  if (N <= 0) {
+    return;
+  }
   if (flags & MTX_UPPER) {
     if (flags & MTX_TRANSA) {
       _dmvec_trid_dot_backward(X->md, A->md, unit, X->inc, A->step, N);
@@ -202,6 +255,9 @@ void dmvec_trid_blocked(mvec_t *X, const mdata_t *A, double alpha, int flags, in
   // indicates if diagonal entry is unit (=1.0) or non-unit.
   int unit = flags & MTX_UNIT ? 1 : 0;
 
+  if (N <= 0) {
+    return;
+  }
   if (NB <= 0) {
     NB = 68;
   }
