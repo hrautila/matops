@@ -358,6 +358,10 @@ void dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
   int i, j, nI, nJ, a_aligned, y_aligned, x_aligned, lda_even;
 
 
+  if (L - S <= 0 || E - R <= 0) {
+    return;
+  }
+
   a_aligned = ((uintptr_t)A->md & 0xF);
   lda_even = (A->step & 0x1) == 0;
 

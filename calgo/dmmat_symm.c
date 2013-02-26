@@ -183,6 +183,10 @@ void dmult_symm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
 {
   int i, j, nI, nJ;
 
+  if (L-S <= 0 || E-R <= 0) {
+    return;
+  }
+
   // restrict block sizes as data is copied to aligned buffers of predefined max sizes.
   if (NB > MAX_NB_DDOT || NB <= 0) {
     NB = MAX_NB_DDOT;

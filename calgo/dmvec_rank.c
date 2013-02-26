@@ -241,6 +241,9 @@ void dmvec_symv_rank(mdata_t *A, const mvec_t *X,  double alpha, int flags,
 {
   int i, j, nI, nJ, sR, sE;
 
+  if (L-S <= 0) {
+    return;
+  }
   if (NB <= 0) {
     NB = L - S;
   }
@@ -291,6 +294,10 @@ void dmvec_symv_rank2(mdata_t *A, const mvec_t *X,  const mvec_t *Y,
                       int S, int L, int NB)
 {
   int i, j, nI, nJ, sR, sE;
+
+  if (L - S <= 0) {
+    return;
+  }
 
   if (NB <= 0) {
     NB = L - S;

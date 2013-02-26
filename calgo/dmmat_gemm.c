@@ -158,6 +158,11 @@ void dmult_mm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
 {
   int i, j, nI, nJ;
 
+  if (L-S <= 0 || E-R <= 0) {
+    // nothing to do, zero columns or rows
+    return;
+  }
+
   // restrict block sizes as data is copied to aligned buffers of predefined max sizes.
   if (NB > MAX_VP_ROWS || NB <= 0) {
     NB = MAX_VP_ROWS;
