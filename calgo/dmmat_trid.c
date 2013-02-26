@@ -71,25 +71,26 @@ _dmmat_trid_dot_backward(double *Bc, const double *Ac, int unit,
 {
   // Y is 
   register int i, j;
-  register double *b0, *Bcl;
+  register double *b0, *b1, *Bcl;
   double xtmp;
   register const double *Ar, *Acl;
 
-  // lower diagonal matrix (transposed) of nRE rows/cols and vector X of length nRE
-  // we do it really forward!! unlike the _axpy method above.
+  // lower diagonal matrix (transposed) of nRE rows/cols and matrix B of size nRE*nC
   Acl = Ac + (nRE-1)*ldA;
   Bcl = Bc + nRE - 1;
 
   // xr is the current X element, Ar is row in current A column.
   for (i = 0; i < nRE; i++) {
-    Ar = Ac + i; // move on diagonal
-    b0 = Bcl;
+    //Ar = Ac + i; // move on diagonal
+    b1 = Bcl;
+    b0 = Bc;
     for (j = 0; j < nC; j++) {
       // update all x-values below with the current A column and current X
-      xtmp = unit ? 1.0 : 0.0;
+      xtmp = unit ? b1[0] : 0.0;
       _inner_ddot(&xtmp, Acl, b0, 1.0, nRE-unit-i);
-      b0[0] = xtmp;
+      b1[0] = xtmp;
       b0 += ldB;
+      b1 += ldB;
     }
 
     // previous row in B, previous column in A 
@@ -136,22 +137,25 @@ _dmmat_trid_dot_forward(double *Bc, const double *Ac, int unit,
 {
   // Y is 
   register int i, j;
-  register double *b0;
+  register double *b0, *b1, *Bcr;
   double xtmp;
   register const double *Ar;
-
+  Bcr = Bc;
   for (i = 0; i < nRE; i++) {
     Ar = Ac + i + unit;
-    b0 = Bc;
+    b0 = Bcr;
+    //b1 = Bcr;
     // update all previous B-values with current A column and current b
-    for (j = 0; i < nC; j++) {
-      xtmp = unit ? 1.0 : 0.0;
+    for (j = 0; j < nC; j++) {
+      //printf("i=%d, j=%d\n", i, j);
+      xtmp = unit ? b0[0] : 0.0;
       _inner_ddot(&xtmp, Ar, b0, 1.0, nRE-unit-i);
       b0[0] = xtmp;
       b0 += ldB;
+      //b1 += ldB;
     }
     // next row in B, next column in A 
-    Bc++;
+    Bcr++;
     Ac += ldA;
   }
 }
