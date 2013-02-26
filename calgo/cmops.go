@@ -163,7 +163,7 @@ func DSymmRank2MV(A, X, Y []float64, alpha float64, flags Flags, ldA, incX, incY
 }
 
 
-func DSolveFwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
+func DSolveLower(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -182,7 +182,7 @@ func DSolveFwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DSolveFwdBlocked(X, A []float64, unit bool, incX, ldA, N, NB int) {
+func DSolveLowerBlocked(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -201,7 +201,7 @@ func DSolveFwdBlocked(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DSolveBackwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
+func DSolveUpper(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -220,7 +220,7 @@ func DSolveBackwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DSolveBackwdBlocked(X, A []float64, unit bool, incX, ldA, N, NB int) {
+func DSolveUpperBlocked(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -239,7 +239,7 @@ func DSolveBackwdBlocked(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DTrimvFwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
+func DTrimvUpper(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -258,7 +258,7 @@ func DTrimvFwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DTrimvFwdTransA(X, A []float64, unit bool, incX, ldA, N, NB int) {
+func DTrimvUpperTransA(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -277,7 +277,7 @@ func DTrimvFwdTransA(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DTrimvBackwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
+func DTrimvLower(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -296,7 +296,7 @@ func DTrimvBackwd(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DTrimvBackwdTransA(X, A []float64, unit bool, incX, ldA, N, NB int) {
+func DTrimvLowerTransA(X, A []float64, unit bool, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -315,7 +315,7 @@ func DTrimvBackwdTransA(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DTrmmFwd(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+func DTrmmUpper(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
     var Bm C.mdata_t
     var Am C.mdata_t
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
@@ -324,6 +324,63 @@ func DTrmmFwd(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
     Am.step = C.int(ldA)
 
     var flags Flags = UPPER
+    if unit {
+        flags |= UNIT
+    }
+    C.dmmat_trid_unb(
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.int(flags), C.int(N), C.int(S), C.int(L))
+
+}
+
+func DTrmmUpperTransA(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+    var Bm C.mdata_t
+    var Am C.mdata_t
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    var flags Flags = UPPER|TRANSA
+    if unit {
+        flags |= UNIT
+    }
+    C.dmmat_trid_unb(
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.int(flags), C.int(N), C.int(S), C.int(L))
+
+}
+
+func DTrmmLower(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+    var Bm C.mdata_t
+    var Am C.mdata_t
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    var flags Flags = LOWER
+    if unit {
+        flags |= UNIT
+    }
+    C.dmmat_trid_unb(
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.int(flags), C.int(N), C.int(S), C.int(L))
+
+}
+
+func DTrmmLowerTransA(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+    var Bm C.mdata_t
+    var Am C.mdata_t
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    var flags Flags = LOWER|TRANSA
     if unit {
         flags |= UNIT
     }

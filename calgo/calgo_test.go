@@ -579,9 +579,9 @@ func solveForwardTest(t *testing.T, A, X0 *matrix.FloatMatrix, unit bool, bN, bN
     }
 
     if bN == bNB {
-        DSolveFwd(Xr, Ar, unit, 1, A.LeadingIndex(), bN, bN)
+        DSolveLower(Xr, Ar, unit, 1, A.LeadingIndex(), bN, bN)
     } else {
-        DSolveFwdBlocked(Xr, Ar, unit, 1, A.LeadingIndex(), bN, bNB)
+        DSolveLowerBlocked(Xr, Ar, unit, 1, A.LeadingIndex(), bN, bNB)
     }
     t.Logf("X0 == X1: %v\n", X0.AllClose(X1))
     if bN < 8 {
@@ -592,8 +592,6 @@ func solveForwardTest(t *testing.T, A, X0 *matrix.FloatMatrix, unit bool, bN, bN
 
 func solveBackwardTest(t *testing.T, A, X0 *matrix.FloatMatrix, unit bool, bN, bNB int) {
     X1 := X0.Copy()
-    Ar := A.FloatArray()
-    Xr := X1.FloatArray()
 
     if bN < 8 {
         t.Logf("A=\n%v\n", A)
@@ -604,16 +602,16 @@ func solveBackwardTest(t *testing.T, A, X0 *matrix.FloatMatrix, unit bool, bN, b
         t.Logf("blas: X0\n%v\n", X0)
     }
 
-    Xr = X1.FloatArray()
-    Ar = A.FloatArray()
+    Ar := A.FloatArray()
+    Xr := X1.FloatArray()
     if bN == bNB {
-        DSolveBackwd(Xr, Ar, unit,  1, A.LeadingIndex(), bN, bN)
+        DSolveUpper(Xr, Ar, unit,  1, A.LeadingIndex(), bN, bN)
     } else {
-        DSolveBackwdBlocked(Xr, Ar, unit,  1, A.LeadingIndex(), bN, bNB)
+        DSolveUpperBlocked(Xr, Ar, unit,  1, A.LeadingIndex(), bN, bNB)
     }
     t.Logf("X1 == X0: %v\n", X1.AllClose(X0))
     if bN < 8 {
-        t.Logf("X0:\n%v\n", X0)
+        t.Logf("X1:\n%v\n", X1)
     }
 }
 
@@ -663,6 +661,7 @@ func TestSolveBlockedSmall(t *testing.T) {
 
     A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
     X0 := matrix.FloatWithValue(A.Rows(), 1, 1.0)
+    X1 := X0.Copy()
     X2 := X0.Copy()
     xsum := 0.0
     for i := 0; i < A.Rows(); i++ {
@@ -672,10 +671,11 @@ func TestSolveBlockedSmall(t *testing.T) {
     }
     t.Logf("-- SOLVE NON-UNIT ---\n")
     solveForwardTest(t, A, X0, false, A.Rows(), 4)
+    solveBackwardTest(t, A.Transpose(), X2, false, A.Rows(), 4)
     
     t.Logf("-- SOLVE UNIT ---\n")
     A.Diag().SetIndexes(1.0)
-    solveForwardTest(t, A, X2, true, A.Rows(), 4)
+    solveForwardTest(t, A, X1, true, A.Rows(), 4)
 }
 
 func TestSolveRandom(t *testing.T) {
@@ -736,7 +736,7 @@ func tridiagSmall(t *testing.T, unit bool) {
 
     Ar := Al.FloatArray()
     Xr := X1.FloatArray()
-    DTrimvFwd(Xr, Ar, unit, 1, Al.LeadingIndex(), bN, bN)
+    DTrimvUpper(Xr, Ar, unit, 1, Al.LeadingIndex(), bN, bN)
     t.Logf("   X0 == X1: %v\n", X0.AllClose(X1))
     t.Logf("   A(lower), X1(fwd) = Al*X1:\n%v\n", X1)
     
@@ -748,7 +748,7 @@ func tridiagSmall(t *testing.T, unit bool) {
 
     Ar = Au.FloatArray()
     Xr = X1.FloatArray()
-    DTrimvFwd(Xr, Ar, unit, 1, Au.LeadingIndex(), bN, bN)
+    DTrimvUpper(Xr, Ar, unit, 1, Au.LeadingIndex(), bN, bN)
     t.Logf("   X0 == X1: %v\n", X0.AllClose(X1))
     t.Logf("   A(upper), X1(fwd) = Au*X1:\n%v\n", X1)
 
@@ -759,7 +759,7 @@ func tridiagSmall(t *testing.T, unit bool) {
 
     Ar = Al.FloatArray()
     Xr = X1.FloatArray()
-    DTrimvBackwd(Xr, Ar, unit, 1, Al.LeadingIndex(), bN, bN)
+    DTrimvLower(Xr, Ar, unit, 1, Al.LeadingIndex(), bN, bN)
     t.Logf("   X0 == X1: %v\n", X0.AllClose(X1))
     t.Logf("   A(lower), X1(backwd) = Al*X1:\n%v\n", X1)
 
@@ -770,7 +770,7 @@ func tridiagSmall(t *testing.T, unit bool) {
 
     Ar = Au.FloatArray()
     Xr = X1.FloatArray()
-    DTrimvBackwd(Xr, Ar, unit, 1, Au.LeadingIndex(), bN, bN)
+    DTrimvLower(Xr, Ar, unit, 1, Au.LeadingIndex(), bN, bN)
     t.Logf("   X0 == X1: %v\n", X0.AllClose(X1))
     t.Logf("   A(upper), X1(backwd) = Au*X1:\n%v\n", X1)
 
@@ -788,7 +788,7 @@ func tridiagSmall(t *testing.T, unit bool) {
 
     Ar = Au_T.FloatArray()
     Xr = X1.FloatArray()
-    DTrimvFwdTransA(Xr, Ar, unit, 1, Au_T.LeadingIndex(), bN, bN)
+    DTrimvUpperTransA(Xr, Ar, unit, 1, Au_T.LeadingIndex(), bN, bN)
     t.Logf("   X0 == X1: %v\n", X0.AllClose(X1))
     t.Logf("   A(upper).T, X1(fwd,trans) = Au.T*X1:\n%v\n", X1)
 
@@ -800,7 +800,7 @@ func tridiagSmall(t *testing.T, unit bool) {
 
     Ar = Au_T.FloatArray()
     Xr = X1.FloatArray()
-    DTrimvBackwdTransA(Xr, Ar, unit, 1, Au_T.LeadingIndex(), bN, bN)
+    DTrimvLowerTransA(Xr, Ar, unit, 1, Au_T.LeadingIndex(), bN, bN)
     t.Logf("   X0 == X1: %v\n", X0.AllClose(X1))
     t.Logf("   A(upper).T, X1(backwd,transA) = Au.T*X1:\n%v\n", X1)
 
@@ -812,7 +812,7 @@ func tridiagSmall(t *testing.T, unit bool) {
 
     Ar = Al_T.FloatArray()
     Xr = X1.FloatArray()
-    DTrimvBackwdTransA(Xr, Ar, unit, 1, Al.LeadingIndex(), bN, bN)
+    DTrimvLowerTransA(Xr, Ar, unit, 1, Al.LeadingIndex(), bN, bN)
     t.Logf("   X0 == X1: %v\n", X0.AllClose(X1))
     t.Logf("   A(lower).T, X1(backwd,trans) = Al.T*X1:\n%v\n", X1)
 
@@ -824,7 +824,7 @@ func tridiagSmall(t *testing.T, unit bool) {
 
     Ar = Al_T.FloatArray()
     Xr = X1.FloatArray()
-    DTrimvFwdTransA(Xr, Ar, unit, 1, Al_T.LeadingIndex(), bN, bN)
+    DTrimvUpperTransA(Xr, Ar, unit, 1, Al_T.LeadingIndex(), bN, bN)
     t.Logf("   X0 == X1: %v\n", X0.AllClose(X1))
     t.Logf("   A(lower).T, X1(fwd,trans) = Al.T*X1:\n%v\n", X1)
 
@@ -838,8 +838,8 @@ func _TestTridiagUnitSmall(t *testing.T) {
     tridiagSmall(t, true) 
 }
 
-func trmmForward(t *testing.T, A *matrix.FloatMatrix, unit bool) {
-    B0 := matrix.FloatWithValue(A.Rows(), 2, 1.0)
+func trmmUpper(t *testing.T, A *matrix.FloatMatrix, unit bool) {
+    B0 := matrix.FloatWithValue(A.Rows(), 2, 2.0)
     B1 := B0.Copy()
     diag := linalg.OptNonUnit
     if unit {
@@ -848,15 +848,81 @@ func trmmForward(t *testing.T, A *matrix.FloatMatrix, unit bool) {
 
     blas.TrmmFloat(A, B0, 1.0, linalg.OptUpper, diag)
     if A.Rows() < 8 {
-        t.Logf("1. A(lower), blas(lower): B0 = A*B0\n%v\n", B0)
+        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
     }
 
     Ar := A.FloatArray()
     Br := B1.FloatArray()
-    DTrmmFwd(Br, Ar, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
+    DTrmmUpper(Br, Ar, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
     t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
     if A.Rows() < 8 {
-        t.Logf("1. A(lower), B1(fwd): B1 = A*B1\n%v\n", B1)
+        t.Logf("  DTrmmUpper: B1 = A*B1\n%v\n", B1)
+    }
+}
+
+func trmmUpperTransA(t *testing.T, A *matrix.FloatMatrix, unit bool) {
+    B0 := matrix.FloatWithValue(A.Rows(), 2, 2.0)
+    B1 := B0.Copy()
+    diag := linalg.OptNonUnit
+    if unit {
+        diag = linalg.OptUnit
+    }
+
+    blas.TrmmFloat(A, B0, 1.0, linalg.OptUpper, linalg.OptTransA, diag)
+    if A.Rows() < 8 {
+        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
+    }
+
+    Ar := A.FloatArray()
+    Br := B1.FloatArray()
+    DTrmmUpperTransA(Br, Ar, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
+    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
+    if A.Rows() < 8 {
+        t.Logf("  DTrmmUpperTransA: B1 = A*B1\n%v\n", B1)
+    }
+}
+
+func trmmLower(t *testing.T, A *matrix.FloatMatrix, unit bool) {
+    B0 := matrix.FloatWithValue(A.Rows(), 2, 2.0)
+    B1 := B0.Copy()
+    diag := linalg.OptNonUnit
+    if unit {
+        diag = linalg.OptUnit
+    }
+
+    blas.TrmmFloat(A, B0, 1.0, linalg.OptLower, diag)
+    if A.Rows() < 8 {
+        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
+    }
+
+    Ar := A.FloatArray()
+    Br := B1.FloatArray()
+    DTrmmLower(Br, Ar, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
+    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
+    if A.Rows() < 8 {
+        t.Logf("  DTrmmLower: B1 = A*B1\n%v\n", B1)
+    }
+}
+
+func trmmLowerTransA(t *testing.T, A *matrix.FloatMatrix, unit bool) {
+    B0 := matrix.FloatWithValue(A.Rows(), 2, 2.0)
+    B1 := B0.Copy()
+    diag := linalg.OptNonUnit
+    if unit {
+        diag = linalg.OptUnit
+    }
+
+    blas.TrmmFloat(A, B0, 1.0, linalg.OptLower, linalg.OptTransA, diag)
+    if A.Rows() < 8 {
+        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
+    }
+
+    Ar := A.FloatArray()
+    Br := B1.FloatArray()
+    DTrmmLowerTransA(Br, Ar, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
+    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
+    if A.Rows() < 8 {
+        t.Logf("  DTrmmLowerTransA: B1 = A*B1\n%v\n", B1)
     }
 }
 
@@ -870,7 +936,23 @@ func TestTrmm(t *testing.T) {
         []float64{1.0, 2.0, 3.0, 4.0, 5.0}}
 
     A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
-    trmmForward(t, A.Transpose(), false)
+    t.Logf("-- TRMM-UPPER, NON-UNIT ---")
+    trmmUpper(t, A.Transpose(), false)
+    t.Logf("-- TRMM-UPPER, NON-UNIT, MATRIX-LOWER ---")
+    trmmUpper(t, A, false)
+    t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
+    trmmUpperTransA(t, A, false)
+    t.Logf("-- TRMM-LOWER, NON-UNIT ---")
+    trmmLower(t, A, false)
+    t.Logf("-- TRMM-LOWER, NON-UNIT, MATRIX-UPPER ---")
+    trmmLower(t, A.Transpose(), false)
+    t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
+    trmmLowerTransA(t, A, false)
+    A.Diag().SetIndexes(1.0)
+    t.Logf("-- TRMM-UPPER, UNIT, TRANSA ---")
+    trmmUpperTransA(t, A, true)
+    t.Logf("-- TRMM-LOWER, UNIT, TRANSA ---")
+    trmmLowerTransA(t, A, true)
 }
 
 // Local Variables:
