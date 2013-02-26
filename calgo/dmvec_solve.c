@@ -131,19 +131,16 @@ void dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N)
 
 /*
   A: N*N, lower          X: N*1
-     A00 | A01 | A02       X0    Y0
-     ---------------      ----  ----
-     A10 | A11 | A12       X1    Y1
-     ---------------      ----  ----
-     A20 | A21 | A22       X2    Y2
+
+     A00 :  0  |  0        X0 
+     ---------------      ----
+     A10 : A11 |  0        X1 
+     ===============      ====
+     A20 : A21 | A22       X2 
 
    i = k: dimensions,
        A11 = n*n, A10 = n*k, A01 = k*n, A12 = N-(n+k)*n, A00 = k*k
        X1  = n*1, X0  = k*1, X2  = N-(n+k)*1  
-       Y1  = n*1, Y0  = k*1, Y2  = N-(n+k)*1  
-
-   A02, A12 are zeros, A00, A22 are lower tridiagonal
-
 
    Lower Variant 0:
         X1 = X1 - A10*X0
@@ -153,6 +150,17 @@ void dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N)
         solve_forward_unb(X1, A11)
         X2 = X2 - A21 * X1
 
+   UPPER
+
+     A00 | A01 : A02       X0 
+     ===============      ====
+      0  | A11 : A12       X1 
+     ---------------      ----
+      0  |  0  : A22       X2 
+
+   Lower Variant 2:
+        solve_forward_unb(X1, A11)
+        X0 = X0 - A01 * X1
 */
 void dmvec_solve_blocked(mvec_t *X, const mdata_t *A, int flags, int N, int NB)
 {
@@ -191,19 +199,20 @@ void dmvec_solve_blocked(mvec_t *X, const mdata_t *A, int flags, int N, int NB)
       dmult_gemv_blocked(&X2, &A21, &X1, -1.0, 1.0, 0, 0, nI, 0, N-nR, 0, 0);
     }
   } else {
+    int n;
     nR = N;
-    for (i = N-NB; i > 0; i -= NB) {
-      nI = i < 0 ? i+NB : NB;
-      i  = i < 0 ? 0 : i;
+    for (i = N; i > 0; i -= NB) {
+      nI = i < NB ? i : NB;
+      n  = i < NB? 0 : i-NB;
 
       // Solve forward curent block
-      X1.md = &X->md[i*X->inc];
-      A11.md = &A->md[i*A->step+i];
+      X1.md = &X->md[n*X->inc];
+      A11.md = &A->md[n*A->step+n];
       _dmvec_solve_backward(X1.md, A11.md, unit, X->inc, A->step, nI);
       nR -= nI;
 
-      // update X2 with new solutions.
-      A01.md = &A->md[i*A->step];
+      // update X0 with new solutions.
+      A01.md = &A->md[n*A->step];
       //printf("A01:\n"); print_tile(A01.md, A21.step, nR, nI);
       dmult_gemv_blocked(&X0, &A01, &X1, -1.0, 1.0, 0, 0, nI, 0, nR, 0, 0);
     }
