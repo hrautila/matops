@@ -220,15 +220,15 @@ INLINE void _inner_ddot2_2_sse3(double *Cr0, double *Cr1,
  update:
   C0_0 = C0_0 * ALP;
   C1_0 = C1_0 * ALP;
-  //F0 = _mm_hadd_pd(C0_0, C1_0);
-  //Cr0[0] += F0[1];
-  //Cr1[0] += F0[0];
+  F0 = _mm_hadd_pd(C0_0, C1_0);
+  Cr0[0] += F0[0];
+  Cr1[0] += F0[1];
 
   C0_1 = C0_1 * ALP;
   C1_1 = C1_1 * ALP;
   F1 = _mm_hadd_pd(C0_1, C1_1);
-  Cr0[1] += F1[1];
-  Cr1[1] += F1[0];
+  Cr0[1] += F1[0];
+  Cr1[1] += F1[1];
 }
 
 
@@ -267,8 +267,8 @@ INLINE void _inner_ddot2_sse3(double *Cr0, double *Cr1, const double *Ar,
   C0 = C0 * ALP;
   C1 = C1 * ALP;
   F0 = _mm_hadd_pd(C0, C1);
-  Cr0[0] += F0[1];
-  Cr1[0] += F0[0];
+  Cr0[0] += F0[0];
+  Cr1[0] += F0[1];
 }
 
 INLINE void _inner_ddot_sse(double *Cr, const double *Ar,
