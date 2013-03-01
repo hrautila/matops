@@ -194,8 +194,10 @@ void colcpy4_trans(double * __restrict dst, int ldD,
 }
 
 
+// Copy upper tridiagonal and fill lower part to form full symmetric matrix
+// result is symmetric matrix A and A = A.T
 static inline
-void colcpy_fill_low(double *dst, int ldD, const double *src, int ldS, int nR, int nC)
+void colcpy_fill_low(double *dst, int ldD, const double *src, int ldS, int nR, int nC, int unit)
 {
   //assert(nR == nC);
   register double *Dcu, *Dcl, *Drl, *Dru;
@@ -215,15 +217,17 @@ void colcpy_fill_low(double *dst, int ldD, const double *src, int ldS, int nR, i
       Dru++; 
       Drl += ldD;
     }
-    *Dru = *Sr;         // copy the diagonal entry
-    Sc += ldS;          // next column in source
-    Dcu += ldD;         // next column for upper triagonal
-    Dcl++;              // next row for lower triagonal
+    *Dru = unit ? 1.0 : *Sr;  // copy the diagonal entry
+    Sc += ldS;                // next column in source
+    Dcu += ldD;               // next column for upper triagonal
+    Dcl++;                    // next row for lower triagonal
   }
 }
 
+// Copy lower tridiagonal and fill upper part to form full symmetric matrix;
+// result is symmetric matrix A and A = A.T
 static inline
-void colcpy_fill_up(double *dst, int ldD, const double *src, int ldS, int nR, int nC)
+void colcpy_fill_up(double *dst, int ldD, const double *src, int ldS, int nR, int nC, int unit)
 {
   //assert(nR == nC);
   register double *Dcu, *Dcl, *Drl, *Dru;
@@ -239,7 +243,7 @@ void colcpy_fill_up(double *dst, int ldD, const double *src, int ldS, int nR, in
     // start of data on column, j'th row (diagonal entry)
     Sr = Sc + j;
     // diagonal entry
-    *Dru = *Sr;
+    *Dru = unit ? 1.0 : *Sr;
     Sr++;
     Dru += ldD;
     Drl++;     
@@ -259,6 +263,81 @@ void colcpy_fill_up(double *dst, int ldD, const double *src, int ldS, int nR, in
     Dcl += ldD;
   }
 }
+
+
+
+
+// Transpose upper tridiagonal to fill lower part and fill dst upper part with zeros.
+// Result is lower tridiagonal matrix with zero upper part.
+static inline
+void colcpy_trans_upper_and_zero(double *dst, int ldD, const double *src,
+                                 int ldS, int nR, int nC, int unit)
+{
+  //assert(nR == nC);
+  register double *Dcu, *Dcl, *Drl, *Dru;
+  register const double *Sc, *Sr;
+  register int j, i;
+  Dcu = dst; Sc = src;
+  Dcl = dst;
+  // fill dst row and column at the same time, following src columns
+  for (j = 0; j < nC; j++) {
+    Dru = Dcu;
+    Drl = Dcl;
+    Sr = Sc;
+    for (i = 0; i < j; i++) {
+      *Dru = 0.0;
+      *Drl = *Sr;
+      Sr++;
+      Dru++; 
+      Drl += ldD;
+    }
+    // copy the diagonal entry or set to 1.0
+    *Dru = unit ? 1.0 : *Sr;
+    Sc += ldS;          // next column in source
+    Dcu += ldD;         // next column for upper triagonal
+    Dcl++;              // next row for lower triagonal
+  }
+}
+
+static inline
+void colcpy_trans_lower_and_zero(double *dst, int ldD, const double *src,
+                                 int ldS, int nR, int nC, int unit)
+{
+  //assert(nR == nC);
+  register double *Dcu, *Dcl, *Drl, *Dru;
+  register const double *Sc, *Sr;
+  register int j, i;
+  Dcu = dst; Sc = src;
+  Dcl = dst;
+  // fill dst row and column at the same time, following src columns
+  for (j = 0; j < nC; j++) {
+    // start at same point and diverge down (Drl) and right (Dru)
+    Dru = Dcu + j;
+    Drl = Dcl + j;
+    // start of data on column, j'th row (diagonal entry)
+    Sr = Sc + j;
+    // diagonal entry
+    *Dru = unit ? 1.0 : *Sr;
+    Sr++;
+    Dru += ldD;
+    Drl++;     
+    // off diagonal entries
+    for (i = 1; i < nC-j; i++) {
+      *Dru = *Sr;
+      *Drl = 0.0;
+      Sr++;
+      Dru += ldD;       // next column in row
+      Drl++;            // next row in column 
+    }
+    // NEXT column in source
+    Sc += ldS;
+    // next column for upper triagonal
+    Dcu += ldD;
+    // next column for lower triagonal
+    Dcl += ldD;
+  }
+}
+
 
 #endif
 
