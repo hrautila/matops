@@ -63,6 +63,8 @@ void _dblock_ddot_sse(double *Cc, const double *Aroot, const double *Bc, double 
     c1 = c0 + ldC;
     for (i = 0; i < nRE; i++) {
       _inner_ddot2_sse3(c0, c1, Ac, Br0, Br1, alpha, nVP);
+      //_inner_ddot_sse(c0, Ac, Br0, alpha, nVP);
+      //_inner_ddot_sse(c1, Ac, Br1, alpha, nVP);
       Ac += ldA;
       c0++;
       c1++;
@@ -183,6 +185,113 @@ void dmult_mm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
       //printf("post: C=\n"); print_tile(C->md, C->step, E-R, L-S);
     }
   }
+}
+
+
+// Second version; assumes C is correct destination block i.e C->md points to C[R, E];
+// and that A->md is start of A panel and B->md is start of B panel.
+// Acpy and Bcpy are correctly aligned data buffers to which A, B are copied and
+// transposed if necessary. Size parameters are not checked against copy buffer
+// sizes, they are assumed to be correct.
+void _dblock_mult_panel(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                        double alpha, int flags, 
+                        int nP, int nSL, int nRE, int vlen, cbuf_t *Acpy, cbuf_t *Bcpy)
+{
+  int vpS, vpL, nC, nB, nA;
+  const double *Bc, *Ac, *AvpS;
+
+  if (vlen > nP) {
+    vlen = nP;
+  }
+  vpS = 0;
+  vpL = vlen < nP ? vlen : nP;
+
+  while (vpS < nP) {
+    nB = vpL-vpS;
+    nB += (nB & 0x1);
+    nA = nB;
+
+    // transpose A, B on copy to be able to DOT operations.
+    if (flags & MTX_TRANSB) {
+      Bc = &B->md[vpS*B->step];
+      colcpy4_trans(Bcpy->data, nB, Bc, B->step, nSL, vpL-vpS);
+    } else {
+      Bc = &B->md[vpS];
+      colcpy(Bcpy->data, nB, Bc, B->step, vpL-vpS, nSL);
+    }
+
+    if (flags & MTX_TRANSA) {
+      AvpS = &A->md[vpS];
+      colcpy(Acpy->data, nA, AvpS, A->step, vpL-vpS, nRE);
+    } else {
+      AvpS = &A->md[vpS*A->step];
+      colcpy4_trans(Acpy->data, nA, AvpS, A->step, nRE, vpL-vpS);
+    }
+
+    _dblock_ddot_sse(C->md, Acpy->data, Bcpy->data, alpha, C->step, nA, nB, nSL, nRE, vpL-vpS);
+
+    vpS = vpL;
+    vpL += vlen;
+    if (vpL > nP) {
+      vpL = nP;
+    }
+  }
+}
+
+
+void dmult_mm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                       double alpha, double beta, int flags,
+                       int P, int S, int L, int R, int E, 
+                       int vlen, int NB, int MB)
+{
+  int i, j, nI, nJ;
+  double Abuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(16)));
+  double Bbuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(16)));
+  cbuf_t Acpy = {Abuf, MAX_VP_ROWS*MAX_VP_COLS};
+  cbuf_t Bcpy = {Bbuf, MAX_VP_ROWS*MAX_VP_COLS};
+  mdata_t Ablk, Bblk, Cblk;
+
+  if (L-S <= 0 || E-R <= 0) {
+    // nothing to do, zero columns or rows
+    return;
+  }
+
+  Ablk.step = A->step;
+  Bblk.step = B->step;
+  Cblk.step = C->step;
+
+  // restrict block sizes as data is copied to aligned buffers of predefined max sizes.
+  if (NB > MAX_VP_ROWS || NB <= 0) {
+    NB = MAX_VP_ROWS;
+  }
+  if (MB > MAX_VP_COLS || MB <= 0) {
+    MB = MAX_VP_COLS;
+  }
+  if (vlen > MAX_VP_ROWS || vlen <= 0) {
+    vlen = MAX_VP_ROWS;
+  }
+
+  for (j = S; j < L; j += NB) {
+    nJ = L - j < NB ? L - j : NB;
+    Bblk.md = flags & MTX_TRANSB ? &B->md[j] : &B->md[j*B->step];
+    
+    for (i = R; i < E; i += MB) {
+      nI = E - i < MB ? E - i : MB;
+
+      // update block starting points;
+      Cblk.md = &C->md[j*C->step+i];
+      Ablk.md = flags & MTX_TRANSA ? &A->md[i*A->step] : &A->md[i];
+
+      dscale_tile(Cblk.md, Cblk.step, beta, nI, nJ);
+      _dblock_mult_panel(&Cblk, &Ablk, &Bblk, alpha, flags, P, nJ, nI, vlen, &Acpy, &Bcpy);
+    }
+  }
+}
+
+// Cij += alpha * Aik * Bkj
+void dblock_ddot(mdata_t *C, mdata_t* A, mdata_t *B, double alpha, int nSL, int nRE, int nVP)
+{
+  _dblock_ddot_sse(C->md, A->md, B->md, alpha, C->step, A->step, B->step, nSL, nRE, nVP);
 }
 
 // Local Variables:
