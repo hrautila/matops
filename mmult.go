@@ -15,6 +15,19 @@ import (
     //"fmt"
 )
 
+type Flags int
+const (
+    TRANSA = calgo.TRANSA
+    TRANSB = calgo.TRANSB
+    LOWER  = calgo.LOWER
+    UPPER  = calgo.UPPER
+    LEFT   = calgo.LEFT
+    RIGHT  = calgo.RIGHT
+    UNIT   = calgo.UNIT
+    NOTRANS = calgo.NOTRANS
+    NONE   = calgo.NOTRANS
+)
+    
 // blocking parameter size for AXPY based algorithms
 var vpLenAxpy int = 48
 var nBaxpy int = 256
@@ -116,6 +129,33 @@ func scheduleWork(colworks, rowworks, cols, rows int, worker task) {
         nready += <- ch
     }
 }
+
+func MMMult2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+    psize := C.NumElements()
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    Cr := C.FloatArray()
+    ldC := C.LeadingIndex()
+
+    if nWorker <= 1 || psize <= limitOne {
+        calgo.DMult2(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
+            0, C.Cols(), 0, C.Rows(),
+            vpLenDot, nBdot, mBdot)
+        return nil
+    } 
+    // here we have more than one worker available
+    worker := func(cstart, cend, rstart, rend int, ready chan int) {
+        calgo.DMult2(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
+            cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
+        ready <- 1
+    }
+    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
+    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
+    return nil
+}
+
 
 // Calculate C = alpha*A*B + beta*C, C is M*N, A is M*P and B is P*N
 func MMMult(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
