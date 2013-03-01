@@ -59,6 +59,28 @@ func DMult(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, P
         C.int(H), C.int(NB), C.int(MB))
 }
 
+func DMult2(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
+
+    var Cm C.mdata_t
+    var Am C.mdata_t
+    var Bm C.mdata_t
+
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmult_mm_blocked2(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta), C.int(trans),
+        C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
+
 
 func DMultSymm(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
 
@@ -74,6 +96,28 @@ func DMultSymm(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ld
     Bm.step = C.int(ldB)
 
     C.dmult_symm_blocked(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta), C.int(flags),
+        C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
+        C.int(H), C.int(NB), C.int(MB))
+}
+
+func DMultSymm2(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
+
+    var Cm C.mdata_t
+    var Am C.mdata_t
+    var Bm C.mdata_t
+
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmult_symm_blocked2(
         (*C.mdata_t)(unsafe.Pointer(&Cm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
@@ -315,7 +359,7 @@ func DTrimvLowerTransA(X, A []float64, unit bool, incX, ldA, N, NB int) {
 
 }
 
-func DTrmmUpper(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+func DTrmmUpper(B, A []float64, alpha float64, unit bool, ldB, ldA, N, S, L int) {
     var Bm C.mdata_t
     var Am C.mdata_t
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
@@ -330,11 +374,11 @@ func DTrmmUpper(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
     C.dmmat_trid_unb(
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
-        C.int(flags), C.int(N), C.int(S), C.int(L))
+        C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(L))
 
 }
 
-func DTrmmUpperTransA(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+func DTrmmUpperTransA(B, A []float64, alpha float64, unit bool, ldB, ldA, N, S, L int) {
     var Bm C.mdata_t
     var Am C.mdata_t
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
@@ -349,11 +393,11 @@ func DTrmmUpperTransA(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
     C.dmmat_trid_unb(
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
-        C.int(flags), C.int(N), C.int(S), C.int(L))
+        C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(L))
 
 }
 
-func DTrmmLower(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+func DTrmmLower(B, A []float64, alpha float64, unit bool, ldB, ldA, N, S, L int) {
     var Bm C.mdata_t
     var Am C.mdata_t
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
@@ -368,11 +412,11 @@ func DTrmmLower(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
     C.dmmat_trid_unb(
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
-        C.int(flags), C.int(N), C.int(S), C.int(L))
+        C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(L))
 
 }
 
-func DTrmmLowerTransA(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
+func DTrmmLowerTransA(B, A []float64, alpha float64, unit bool, ldB, ldA, N, S, L int) {
     var Bm C.mdata_t
     var Am C.mdata_t
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
@@ -387,7 +431,7 @@ func DTrmmLowerTransA(B, A []float64, unit bool, ldB, ldA, N, S, L int) {
     C.dmmat_trid_unb(
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
-        C.int(flags), C.int(N), C.int(S), C.int(L))
+        C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(L))
 
 }
 

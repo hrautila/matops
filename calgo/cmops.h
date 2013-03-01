@@ -13,13 +13,14 @@
 
 enum {
   MTX_NOTRANS = 0,
-  MTX_TRANSA = 0x1,
-  MTX_TRANSB = 0x2,
-  MTX_LOWER  = 0x4,
-  MTX_UPPER  = 0x8,
-  MTX_LEFT   = 0x10,
-  MTX_RIGHT  = 0x20,
-  MTX_UNIT   = 0x40
+  MTX_TRANSA  = 0x1,
+  MTX_TRANSB  = 0x2,
+  MTX_LOWER   = 0x4,
+  MTX_UPPER   = 0x8,
+  MTX_LEFT    = 0x10,
+  MTX_RIGHT   = 0x20,
+  MTX_UNIT    = 0x40,
+  MTX_NOSCALE = 0x800
 };
   
 // multiples of 4 but not powers of 2
@@ -55,6 +56,11 @@ typedef struct mvec {
   int inc;
 } mvec_t;
 
+typedef struct cbuf_t {
+  double *data;
+  int nelems;
+} cbuf_t;
+
 extern void *memcpy(void *, const void *, size_t);
 
 
@@ -81,6 +87,10 @@ extern void
 vpur_daxpy(double *Cc, const double *Aroot, const double *Bc, double alpha,
                 int ldC, int ldA, int ldB, int nSL, int nRE, int nVP);
 
+extern void
+_dblock_mult_tile(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                  double alpha, int flags, 
+                  int nP, int nSL, int nRE, int vlen, cbuf_t *Acpy, cbuf_t *Bcpy);
 
 
 
@@ -90,12 +100,24 @@ dmult_mm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
                  int P, int S, int L, int R, int E, 
                  int vlen, int NB, int MB);
 
+extern void
+dmult_mm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                  double alpha, double beta, int flags,
+                  int P, int S, int L, int R, int E, 
+                  int vlen, int NB, int MB);
+
 
 extern void 
 dmult_symm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
                    double alpha, double beta, int flags,
                    int P, int S, int L, int R, int E,
                    int vlen, int NB, int MB);
+
+extern void 
+dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                    double alpha, double beta, int flags,
+                    int P, int S, int L, int R, int E,
+                    int vlen, int NB, int MB);
 
 
 // matrix-vector: Y = alpha*A*X + beta*Y
@@ -135,7 +157,7 @@ dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N);
 
 // for TRMM (unblocked)
 extern void
-dmmat_trid_unb(mdata_t *B, const mdata_t *A, int flags, int N, int S, int L);
+dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int L);
 
 #endif
 
