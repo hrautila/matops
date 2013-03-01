@@ -14,25 +14,59 @@
 #include "inner_vec_dot.h"
 
 /*
-   i = n: dimensions,
-       a11 = 1*1, a10 = 1*n, a01 = n*1, a12 = N-(n+1)*1, A00 = n*n
-       x1  = 1*1, x0  = n*1, x2  = N-(n+1)*1  
+ TRMV UPPER:
 
- TRMV UPPER, TRANSA
-
-     A00 :  0  |  0        x0
+     A00 : a01 | A02       x0
      ---------------      ----   
-     a10 : a11 |  0        x1
+      0  : a11 | a12       x1
      ===============      ====
-     A20 : a12 | A22       x2
+      0  :  0  | A22       x2
 
-   if A diagonal is NON-UNIT:
-       x1 = x1 + a10*x0.T
-       x1 = x1/a11
-   else
-       x1 = x1 + a21*x0.T
-   I am suspicions of the above!!!, the code below produces correct result,
-   checked against ATLAS trmv.
+   x0 = A00*x0 + a01*x1 + A02*x2
+   x1 =          a11*x1 + a12*x2
+   x2 =                   A22*x2
+
+   x0 not needed for x2; start from top breadth first; update x0 with current
+   column [a01; a11], then update x1
+
+   AXPY version: (axpy_forward)
+     x0 = x0 + a01*x1
+     x1 = a11*x1 
+
+   UPPER, TRANSA
+
+     A00 |  0  :  0        x0
+     ===============      ====   
+     a10 | a11 :  0        x1
+     ---------------      ----
+     A20 | a12 : A22       x2
+
+   A00 = A00, a01 == a10, A02 == A20, a12 == a21
+   
+   x0 not need for x2; do depth first from bottom to top.
+
+   DOT version: (ddot_backward)
+     x1 = a11*x11 + a12*x2.T
+
+
+ TRMV LOWER
+
+     A00 |  0  :  0        x0
+     ===============      ====        Xt
+     a10 | a11 :  0        x1   ---> ----
+     ---------------      ----        Xl
+     A20 | a12 : A22       x2
+
+     x0 = A00*x0
+     x1 = a10*x0 + a11*x11 
+     x2 = A20*x0 + a12*x11 + A22*x2
+
+     x2 not needed for x1, start backward from bottom
+     
+     AXPY version (axpy_backward)
+       x2 = x2 + a12*x2.T
+       x1 = a11*x11
+
  */
 
 // Functions here implement various versions of TRMV operation.
@@ -43,19 +77,19 @@
  TRMV LOWER, NOTRANS
 
      A00 |  0  :  0        x0
-     ===============      ====        Xt
-     a10 | a11 :  0        x1   ---> ----
-     ---------------      ----        Xl
+     ===============      ====  
+     a10 | a11 :  0        x1   
+     ---------------      ----  
      A20 | a12 : A22       x2
 
-   if A diagonal is NON-UNIT:
-       x2 = x2 + a12*x1
-       x1 = x1/a11
-   else
-       x2 = x2 + a12*x1
+   x0 = A00*x0
+   x1 = a10*x0 + a11*x1
+   x2 = A20*x0 + a21*x1 + A22*x2
 
- Calculates backward a diagonal block and updates Xc values from last to first.
- Updates are calculated in breadth first manner by with successive AXPY operations.
+   x2 not needed for x1; start backward from bottom
+
+   Calculates backward a diagonal block and updates Xc values from last to first.
+   Updates are calculated in breadth first manner by with successive AXPY operations.
  */
 static void
 _dmvec_trid_axpy_backward(double *Xc, const double *Ac, int unit,
@@ -85,26 +119,7 @@ _dmvec_trid_axpy_backward(double *Xc, const double *Ac, int unit,
   }
 }
 
-/*
- TRMV LOWER, TRANSA
-
-   A: N*N, upper          X: N*1
-
-     A00 | a01 : A02       x0
-     ===============      ====   
-      0  | a11 : a12       x1
-     ---------------      ----
-      0  |  0  : A22       x2
-
-   if A diagonal is NON-UNIT:
-       x1 = x1/a11 + a01*x0.T;
-   else
-       x1 = x1 + a01*x0.T;
-
- Calculate forward a diagonal block and updates x0 values from first to last.
- x0 updated in breadth first manner with successive AXPY operations.
- */
-// Calculates backward a diagonal block and updates Xc values from last to first.
+// Calculates backward a diagonal block and updates Xc values from bottom to top.
 // Updates are calculated in depth first manner with DOT operations.
 static void
 _dmvec_trid_dot_backward(double *Xc, const double *Ac, int unit,
@@ -123,9 +138,9 @@ _dmvec_trid_dot_backward(double *Xc, const double *Ac, int unit,
 
   // xr is the current X element, Ar is row in current A column.
   for (i = 0; i < nRE; i++) {
-    Ar = Ac + i; // move on diagonal
+    //Ar = Ac + i; // move on diagonal
 
-    // update all x-values below with the current A column and current X
+    // update current x-value with the current A column and top
     xtmp = unit ? xr[0] : 0.0;
     _inner_vec_ddot(&xtmp, 1, Acl, Xc, incX, 1.0, nRE-unit-i);
     xr[0] = xtmp;
@@ -136,87 +151,54 @@ _dmvec_trid_dot_backward(double *Xc, const double *Ac, int unit,
   }
 }
 
-/*
- TRMV UPPER, NOTRANS
-
-   A: N*N, upper          X: N*1
-
-     A00 : a01 | A02       x0
-     ---------------      ----   
-      0  : a11 | a12       x1
-     ===============      ====
-      0  :  0  | A22       x2
-
-   if A diagonal is NON-UNIT:
-       x0 = x0 + a01*x1;
-       x1 = x1/a11     
-   else
-       x0 = x0 + a01*x1;
-
- Calculate forward a diagonal block and updates x0 values from first to last.
- x0 updated in breadth first manner with successive AXPY operations.
- */
+// Calculate forward a diagonal block and updates x0 values from first to last.
+// x0 updated in breadth first manner with successive AXPY operations.
 static void
 _dmvec_trid_axpy_forward(double *Xc, const double *Ac, double unit,
                          int incX, int ldA, int nRE)
 {
   // Y is 
   register int i;
-  register double *xr, xtmp;
-  register const double *Ar;
+  register double *X0, *x1;
+  register const double *a11;
 
   // upper diagonal matrix of nRE rows/cols and vector X, Y of length nRE
-  xr = Xc;
+  X0 = Xc;
+  x1 = Xc;
 
   // xr is the current X element, Ar is row in current A column.
   for (i = 0; i < nRE; i++) {
     // update all previous x-values with current A column and current X
-    _inner_vec_daxpy(Xc, incX, Ac, xr, incX, 1.0, i);
-    Ar = Ac + i;
-    xr[0] *= unit ? 1.0 : Ar[0];
+    _inner_vec_daxpy(X0, incX, Ac, x1, incX, 1.0, i);
+    a11 = Ac + i;
+    x1[0] *= unit ? 1.0 : a11[0];
     // next X, next column in A 
-    xr += incX;
+    x1 += incX;
     Ac += ldA;
   }
 }
 
-/*
-  TRMV LOWER, TRANSA
-
-     A00 :  0  |  0        x0
-     ---------------      ----   
-     a10 : a11 |  0        x1
-     ===============      ====
-     A20 : a21 | A22       x2
-
-   if A diagonal is NON-UNIT:
-       x1 = x1/a11 + a21*x2.T
-   else
-       x1 = x1 + a21*x2.T
-
- Calculate forward a diagonal block and updates Xc values from first to last.
- The code below does it right, in comparison to ATLAS, but there is something
- fishy, lower tridiagonal transposed is same as upper tridiagonal.
- */
+// Update X values from top to bottom; current x is inner product of current A [a11; a12]
+// column and current and following x values [x1; x2]
 static void
 _dmvec_trid_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ldA, int nRE)
 {
   // Y is 
   register int i;
-  register double *xr;
+  register double *x1;
   double xtmp;
-  register const double *Ar;
+  register const double *a11;
 
-  xr = Xc;
+  x1 = Xc;
   // xr is the current X element, Ar is row in current A column.
   for (i = 0; i < nRE; i++) {
-    Ar = Ac + i + unit;
-    // update all previous x-values with current A column and current X
-    xtmp = unit ? xr[0] : 0.0;
-    _inner_vec_ddot(&xtmp, 1, Ar, xr, incX, 1.0, nRE-unit-i);
-    xr[0] = xtmp;
+    a11 = Ac + i + unit;
+    // update current x-value with current A column and current and following X
+    xtmp = unit ? x1[0] : 0.0;
+    _inner_vec_ddot(&xtmp, 1, a11, x1, incX, 1.0, nRE-unit-i);
+    x1[0] = xtmp;
     // next X, next column in A 
-    xr += incX;
+    x1 += incX;
     Ac += ldA;
   }
 }
