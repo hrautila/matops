@@ -88,9 +88,9 @@ vpur_daxpy(double *Cc, const double *Aroot, const double *Bc, double alpha,
                 int ldC, int ldA, int ldB, int nSL, int nRE, int nVP);
 
 extern void
-_dblock_mult_tile(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                  double alpha, int flags, 
-                  int nP, int nSL, int nRE, int vlen, cbuf_t *Acpy, cbuf_t *Bcpy);
+_dblock_mult_panel(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                   double alpha, int flags, 
+                   int nP, int nSL, int nRE, int vlen, cbuf_t *Acpy, cbuf_t *Bcpy);
 
 
 
@@ -158,6 +158,10 @@ dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N);
 // for TRMM (unblocked)
 extern void
 dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int L);
+
+extern void
+dmmat_trmm_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
+               int N, int S, /*int L, int R,*/ int E, int NB);
 
 #endif
 
