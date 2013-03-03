@@ -156,6 +156,34 @@ func MMMult2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) erro
     return nil
 }
 
+func MMSymm2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+
+    if A.Rows() != A.Cols() {
+        return errors.New("A matrix not square matrix.");
+    }
+    psize := C.NumElements()
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    Cr := C.FloatArray()
+    ldC := C.LeadingIndex()
+
+    if nWorker <= 1 || psize <= limitOne {
+        calgo.DMultSymm2(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
+            A.Cols(),  0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
+        return nil
+    } 
+    // here we have more than one worker available
+    worker := func(cstart, cend, rstart, rend int, ready chan int) {
+        calgo.DMultSymm2(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
+            A.Cols(), cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
+        ready <- 1
+    }
+    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
+    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
+    return nil
+}
 
 // Calculate C = alpha*A*B + beta*C, C is M*N, A is M*P and B is P*N
 func MMMult(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
