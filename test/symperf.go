@@ -90,6 +90,16 @@ func CTestSymmUpper(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return fnc, A, B, C
 }
 
+func CTestSymmUpper2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormalSymmetric(m, matrix.Upper)
+    B = matrix.FloatNormal(m, n)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        matops.MMSymm2(C, A, B, 1.0, 1.0, matops.LEFT|matops.UPPER)
+    }
+    return fnc, A, B, C
+}
+
 func CTestSymmLower(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormalSymmetric(m, matrix.Lower)
     B = matrix.FloatNormal(m, n)
@@ -132,6 +142,7 @@ func CheckLower(A, B, C *matrix.FloatMatrix) {
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     // lowel tests: calgo interfaces
+    "SymmUpper2": CTestSymmUpper2,
     "SymmUpper": CTestSymmUpper,
     "SymmLower": CTestSymmLower,
     // blas interface reference tests
