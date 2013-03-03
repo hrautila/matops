@@ -219,20 +219,21 @@ void _dblock_mult_diag(mdata_t *C, const mdata_t *A, const mdata_t *B,
 {
   // assert (nSL == nRE)
   int unit = flags & MTX_UNIT ? 1 : 0;
-  int nA, nB;
+  int nA, nB, nAC;
 
   if (nP == 0)
     return;
 
   nA = nRE + (nRE & 0x1);
   nB = nA;
-
+  nAC = flags & MTX_RIGHT ? nSL : nRE;
+  
   if (flags & MTX_LOWER) {
     // upper part of source untouchable, copy diagonal block and fill upper part
-    colcpy_fill_up(Acpy->data, nA, A->md, A->step, nRE, nRE, unit);
+    colcpy_fill_up(Acpy->data, nA, A->md, A->step, nAC, nAC, unit);
   } else {
     // lower part of source untouchable, copy diagonal block and fill lower part
-    colcpy_fill_low(Acpy->data, nA, A->md, A->step, nRE, nRE, unit);
+    colcpy_fill_low(Acpy->data, nA, A->md, A->step, nAC, nAC, unit);
   }
 
   if (flags & MTX_RIGHT) {
@@ -254,8 +255,8 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
                          int P, int S, int L, int R, int E,
                          int vlen, int NB, int MB)
 {
-  int i, j, nI, nJ, aflags;
-  mdata_t A0, B0, C0;
+  int i, j, nI, nJ, flags1, flags2;
+  mdata_t A0, B0, C0, *Ap, *Bp;
   double Abuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(16)));
   double Bbuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(16)));
   cbuf_t Acpy = {Abuf, MAX_VP_ROWS*MAX_VP_COLS};
@@ -279,13 +280,14 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
   C0.step = C->step;
   A0.step = A->step;
   B0.step = B->step;
-  // A is square matrix: 
-  if (flags & MTX_RIGHT) {
-    
-  } else {
+
+  flags1 = 0;
+  flags2 = 0;
+
+  if (flags & MTX_LEFT) {
     /*
       P is A, B common dimension, e.g. P cols in A and P rows in B.
-
+    
       [R,R] [E,E] define block on A diagonal that divides A in three blocks
       if A is upper:
         A0 [0, R] [R, E]; B0 [0, S] [R, L] (R rows,cols in P); (A transposed)
@@ -298,6 +300,8 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
         
       C = A0*B0 + A1*B1 + A2*B2
     */
+    flags1 |= flags & MTX_UPPER ? MTX_TRANSA : 0;
+    flags2 |= flags & MTX_LOWER ? MTX_TRANSA : 0;
 
     for (i = R; i < E; i += MB) {
       nI = E - i < MB ? E - i : MB;
@@ -306,33 +310,76 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
       for (j = S; j < L; j += NB) {
         nJ = L - j < NB ? L - j : NB;
         C0.md = &C->md[j*C->step + i];
-
-        //printf("i: %d, j: %d, nI: %d, nJ: %d, A2.r: %d\n", i, j, nI, nJ, P-i-nI);
+      
         dscale_tile(C0.md, C0.step, beta, nI, nJ);
 
         // above|left diagonal
         A0.md = flags & MTX_UPPER ? &A->md[i*A->step] : &A->md[i];
         B0.md = &B->md[j*B->step];
-        //printf("..A0:\n"); print_tile(A0.md, A0.step, i, nI);
-        //printf("..B0:\n"); print_tile(B0.md, B0.step, i,  nJ);
-        aflags = flags & MTX_UPPER ? MTX_TRANSA : MTX_NOTRANS;
-        _dblock_mult_panel(&C0, &A0, &B0, alpha, aflags, i, nJ, nI, vlen, &Acpy, &Bcpy);
+        _dblock_mult_panel(&C0, &A0, &B0, alpha, flags1, i, nJ, nI, vlen, &Acpy, &Bcpy);
 
         // diagonal block
         A0.md = &A->md[i*A->step + i];
         B0.md = &B->md[j*B->step + i];
-        //printf("..A1:\n"); print_tile(A0.md, A0.step, nI, nI);
-        //printf("..B1:\n"); print_tile(B0.md, B0.step, nI,  nJ);
         _dblock_mult_diag(&C0, &A0, &B0, alpha, flags, nI, nJ, nI, vlen, &Acpy, &Bcpy);
 
         // right|below of diagonal
         A0.md = flags & MTX_UPPER ? &A->md[(i+nI)*A->step + i] : &A->md[i*A->step + i+nI];
         B0.md = &B->md[j*B->step + i+nI];
-        //printf("..A2:\n"); print_tile(A0.md, A0.step, nI, P-i-nI);
-        //printf("..B2:\n"); print_tile(B0.md, B0.step, P-i-nI, nJ);
-        aflags = flags & MTX_UPPER ? MTX_NOTRANS : MTX_TRANSA;
-        _dblock_mult_panel(&C0, &A0, &B0, alpha, aflags, P-i-nI, nJ, nI, vlen, &Acpy, &Bcpy);
-        //printf("..C:\n"); print_tile(C->md, C->step, E-R, L-S);
+        _dblock_mult_panel(&C0, &A0, &B0, alpha, flags2, P-i-nI, nJ, nI, vlen, &Acpy, &Bcpy);
+      }
+    }
+  } else {
+
+    /*
+      P is A, B common dimension, e.g. P cols in A and P rows in B.
+    
+      C = B * A;
+      [S,S] [L,L] define block on A diagonal that divides A in three blocks
+      if A is upper:
+        A0 [0, S] [S, S]; B0 [R, 0] [E, S] (R rows,cols in P); (A transposed)
+        A1 [S, S] [L, L]; B1 [R, S] [E, L] (E-R rows,cols in P)
+        A2 [S, L] [L, N]; B2 [R, L] [E, N] (N-E rows, cols in  P)
+      if A is LOWER:
+        A0 [S, 0] [S, S]; B0 [R, 0] [E, S]
+        A1 [S, S] [L, L]; B1 [R, S] [E, L] (diagonal block, fill_up);
+        A2 [L, S] [N, L]; B2 [R, L] [E, N] (A transpose)
+        
+      C = A0*B0 + A1*B1 + A2*B2
+    */
+
+    register int nR, nC, ic, ir;
+    flags1 = flags & MTX_TRANSB ? MTX_TRANSA : 0;
+    flags2 = flags & MTX_TRANSB ? MTX_TRANSA : 0;
+
+    flags1 |= flags & MTX_LOWER ? MTX_TRANSB : 0;
+    flags2 |= flags & MTX_UPPER ? MTX_TRANSB : 0;
+
+    for (ic = S; ic < L; ic += NB) {
+      nC = L - ic < NB ? L - ic : NB;
+
+      // for all rows of C, B ...
+      for (ir = R; ir < E; ir += MB) {
+        nR = E - ir < MB ? E - ir : MB;
+
+        C0.md = &C->md[ic*C->step + ir];
+      
+        dscale_tile(C0.md, C0.step, beta, nR, nC);
+
+        // above|left diagonal
+        A0.md = flags & MTX_UPPER ? &A->md[ic*A->step] : &A->md[ic];
+        B0.md = &B->md[ir];
+        _dblock_mult_panel(&C0, &B0, &A0, alpha, flags1, ic, nC, nR, vlen, &Acpy, &Bcpy);
+
+        // diagonal block
+        A0.md = &A->md[ic*A->step + ic];
+        B0.md = &B->md[ic*B->step+ir];
+        _dblock_mult_diag(&C0, &A0, &B0, alpha, flags, nC, nC, nR, vlen, &Acpy, &Bcpy);
+
+        // right|below of diagonal
+        A0.md = flags & MTX_UPPER ? &A->md[(ic+nC)*A->step + ic] : &A->md[ic*A->step +ic+nC];
+        B0.md = &B->md[(ic+nC)*B->step+ir];
+        _dblock_mult_panel(&C0, &B0, &A0, alpha, flags2, P-ic-nC, nC, nR, vlen, &Acpy, &Bcpy);
       }
     }
   }
