@@ -12,6 +12,7 @@
 #include "cmops.h"
 #include "inner_axpy.h"
 #include "inner_ddot.h"
+#include "inner_ddot_trans.h"
 
 /*
   A: N*N, lower          X: N*1
@@ -31,8 +32,25 @@
 
 // Functions here implement various versions of TRMV operation.
 
-// Calculates backward a diagonal block and updates Xc values from last to first.
-// Updates are calculated in breadth first manner by with successive AXPY operations.
+/*
+  B = A*B; A is lower
+
+    a00| 0 | 0   b00|b01
+    a10|a11| 0   b10|b11
+    a20|a21|a22  b20|b21
+
+  b00 = a00*b00
+  b01 = a00*b01
+  b10 = a10*b00 + a11*b10
+  b11 = a10*b01 + a11*b11
+  b20 = a20*b00 + a21*b10 + a22*b20
+  b21 = a20*b01 + a21*b11 + a22*b21
+
+  --> work it backwards as b12 & b02 are not needed for b11, b01, ...
+
+  Calculates backward a diagonal block and updates Xc values from last to first.
+  Updates are calculated in breadth first manner by with successive AXPY operations.
+ */
 static void
 _dmmat_trid_axpy_backward(double *Bc, const double *Ac, double alpha, int unit,
                           int ldB, int ldA, int nRE, int nC)
@@ -63,8 +81,25 @@ _dmmat_trid_axpy_backward(double *Bc, const double *Ac, double alpha, int unit,
   }
 }
 
-// Calculates backward a diagonal block and updates Xc values from last to first.
-// Updates are calculated in depth first manner with DOT operations.
+/*
+  B = A*B; A is upper, trans A
+
+    a00|a01|a02  b00|b01
+     0 |a11|a12  b10|b11
+     0 | 0 |a22  b20|b21
+
+  b00 = a00*b00 + a01*b10 + a02*b20
+  b01 = a00*b01 + a01*b11 + a02*b21
+  b10 =           a11*b10 + a12*b20
+  b11 =           a11*b11 + a12*b21
+  b20 =                     a22*b20
+  b21 =                     a22*b21
+
+  --> work it backwards with DOT products
+
+  Calculates backward a diagonal block and updates Xc values from last to first.
+  Updates are calculated in depth first manner with DOT operations.
+ */
 static void
 _dmmat_trid_dot_backward(double *Bc, const double *Ac, double alpha, int unit,
                          int ldB, int ldA, int nRE, int nC)
@@ -99,7 +134,25 @@ _dmmat_trid_dot_backward(double *Bc, const double *Ac, double alpha, int unit,
   }
 }
 
-// Calculate forward a diagonal block and updates Xc values from first to last.
+/*
+    B = A*B; A is upper
+
+      a00|a01|a02  b00|b01
+       0 |a11|a12  b10|b11
+       0 | 0 |a22  b20|b21
+
+    b00 = a00*b00 + a01*b10 + a02*b20
+    b10 =           a11*b10 + a12*b20
+    b20 =                     a22*b20
+    b01 = a00*b01 + a01*b11 + a02*b21
+    b11 =           a11*b11 + a12*b21
+    b21 =                     a22*b21
+
+    --> work it forwards as b00, b01 not need for later elements; AXPY
+
+ Calculate forward a diagonal block and updates Xc values from first to last.
+*/
+
 static void
 _dmmat_trid_axpy_forward(double *Bc, const double *Ac, double alpha, int unit,
                          int ldB, int ldA, int nRE, int nC)
@@ -160,6 +213,89 @@ _dmmat_trid_dot_forward(double *Bc, const double *Ac, double alpha, int unit,
   }
 }
 
+/*
+  for B = B*A; A is [nC, nC], B is [nRE, nC]
+  
+    b00|b01|b02  a00|a01|a02
+    b10|b11|b12   0 |a11|a12
+                  0 | 0 |a22
+
+    b00 = b00*a00
+    b10 = b10*a00
+    b01 = b00*a01 + a11*b01
+    b11 = b10*a01 + a11*b11
+    b02 = b00*a02 + a12*b01 + a22*b02
+    b12 = b10*a02 + a12*b11 + a22*b12
+    
+    --> work it backwards as b12 & b02 are not needed for b11, b01, ...
+*/
+static void
+_dmmat_trid_dot_bleft_backwd(double *Bc, const double *Ac, double alpha, int unit,
+                             int ldB, int ldA, int nRE, int nC)
+{
+  // Y is 
+  register int i, j;
+  register double *b0, *Br, *Bcl;
+  register const double *Ar, *Acl;
+  double btmp;
+
+  // last columns of A
+  Acl = Ac + (nC-1)*ldA;
+  Bcl = Bc + (nC-1)*ldB;
+  for (j = nC; j > 0; j--) {
+    Br = Bc;
+    b0 = Bcl;
+    // update all B-values with current A column and current B, AXPY
+    for (i = 0; i < nRE; i++) {
+      Ar = Acl;
+      btmp = unit ? alpha*b0[0] : 0.0;
+      // calculate dot-product following Ar column and Br row
+      _inner_ddot_trans(&btmp, Ar, Br, alpha, j-unit, ldB);
+      b0[0] = btmp;
+      b0++;
+      Br++;
+    }
+    // previous B column, previous A column
+    Bcl -= ldB;
+    Acl -= ldA;
+  }
+}
+
+static void
+_dmmat_trid_dot_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
+                          int ldB, int ldA, int nRE, int nC)
+{
+  // Y is 
+  register int i, j;
+  register double *b0, *Br, *Bcl;
+  register const double *Ar, *Acl;
+  double btmp;
+
+  // columns of A
+  Acl = Ac;
+  Bcl = Bc;
+  for (j = nC; j > 0; j--) {
+    Br = Bcl;
+    b0 = Bcl;
+    // update all B-values with current A column and current B, AXPY
+    for (i = 0; i < nRE; i++) {
+      Ar = Acl + nC - j;
+      //printf(".. i: %d, j: %d, Ar: %.1f, b0: %.1f\n", i, j, Ar[0], b0[0]);
+      btmp = 0.0;
+      // calculate dot-product following Ar column and Br row
+      _inner_ddot_trans(&btmp, Ar+unit, Br+unit, alpha, j-unit, ldB);
+      //printf(".. i: %d, j: %d, Ar: %.1f, b0: %.1f %.1f\n", i, j, Ar[0], b0[0], btmp);
+      b0[0] = unit ? btmp + alpha*b0[0] : btmp;
+      b0++;
+      Br++;
+    }
+    // next B column, next A column
+    Bcl += ldB;
+    Acl += ldA;
+  }
+}
+
+
 //extern void memset(void *, int, size_t);
 
 // X = A*X; unblocked version
@@ -173,7 +309,9 @@ void dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N
   if (flags & MTX_RIGHT) {
     Bc = &B->md[S];  // row of B
     if (flags & MTX_UPPER) {
+      _dmmat_trid_dot_bleft_backwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
     } else {
+      _dmmat_trid_dot_bleft_fwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
     }
   } else {
     Bc = &B->md[S*B->step]; // column of B

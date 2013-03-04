@@ -1037,6 +1037,92 @@ func TestTrmmBlkSmall(t *testing.T) {
     trmmBlocked(t, L, LOWER)
 }
 
+
+func trmmUnblocked(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
+    var B0 *matrix.FloatMatrix
+    side := linalg.OptLeft
+    N := A.Cols()
+    S := 0
+    E := A.Cols()
+    if flags & RIGHT != 0 {
+        B0 = matrix.FloatWithValue(2, A.Rows(), 2.0)
+        side = linalg.OptRight
+        E = B0.Rows()
+    } else {
+        B0 = matrix.FloatWithValue(A.Rows(), 2, 2.0)
+    }
+    B1 := B0.Copy()
+    diag := linalg.OptNonUnit
+    if flags & UNIT != 0 {
+        diag = linalg.OptUnit
+    }
+    uplo := linalg.OptUpper
+    if flags & LOWER != 0 {
+        diag = linalg.OptLower
+    }
+    blas.TrmmFloat(A, B0, 1.0, uplo, diag, side)
+    if A.Rows() < 8 {
+        t.Logf("..A\n%v\n", A)
+        t.Logf("  BLAS: B0\n%v\n", B0)
+    }
+
+    Ar := A.FloatArray()
+    Br := B1.FloatArray()
+    DTrmmUnblk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(),
+        N, S, E, /*0, B1.Rows(),*/ 4)
+
+    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
+    if A.Rows() < 8 {
+        t.Logf("  DTrmmBlk: B1\n%v\n", B1)
+    }
+}
+
+func TestTrmmUnblkSmall(t *testing.T) {
+    //bN := 7
+    Udata3 := [][]float64{
+        []float64{1.0, 1.0, 1.0},
+        []float64{0.0, 2.0, 2.0},
+        []float64{0.0, 0.0, 3.0}}
+
+    Udata := [][]float64{
+        []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+        []float64{0.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0},
+        []float64{0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 3.0},
+        []float64{0.0, 0.0, 0.0, 4.0, 4.0, 4.0, 4.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 5.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 6.0, 6.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0}}
+    U := matrix.FloatMatrixFromTable(Udata, matrix.RowOrder)
+    U3 := matrix.FloatMatrixFromTable(Udata3, matrix.RowOrder)
+    _ = U
+    _ = U3
+
+    Ldata3 := [][]float64{
+        []float64{1.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 0.0},
+        []float64{1.0, 2.0, 3.0}}
+
+    Ldata := [][]float64{
+     []float64{1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}}
+    L := matrix.FloatMatrixFromTable(Ldata, matrix.RowOrder)
+    L3 := matrix.FloatMatrixFromTable(Ldata3, matrix.RowOrder)
+    _ = L
+
+    t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT ---")
+    trmmUnblocked(t, U3, UPPER|RIGHT)
+    trmmUnblocked(t, U, UPPER|RIGHT)
+    t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT ---")
+    trmmUnblocked(t, L3, LOWER|RIGHT)
+    trmmUnblocked(t, L, LOWER|RIGHT)
+
+}
+
 // Local Variables:
 // tab-width: 4
 // indent-tabs-mode: nil
