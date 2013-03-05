@@ -1041,6 +1041,7 @@ func TestTrmmBlkSmall(t *testing.T) {
 func trmmUnblocked(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
     var B0 *matrix.FloatMatrix
     side := linalg.OptLeft
+    trans := linalg.OptNoTrans
     N := A.Cols()
     S := 0
     E := A.Cols()
@@ -1060,7 +1061,10 @@ func trmmUnblocked(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
     if flags & LOWER != 0 {
         diag = linalg.OptLower
     }
-    blas.TrmmFloat(A, B0, 1.0, uplo, diag, side)
+    if flags & TRANSA != 0 {
+        trans = linalg.OptTransA
+    }
+    blas.TrmmFloat(A, B0, 1.0, uplo, diag, side, trans)
     if A.Rows() < 8 {
         t.Logf("..A\n%v\n", A)
         t.Logf("  BLAS: B0\n%v\n", B0)
@@ -1116,10 +1120,16 @@ func TestTrmmUnblkSmall(t *testing.T) {
 
     t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT ---")
     trmmUnblocked(t, U3, UPPER|RIGHT)
-    trmmUnblocked(t, U, UPPER|RIGHT)
+    //trmmUnblocked(t, U, UPPER|RIGHT)
     t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT ---")
     trmmUnblocked(t, L3, LOWER|RIGHT)
-    trmmUnblocked(t, L, LOWER|RIGHT)
+    //trmmUnblocked(t, L, LOWER|RIGHT)
+    t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT, TRANSA ---")
+    trmmUnblocked(t, U3, UPPER|RIGHT|TRANSA)
+    //trmmUnblocked(t, U, UPPER|RIGHT|TRANSA)
+    t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT, TRANSA ---")
+    trmmUnblocked(t, L3, LOWER|RIGHT|TRANSA)
+    trmmUnblocked(t, L, LOWER|RIGHT|TRANSA)
 
 }
 
