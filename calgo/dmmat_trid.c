@@ -65,7 +65,6 @@ _dmmat_trid_axpy_backward(double *Bc, const double *Ac, double alpha, int unit,
   Acl = Ac + (nRE-1)*ldA;
   Bcl = Bc + nRE-1;
 
-  // xr is the current X element, Ar is row in current A column.
   for (i = nRE; i > 0; i--) {
     Ar = Acl + i - 1; // move on diagonal
     b0 = Bcl;
@@ -114,13 +113,11 @@ _dmmat_trid_dot_backward(double *Bc, const double *Ac, double alpha, int unit,
   Acl = Ac + (nRE-1)*ldA;
   Bcl = Bc + nRE - 1;
 
-  // xr is the current X element, Ar is row in current A column.
   for (i = 0; i < nRE; i++) {
-    //Ar = Ac + i; // move on diagonal
     b1 = Bcl;
     b0 = Bc;
     for (j = 0; j < nC; j++) {
-      // update all x-values below with the current A column and current X
+      // update all B-values below with the current A column and current X
       xtmp = unit ? alpha*b1[0] : 0.0;
       _inner_ddot(&xtmp, Acl, b0, alpha, nRE-unit-i);
       b1[0] = xtmp;
@@ -163,7 +160,6 @@ _dmmat_trid_axpy_forward(double *Bc, const double *Ac, double alpha, int unit,
   register const double *Ar;
   double *Broot = Bc;
 
-  // xr is the current X element, Ar is row in current A column.
   Br = Bc;
   for (i = 0; i < nRE; i++) {
     b0 = Br;
@@ -176,7 +172,6 @@ _dmmat_trid_axpy_forward(double *Bc, const double *Ac, double alpha, int unit,
       b0 += ldB;
       Bc += ldB;
     }
-    //printf("B: i=%d\n", i); print_tile(Broot, ldB, nRE, nC);
     // next B row, next column in A 
     Br++;
     Ac += ldA;
@@ -197,15 +192,12 @@ _dmmat_trid_dot_forward(double *Bc, const double *Ac, double alpha, int unit,
   for (i = 0; i < nRE; i++) {
     Ar = Ac + i + unit;
     b0 = Bcr;
-    //b1 = Bcr;
     // update all current B-value with current A column and following b
     for (j = 0; j < nC; j++) {
-      //printf("i=%d, j=%d\n", i, j);
       xtmp = unit ? alpha*b0[0] : 0.0;
       _inner_ddot(&xtmp, Ar, b0, alpha, nRE-unit-i);
       b0[0] = xtmp;
       b0 += ldB;
-      //b1 += ldB;
     }
     // next row in B, next column in A 
     Bcr++;
@@ -280,11 +272,9 @@ _dmmat_trid_dot_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
     // update all B-values with current A column and current B, AXPY
     for (i = 0; i < nRE; i++) {
       Ar = Acl + nC - j;
-      //printf(".. i: %d, j: %d, Ar: %.1f, b0: %.1f\n", i, j, Ar[0], b0[0]);
       btmp = 0.0;
       // calculate dot-product following Ar column and Br row
       _inner_ddot_trans(&btmp, Ar+unit, Br+unit, alpha, j-unit, ldB);
-      //printf(".. i: %d, j: %d, Ar: %.1f, b0: %.1f %.1f\n", i, j, Ar[0], b0[0], btmp);
       b0[0] = unit ? btmp + alpha*b0[0] : btmp;
       b0++;
       Br++;
@@ -295,6 +285,97 @@ _dmmat_trid_dot_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
   }
 }
 
+/*
+  for B = B*A.T; A.T is [nC, nC], B is [nRE, nC], 
+  
+    b00|b01|b02  a00|a01|a02
+    b10|b11|b12   0 |a11|a12
+                  0 | 0 |a22
+
+    b00 = b00*a00 + a01*b01 + a02*b02
+    b01 =           a11*b01 + a12*b02
+    b02 =                     a22*b02
+    b10 = b10*a00 + a01*b11 + a02*b12
+    b11 =           a11*b11 + a12*b02
+    b12 =                     a22*b12
+    
+    --> work it forward as b00 & b010 are not needed for b01, b11, ... with AXPY
+*/
+static void
+_dmmat_trid_axpy_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
+                           int ldB, int ldA, int nRE, int nC)
+{
+  // Y is 
+  register int i, j;
+  register double *b0, *Br, *Bcl;
+  register const double *Ar, *Acl;
+
+  // columns of A
+  Acl = Ac;
+  Bcl = Bc;
+  for (i = 0; i < nRE; i++) {
+    Br = Bcl;
+    b0 = Bcl;
+    Acl = Ac;
+    // update all B-values with current A column and current B, AXPY
+    for (j = 0; j < nC; j++) {
+      Ar = Acl + j;     // diagonal entry on A.
+      // update preceding elements on B row
+      _inner_axpy_trans(Bcl, Acl, b0, alpha, j, ldB);
+      // update current element on B rows
+      b0[0] = unit ? alpha*b0[0] : alpha*Ar[0]*b0[0];
+      b0 += ldB;        // next element on B rows
+      Acl += ldA;       // next column in A
+    }
+    // next B column, next A column
+    Bcl++;
+  }
+}
+
+/*
+  for B = B*A.T; A.T is [nC, nC], B is [nRE, nC], 
+  
+    b00|b01|b02  a00| 0 | 0
+    b10|b11|b12  a10|a11| 0
+                 a20|a21|a22
+
+    b00 = b00*a00
+    b01 = b00*a10 + a11*b01
+    b02 = b00*a20 + a21*b01 + a22*b02
+    
+    --> work it backward as b02 & b12 are not needed for b01, b11, ... with AXPY
+*/
+static void
+_dmmat_trid_axpy_bleft_backwd(double *Bc, const double *Ac, double alpha, int unit,
+                              int ldB, int ldA, int nRE, int nC)
+{
+  // Y is 
+  register int i, j;
+  register double *b0, *Br, *Bcl;
+  register const double *Ar, *Acl;
+
+  // columns of A
+  Bcl = Bc + (nC-1)*ldB;
+
+  for (i = 0; i < nRE; i++) {
+    Acl = Ac + (nC-1)*ldA;
+    b0 = Bcl;
+    // update all B-values with current A column and current B, AXPY
+    for (j = nC; j > 0; j--) {
+      Ar = Acl + j - 1;     // diagonal entry on A.
+
+      // update following elements on B row
+      _inner_axpy_trans(b0+ldB, Ar+1, b0, alpha, nC-j, ldB);
+      // update current element on B rows
+      b0[0] = unit ? alpha*b0[0] : alpha*Ar[0]*b0[0];
+
+      b0 -= ldB;        // previous element on B rows
+      Acl -= ldA;       // previous column in A
+    }
+    // next B column, next A column
+    Bcl++;
+  }
+}
 
 //extern void memset(void *, int, size_t);
 
@@ -305,15 +386,24 @@ void dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N
   int unit = flags & MTX_UNIT ? 1 : 0;
   double *Bc; 
   
-  // for X = op(A)*X
   if (flags & MTX_RIGHT) {
+    // for X = X*op(A)
     Bc = &B->md[S];  // row of B
     if (flags & MTX_UPPER) {
-      _dmmat_trid_dot_bleft_backwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+      if (flags & MTX_TRANSA) {
+        _dmmat_trid_axpy_bleft_fwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+      } else {
+        _dmmat_trid_dot_bleft_backwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+      }
     } else {
-      _dmmat_trid_dot_bleft_fwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+      if (flags & MTX_TRANSA) {
+        _dmmat_trid_axpy_bleft_backwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+      } else {
+        _dmmat_trid_dot_bleft_fwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+      }
     }
   } else {
+    // for X = op(A)*X
     Bc = &B->md[S*B->step]; // column of B
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
