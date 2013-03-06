@@ -468,6 +468,21 @@ func DTrmmBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB 
 
 }
 
+// S is the start column (LEFT), row (RIGHT); E is the end column (LEFT), row (RIGHT)
+func DMSolveUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E int) {
+    var Bm C.mdata_t
+    var Am C.mdata_t
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.dmmat_solve_unb(
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(E))
+
+}
 
 /*
 func copy_trans(C, A []float64, ldC, ldA, M, N int) {
