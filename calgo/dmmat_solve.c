@@ -14,31 +14,59 @@
 //#include "inner_vec_axpy.h"
 #include "inner_ddot.h"
 #include "inner_ddot_trans.h"
+/*
+  A: N*N, UPPER            B: N*2
+     a00 | a01 | a02       b00|b01
+     ---------------      --------   
+      0  | a11 | a12       b10|b11
+     ---------------      --------
+      0  |  0  | a22       b20|b21
+
+   Variant 0:
+      if A diagonal is non-UNIT
+         b10 = (b10 - a10*b00) / a11
+      else
+         b10 = b10 - a10*b00
+   
+   Variant 1:
+      if A diagonal is non-UNIT
+         b10 = b10/a11
+         b00 = b00 - a01*b10;
+      else
+         b10 = b10
+         b00 = b00 - a01*b10
+
+*/
 
 static void
 _dmmat_solve_backward(double *Bc, const double *Ac, double alpha, int flags, 
                       int ldB, int ldA, int nRE, int nB)
 {
   register int i, j;
-  double *b0, *b1;
-  const double *a11, *a01;
+  double *b0, *b1, *Bcl;
+  const double *a11, *a01, *Acl;
   int unit = flags & MTX_UNIT ? 1 : 0;
 
-  // upper diagonal matrix of nRE rows/cols and vector X, Y of length nRE
-  // move to point to last column and last entry of X.
-  a01 = Ac + (nRE-1)*ldA;
-  b1 = Bc + (nRE-1)*ldB;
-  b0 = b1;
+  // upper diagonal matrix of nRE rows/cols and matrix B with nRE rows, nB columns
+  // move to point to last column of A and B.
+  Acl = Ac + (nRE-1)*ldA;
+  Bcl = Bc + (nB-1)*ldB;
 
   for (i = nRE-1; i >= 0; i--) {
-    a11 = a01 + i;                // move on diagonal
-    b1[0] = unit ? b1[0] : b1[0]/a11[0];
+    a01 = Acl;
+    a11 = a01 + i;  // diagonal entry in A
+    b0 = Bcl;
+    for (j = 0; j < nB; j++) {
+      b1 = b0 + i;
+      b1[0] = unit ? b1[0] : b1[0]/a11[0];
+      // update all x0-values with in current column (i is the count above current row)
+      _inner_daxpy(b0, a01, b1, -1.0, i);
 
-    // update all x0-values with in current column (i is the count above current row)
-    _inner_daxpy(b0, a01, b1, -1.0, i);
-    // repartition: previous X, previous column in A 
-    b1  -= ldB;
-    a01 -= ldA;
+      // repartition: previous column in B
+      b0  -= ldB;
+    }
+    // previous column in A
+    Acl -= ldA;
   }
 }
 
@@ -79,15 +107,15 @@ _dmmat_solve_forward(double *Bc, const double *Ac, double alpha, int flags,
 void dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int E)
 {
   double *Bc;
-  printf("solve_unb: N=%d, S=%d, E=%d\n", N, S, E);
+  //printf("solve_unb: N=%d, S=%d, E=%d\n", N, S, E);
   if (flags & MTX_RIGHT) {
   } else {
-	Bc = &B->md[S*B->step];
-	if (flags & MTX_LOWER) {
-	  _dmmat_solve_forward(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
-	} else {
-	  _dmmat_solve_backward(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
-	}
+    Bc = &B->md[S*B->step];
+    if (flags & MTX_LOWER) {
+      _dmmat_solve_forward(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+    } else {
+      _dmmat_solve_backward(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+    }
   }
 }
 
