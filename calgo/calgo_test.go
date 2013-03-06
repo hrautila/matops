@@ -1133,7 +1133,7 @@ func TestTrmmUnblkSmall(t *testing.T) {
 
 }
 
-func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
+func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool) {
     var B0 *matrix.FloatMatrix
     side := linalg.OptLeft
     trans := linalg.OptNoTrans
@@ -1142,11 +1142,19 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
     E := A.Rows()
     _ = S; _ = E
     if flags & RIGHT != 0 {
-        B0 = matrix.FloatWithValue(2, A.Rows(), 2.0)
+        if rand {
+            B0 = matrix.FloatNormal(2, A.Rows())
+        } else {
+            B0 = matrix.FloatWithValue(2, A.Rows(), 2.0)
+        }
         side = linalg.OptRight
         E = B0.Rows()
     } else {
-        B0 = matrix.FloatWithValue(A.Rows(), 2, 2.0)
+        if rand {
+            B0 = matrix.FloatNormal(A.Rows(), 2)
+        } else {
+            B0 = matrix.FloatWithValue(A.Rows(), 2, 2.0)
+        }
         E = B0.Cols()
     }
     B1 := B0.Copy()
@@ -1214,8 +1222,15 @@ func TestTrsmSmall(t *testing.T) {
     L3 := matrix.FloatMatrixFromTable(Ldata3, matrix.RowOrder)
     _ = L
 
-    t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT ---")
-    trsmSolve(t, L3, LOWER)
+    t.Logf("-- TRSM-LOWER, NON-UNIT ---")
+    trsmSolve(t, L3, LOWER, false)
+    trsmSolve(t, L, LOWER, false)
+    trsmSolve(t, L, LOWER, true)
+
+    t.Logf("-- TRSM-UPPER, NON-UNIT ---")
+    trsmSolve(t, U3, UPPER, false)
+    trsmSolve(t, U, UPPER, false)
+    trsmSolve(t, U, UPPER, true)
 }
 
 // Local Variables:
