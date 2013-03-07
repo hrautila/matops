@@ -1188,9 +1188,9 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool) {
 func TestTrsmSmall(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
-        []float64{1.0, 1.0, 1.0},
-        []float64{0.0, 2.0, 2.0},
-        []float64{0.0, 0.0, 3.0}}
+        []float64{2.0, 2.0, 2.0},
+        []float64{0.0, 3.0, 3.0},
+        []float64{0.0, 0.0, 4.0}}
 
     Udata := [][]float64{
         []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
@@ -1221,16 +1221,29 @@ func TestTrsmSmall(t *testing.T) {
     L := matrix.FloatMatrixFromTable(Ldata, matrix.RowOrder)
     L3 := matrix.FloatMatrixFromTable(Ldata3, matrix.RowOrder)
     _ = L
+    _ = L3
 
     t.Logf("-- TRSM-LOWER, NON-UNIT ---")
-    trsmSolve(t, L3, LOWER, false)
-    trsmSolve(t, L, LOWER, false)
-    trsmSolve(t, L, LOWER, true)
+    //trsmSolve(t, L3, LOWER, false)
+    //trsmSolve(t, L, LOWER, false)
+    //trsmSolve(t, L, LOWER, true)
 
     t.Logf("-- TRSM-UPPER, NON-UNIT ---")
-    trsmSolve(t, U3, UPPER, false)
-    trsmSolve(t, U, UPPER, false)
-    trsmSolve(t, U, UPPER, true)
+    //trsmSolve(t, U3, UPPER, false)
+    //trsmSolve(t, U, UPPER, false)
+    //trsmSolve(t, U, UPPER, true)
+
+    t.Logf("-- TRSM-UPPER, TRANS, NON-UNIT ---")
+    trsmSolve(t, U3, UPPER|TRANSA, false)
+
+    t.Logf("-- TRSM-LOWER, TRANS, NON-UNIT ---")
+    trsmSolve(t, L3, LOWER|TRANSA, false)
+
+    t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT ---")
+    trsmSolve(t, U3, UPPER|RIGHT, false)
+
+    t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT ---")
+    trsmSolve(t, L3, LOWER|RIGHT, false)
 }
 
 // Local Variables:
