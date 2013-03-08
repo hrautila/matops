@@ -166,6 +166,10 @@ dmmat_trmm_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
 extern void
 dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int E);
 
+extern void
+dmmat_solve_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
+                int N, int S, int E, int NB);
+
 #endif
 
 // Local Variables:
