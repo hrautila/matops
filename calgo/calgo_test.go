@@ -1133,7 +1133,7 @@ func TestTrmmUnblkSmall(t *testing.T) {
 
 }
 
-func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool) {
+func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nb int) {
     var B0 *matrix.FloatMatrix
     side := linalg.OptLeft
     trans := linalg.OptNoTrans
@@ -1177,7 +1177,11 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool) {
 
     Ar := A.FloatArray()
     Br := B1.FloatArray()
-    DMSolveUnblk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(), N, S, E)
+    if nb == 0 || nb == N {
+        DMSolveUnblk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(), N, S, E)
+    } else {
+        DMSolveBlk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(), N, S, E, nb)
+    }
     t.Logf("B1 == B0: %v\n", B1.AllClose(B0))
     if N < 8 {
         t.Logf("B1:\n%v\n", B1)
@@ -1223,33 +1227,49 @@ func TestTrsmSmall(t *testing.T) {
     _ = L
     _ = L3
 
-    t.Logf("-- TRSM-LOWER, NON-UNIT ---")
-    //trsmSolve(t, L3, LOWER, false)
-    //trsmSolve(t, L, LOWER, false)
-    //trsmSolve(t, L, LOWER, true)
+    //t.Logf("-- TRSM-LOWER, NON-UNIT ---")
+    //trsmSolve(t, L3, LOWER, false, 0)
+    //trsmSolve(t, L, LOWER, false, 0)
+    //trsmSolve(t, L, LOWER, true, 0)
 
-    t.Logf("-- TRSM-UPPER, NON-UNIT ---")
-    //trsmSolve(t, U3, UPPER, false)
-    //trsmSolve(t, U, UPPER, false)
-    //trsmSolve(t, U, UPPER, true)
+    //t.Logf("-- TRSM-UPPER, NON-UNIT ---")
+    //trsmSolve(t, U3, UPPER, false, 0)
+    //trsmSolve(t, U, UPPER, false, 0)
+    //trsmSolve(t, U, UPPER, true, 0)
 
-    t.Logf("-- TRSM-UPPER, TRANS, NON-UNIT ---")
-    trsmSolve(t, U3, UPPER|TRANSA, false)
+    //t.Logf("-- TRSM-UPPER, TRANS, NON-UNIT ---")
+    //trsmSolve(t, U3, UPPER|TRANSA, false, 0)
 
-    t.Logf("-- TRSM-LOWER, TRANS, NON-UNIT ---")
-    trsmSolve(t, L3, LOWER|TRANSA, false)
+    //t.Logf("-- TRSM-LOWER, TRANS, NON-UNIT ---")
+    //trsmSolve(t, L3, LOWER|TRANSA, false, 0)
 
-    t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT ---")
-    trsmSolve(t, U3, UPPER|RIGHT, false)
+    //t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT ---")
+    //trsmSolve(t, U3, UPPER|RIGHT, false, 0)
 
-    t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT ---")
-    trsmSolve(t, L3, LOWER|RIGHT, false)
+    //t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT ---")
+    //trsmSolve(t, L3, LOWER|RIGHT, false, 0)
 
-    t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT, TRANS ---")
-    trsmSolve(t, U3, UPPER|RIGHT|TRANSA, false)
+    //t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT, TRANS ---")
+    //trsmSolve(t, U3, UPPER|RIGHT|TRANSA, false, 0)
 
-    t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT, TRANS ---")
-    trsmSolve(t, L3, LOWER|RIGHT|TRANSA, false)
+    //t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT, TRANS ---")
+    //trsmSolve(t, L3, LOWER|RIGHT|TRANSA, false, 0)
+
+    //t.Logf("-- BLK TRSM-UPPER, NON-UNIT ---")
+    //trsmSolve(t, U, UPPER, false, 2)
+    //trsmSolve(t, U, UPPER, true, 2)
+
+    //t.Logf("-- BLK TRSM-LOWER, NON-UNIT ---")
+    //trsmSolve(t, L, LOWER, false, 2)
+    //trsmSolve(t, L, LOWER, true, 2)
+
+    t.Logf("-- BLK TRSM-UPPER, NON-UNIT, TRANS ---")
+    //trsmSolve(t, U, UPPER|TRANSA, false, 2)
+    trsmSolve(t, U, UPPER|TRANSA, false, 2)
+
+    //t.Logf("-- BLK TRSM-LOWER, NON-UNIT, TRANS ---")
+    //trsmSolve(t, L, LOWER|TRANSA, false, 4)
+    //trsmSolve(t, L, LOWER|TRANSA, true, 2)
 }
 
 // Local Variables:
