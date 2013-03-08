@@ -1244,6 +1244,12 @@ func TestTrsmSmall(t *testing.T) {
 
     t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT ---")
     trsmSolve(t, L3, LOWER|RIGHT, false)
+
+    t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT, TRANS ---")
+    trsmSolve(t, U3, UPPER|RIGHT|TRANSA, false)
+
+    t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT, TRANS ---")
+    trsmSolve(t, L3, LOWER|RIGHT|TRANSA, false)
 }
 
 // Local Variables:
