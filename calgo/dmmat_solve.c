@@ -235,6 +235,51 @@ _dmmat_solve_bleft_fwd(double *Bc, const double *Ac, double alpha, int flags,
     Bcl++;
   }
 }
+/*
+    B: 2*N        A: N*N, UPPER, TRANS
+                  a00 | a01 : a02  
+    b00|b01|b02   ===============  
+    -----------    0  | a11 : a12  
+    b10|b11|b12   ---------------  
+                   0  |  0  : a22  
+
+    b00 = a00*b'00 + a01*b'01 + a02*b'02 --> b'00 = (b00 - a01*b'01 - a02*b'02)/a00
+    b01 = a11*b'01 + a12*b'02            --> b'01 = (b01            - a12*b'02)/a11
+    b02 = a22*b'02                       --> b'02 = b02/a22
+
+*/
+static void
+_dmmat_solve_bleft_backwd_trans(double *Bc, const double *Ac, double alpha, int flags, 
+                                int ldB, int ldA, int nRE, int nB)
+{
+  register int i, j;
+  register double *b1, *b0, *Bcl;
+  register const double *a11, *a21, *Acl;
+  double btmp;
+  int unit = flags & MTX_UNIT ? 1 : 0;
+
+  // A is lower diagonal matrix of nRE rows/cols and matrix B with nB rows, nRE cols
+  // move to point to last column of A and B.
+  Bcl = Bc + (nRE-1)*ldB;
+  b0 = Bc;
+  for (i = 0; i < nB; i++) {
+    Acl = Ac + (nRE-1)*ldA;
+    b1 = Bcl;
+    for (j = nRE-1; j >= 0; j--) {
+      a11 = Acl + j;  // diagonal entry in A
+      b1[0] = unit ? b1[0] : b1[0]/a11[0];
+      // update preceeding values with current values
+      _inner_axpy_trans(b0, Acl, b1, -1.0, j, ldB);
+
+      // repartition: previous column in B, A
+      b1  -= ldB;
+      Acl -= ldA;
+    }
+    // next row in B
+    Bcl++;
+    b0++;
+  }
+}
 
 /*
     B: 2*N        A: N*N, LOWER
@@ -245,7 +290,7 @@ _dmmat_solve_bleft_fwd(double *Bc, const double *Ac, double alpha, int flags,
                   a20 | a21 : a22  
 
     b00 = a00*b'00 + a10*b'01 + a20*b'02 --> b'00 = (b00 - a10*b'01 - a20*b'02)/a00
-    b01 = a11*b'01 + a21*b'02            --> b'01 = (b01 - a21*b'02)/a11
+    b01 = a11*b'01 + a21*b'02            --> b'01 = (b01            - a21*b'02)/a11
     b02 = a22*b'02                       --> b'02 = b02/a22
 
 */
@@ -285,17 +330,72 @@ _dmmat_solve_bleft_backwd(double *Bc, const double *Ac, double alpha, int flags,
   }
 }
 
+/*
+    B: 2*N        A: N*N, LOWER, TRANS
+                  a00 |  0  :  0  
+    b00|b01|b02   ===============  
+    -----------   a10 | a11 :  0  
+    b10|b11|b12   ---------------  
+                  a20 | a21 : a22  
+
+    b00 = a00*b'00                       --> b'00 = b00/a00
+    b01 = a10*b'00 + a11*b'01            --> b'01 = (b01 - a10*b'00)/a11
+    b02 = a20*b'00 + a21*b'01 + a22*b'02 --> b'02 = (b02 - a20*b'00 - a21*b'01)/a22
+
+*/
+static void
+_dmmat_solve_bleft_fwd_trans(double *Bc, const double *Ac, double alpha, int flags, 
+                             int ldB, int ldA, int nRE, int nB)
+{
+  register int i, j;
+  register double *b1, *b2, *Bcl;
+  register const double *a11, *a21, *Acl;
+  double btmp;
+  int unit = flags & MTX_UNIT ? 1 : 0;
+
+  // A is lower diagonal matrix of nRE rows/cols and matrix B with nB rows, nRE cols
+  // move to point to last column of A and B.
+  Bcl = Bc;
+  for (i = 0; i < nB; i++) {
+    Acl = Ac;
+    b1 = Bcl;
+    for (j = 0; j < nRE; j++) {
+      a11 = Acl + j;  // diagonal entry in A
+      b2 = b1 + ldB;
+      b1[0] = unit ? b1[0] : b1[0]/a11[0];
+
+      // update following values with current values
+      _inner_axpy_trans(b2, Acl, b1, -1.0, nRE-1-j, ldB);
+
+      // repartition: previous column in B, A
+      b1  += ldB;
+      Acl += ldA;
+    }
+    // next row in B
+    Bcl++;
+  }
+}
+
 // B = A.-1*B; unblocked
 void dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int E)
 {
   double *Bc;
   //printf("solve_unb: N=%d, S=%d, E=%d\n", N, S, E);
   if (flags & MTX_RIGHT) {
+    // for B = alpha*B*op(A)
     Bc = &B->md[S]; 
     if (flags & MTX_LOWER) {
-      _dmmat_solve_bleft_backwd(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+      if (flags & MTX_TRANSA) {
+        _dmmat_solve_bleft_fwd_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+      } else {
+        _dmmat_solve_bleft_backwd(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+      }
     } else {
-      _dmmat_solve_bleft_fwd(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+      if (flags & MTX_TRANSA) {
+        _dmmat_solve_bleft_backwd_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+      } else {
+        _dmmat_solve_bleft_fwd(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+      }
     }
   } else {
     Bc = &B->md[S*B->step];
