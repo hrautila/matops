@@ -972,15 +972,26 @@ func TestTrmm(t *testing.T) {
     trmmLowerTransA(t, A, true)
 }
 
-func trmmBlocked(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
+func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) {
     var B0 *matrix.FloatMatrix
+    N := A.Cols()
+    S := 0
+    E := A.Cols()
+    side := linalg.OptLeft
     if flags & RIGHT != 0 {
         B0 = matrix.FloatWithValue(2, A.Rows(), 2.0)
+        side = linalg.OptRight
+        E = B0.Rows()
     } else {
         B0 = matrix.FloatWithValue(A.Rows(), 2, 2.0)
+        E = B0.Cols()
     }
     B1 := B0.Copy()
 
+    trans := linalg.OptNoTrans
+    if flags & TRANSA != 0 {
+        trans = linalg.OptTransA
+    }
     diag := linalg.OptNonUnit
     if flags & UNIT != 0 {
         diag = linalg.OptUnit
@@ -990,17 +1001,21 @@ func trmmBlocked(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
         diag = linalg.OptLower
     }
 
-    blas.TrmmFloat(A, B0, 1.0, uplo, diag)
+    blas.TrmmFloat(A, B0, 1.0, uplo, diag, trans, side)
     if A.Rows() < 8 {
-        t.Logf("..A\n%v\n", A)
+        //t.Logf("..A\n%v\n", A)
         t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
     }
 
     Ar := A.FloatArray()
     Br := B1.FloatArray()
-    DTrmmBlk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(),
-        A.Cols(), 0, B1.Cols(), /*0, B1.Rows(),*/ 4)
-
+    if nb != 0 {
+        DTrmmBlk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(),
+            N, S, E, nb)
+    } else {
+        DTrmmUnblk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(),
+            N, S, E, 0)
+    }
     t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
     if A.Rows() < 8 {
         t.Logf("  DTrmmBlk: B1 = A*B1\n%v\n", B1)
@@ -1032,9 +1047,17 @@ func TestTrmmBlkSmall(t *testing.T) {
     _ = L
 
     t.Logf("-- TRMM-UPPER, NON-UNIT ---")
-    trmmBlocked(t, U, UPPER)
+    trmmTest(t, U, UPPER, 4)
+    t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
+    trmmTest(t, U, UPPER|TRANSA, 4)
     t.Logf("-- TRMM-LOWER, NON-UNIT ---")
-    trmmBlocked(t, L, LOWER)
+    trmmTest(t, L, LOWER, 4)
+    t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
+    trmmTest(t, L, LOWER|TRANSA, 4)
+    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT ---")
+    trmmTest(t, U, UPPER|RIGHT, 4)
+    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT, TRANSA ---")
+    trmmTest(t, U, UPPER|RIGHT|TRANSA, 4)
 }
 
 
@@ -1051,6 +1074,7 @@ func trmmUnblocked(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
         E = B0.Rows()
     } else {
         B0 = matrix.FloatWithValue(A.Rows(), 2, 2.0)
+        E = B0.Cols()
     }
     B1 := B0.Copy()
     diag := linalg.OptNonUnit
@@ -1081,7 +1105,7 @@ func trmmUnblocked(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
     }
 }
 
-func TestTrmmUnblkSmall(t *testing.T) {
+func _TestTrmmUnblkSmall(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{1.0, 1.0, 1.0},
@@ -1119,17 +1143,17 @@ func TestTrmmUnblkSmall(t *testing.T) {
     _ = L
 
     t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT ---")
-    trmmUnblocked(t, U3, UPPER|RIGHT)
+    trmmTest(t, U3, UPPER|RIGHT, 0)
     //trmmUnblocked(t, U, UPPER|RIGHT)
     t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT ---")
-    trmmUnblocked(t, L3, LOWER|RIGHT)
+    trmmTest(t, L3, LOWER|RIGHT, 0)
     //trmmUnblocked(t, L, LOWER|RIGHT)
     t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT, TRANSA ---")
-    trmmUnblocked(t, U3, UPPER|RIGHT|TRANSA)
+    trmmTest(t, U3, UPPER|RIGHT|TRANSA, 0)
     //trmmUnblocked(t, U, UPPER|RIGHT|TRANSA)
     t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT, TRANSA ---")
-    trmmUnblocked(t, L3, LOWER|RIGHT|TRANSA)
-    trmmUnblocked(t, L, LOWER|RIGHT|TRANSA)
+    trmmTest(t, L3, LOWER|RIGHT|TRANSA, 0)
+    trmmTest(t, L, LOWER|RIGHT|TRANSA, 0)
 
 }
 
@@ -1191,7 +1215,7 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nb i
 }
 
 
-func TestTrsmSmall(t *testing.T) {
+func _TestTrsmSmall(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{2.0, 2.0, 2.0},
