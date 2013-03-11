@@ -26,9 +26,11 @@
     b20 = a22*b'20                       --> b'20 = b20/a22
     b10 = a11*b'10 + a12*b'20            --> b'10 = (b10 - a12*b'20)/a11
     b00 = a00*b'00 + a01*b'10 + a02*b'20 --> b'00 = (b00 - a01*b'10 - a12*b'20)/a00
+
+    Work it backwards from bottom to top.
 */
 static void
-_dmmat_solve_backward(double *Bc, const double *Ac, double alpha, int flags, 
+_dmmat_solve_unb_upper(double *Bc, const double *Ac, double alpha, int flags, 
                       int ldB, int ldA, int nRE, int nB)
 {
   register int i, j;
@@ -70,10 +72,11 @@ _dmmat_solve_backward(double *Bc, const double *Ac, double alpha, int flags,
    b10 = a01*b'00 + a11*b'10            --> b'10 = (b10 - a01*b'00)/a11
    b20 = a02*b'00 + a12*b'10 + a22*b'20 --> b'20 = (b20 - a02*b'00 - a12*b'10)/a22
 
+    Work it forwards from top to bottom.
 */
 
 static void
-_dmmat_solve_fwd_trans(double *Bc, const double *Ac, double alpha, int flags, 
+_dmmat_solve_unb_u_trans(double *Bc, const double *Ac, double alpha, int flags, 
                        int ldB, int ldA, int nRE, int nB)
 {
   int unit = flags & MTX_UNIT ? 1 : 0;
@@ -115,10 +118,13 @@ _dmmat_solve_fwd_trans(double *Bc, const double *Ac, double alpha, int flags,
     b00 = a00*b'00                       --> b'00 = b020/a00
     b10 = a10*b'00 + a11*b'10            --> b'10 = (b10 - a10*b'00)/a11
     b20 = a20*b'00 + a21*b'10 + a22*b'20 --> b'20 = (b20 - a20*b'00 - a21*b'10)/a22
+
+    Work it forwards from top to bottom with AXPY operations.
+
  */
 static void
-_dmmat_solve_forward(double *Bc, const double *Ac, double alpha, int flags, 
-                     int ldB, int ldA, int nRE, int nB)
+_dmmat_solve_unb_lower(double *Bc, const double *Ac, double alpha, int flags, 
+                       int ldB, int ldA, int nRE, int nB)
 {
   int unit = flags & MTX_UNIT ? 1 : 0;
   register int i, j;
@@ -159,8 +165,8 @@ _dmmat_solve_forward(double *Bc, const double *Ac, double alpha, int flags,
     b20 = a22*b'20                       --> b'20 = b20/a22
  */
 static void
-_dmmat_solve_backwd_trans(double *Bc, const double *Ac, double alpha, int flags, 
-                           int ldB, int ldA, int nRE, int nB)
+_dmmat_solve_unb_l_trans(double *Bc, const double *Ac, double alpha, int flags, 
+                         int ldB, int ldA, int nRE, int nB)
 {
   register int i, j;
   register double *b1, *b2, *Bcl;
@@ -174,9 +180,9 @@ _dmmat_solve_backwd_trans(double *Bc, const double *Ac, double alpha, int flags,
   Bcl = Bc + (nB-1)*ldB;
 
   for (i = nRE-1; i >= 0; i--) {
-    a11 = Acl + i;  // diagonal entry in A
-    a21 = a11 + 1;
-    b1 = Bcl + i;
+    a11 = Acl + i;  // current A, diagonal entry
+    a21 = a11 + 1;  // below the diagonal entry
+    b1 = Bcl + i;   // current B, corresponding to A
     for (j = 0; j < nB; j++) {
       b2 = b1 + 1;
       // update current value with previous values.
@@ -206,8 +212,8 @@ _dmmat_solve_backwd_trans(double *Bc, const double *Ac, double alpha, int flags,
 
 */
 static void
-_dmmat_solve_bleft_fwd(double *Bc, const double *Ac, double alpha, int flags, 
-                       int ldB, int ldA, int nRE, int nB)
+_dmmat_solve_unb_r_upper(double *Bc, const double *Ac, double alpha, int flags, 
+                         int ldB, int ldA, int nRE, int nB)
 {
   int unit = flags & MTX_UNIT ? 1 : 0;
   register int i, j;
@@ -249,7 +255,7 @@ _dmmat_solve_bleft_fwd(double *Bc, const double *Ac, double alpha, int flags,
 
 */
 static void
-_dmmat_solve_bleft_backwd_trans(double *Bc, const double *Ac, double alpha, int flags, 
+_dmmat_solve_unb_ru_trans(double *Bc, const double *Ac, double alpha, int flags, 
                                 int ldB, int ldA, int nRE, int nB)
 {
   register int i, j;
@@ -295,7 +301,7 @@ _dmmat_solve_bleft_backwd_trans(double *Bc, const double *Ac, double alpha, int 
 
 */
 static void
-_dmmat_solve_bleft_backwd(double *Bc, const double *Ac, double alpha, int flags, 
+_dmmat_solve_unb_r_lower(double *Bc, const double *Ac, double alpha, int flags, 
                           int ldB, int ldA, int nRE, int nB)
 {
   register int i, j;
@@ -344,7 +350,7 @@ _dmmat_solve_bleft_backwd(double *Bc, const double *Ac, double alpha, int flags,
 
 */
 static void
-_dmmat_solve_bleft_fwd_trans(double *Bc, const double *Ac, double alpha, int flags, 
+_dmmat_solve_unb_rl_trans(double *Bc, const double *Ac, double alpha, int flags, 
                              int ldB, int ldA, int nRE, int nB)
 {
   register int i, j;
@@ -386,30 +392,30 @@ void dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int 
     Bc = &B->md[S]; 
     if (flags & MTX_LOWER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_bleft_fwd_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_rl_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
       } else {
-        _dmmat_solve_bleft_backwd(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_r_lower(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_bleft_backwd_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_ru_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
       } else {
-        _dmmat_solve_bleft_fwd(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_r_upper(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
       }
     }
   } else {
     Bc = &B->md[S*B->step];
     if (flags & MTX_LOWER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_backwd_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_l_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
       } else {
-        _dmmat_solve_forward(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_lower(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_fwd_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_u_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
       } else {
-        _dmmat_solve_backward(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_upper(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
       }
     }
   }
