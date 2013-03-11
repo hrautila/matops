@@ -22,6 +22,12 @@ const N = 8
 const P = 8
 
 
+func fail(t *testing.T, isok bool) {
+    if ! isok {
+        t.Errorf("** FAILURE HERE ***\n")
+    }
+}
+
 func TestMakeData(t *testing.T) {
     rand.Seed(time.Now().UnixNano())
 }
@@ -855,124 +861,8 @@ func _TestTridiagUnitSmall(t *testing.T) {
     tridiagSmall(t, true) 
 }
 
-func trmmUpper(t *testing.T, A *matrix.FloatMatrix, unit bool) {
-    B0 := matrix.FloatWithValue(A.Rows(), 2, 2.0)
-    B1 := B0.Copy()
-    diag := linalg.OptNonUnit
-    if unit {
-        diag = linalg.OptUnit
-    }
 
-    blas.TrmmFloat(A, B0, 1.0, linalg.OptUpper, diag)
-    if A.Rows() < 8 {
-        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
-    }
-
-    Ar := A.FloatArray()
-    Br := B1.FloatArray()
-    DTrmmUpper(Br, Ar, 1.0, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
-    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
-    if A.Rows() < 8 {
-        t.Logf("  DTrmmUpper: B1 = A*B1\n%v\n", B1)
-    }
-}
-
-func trmmUpperTransA(t *testing.T, A *matrix.FloatMatrix, unit bool) {
-    B0 := matrix.FloatWithValue(A.Rows(), 2, 2.0)
-    B1 := B0.Copy()
-    diag := linalg.OptNonUnit
-    if unit {
-        diag = linalg.OptUnit
-    }
-
-    blas.TrmmFloat(A, B0, 1.0, linalg.OptUpper, linalg.OptTransA, diag)
-    if A.Rows() < 8 {
-        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
-    }
-
-    Ar := A.FloatArray()
-    Br := B1.FloatArray()
-    DTrmmUpperTransA(Br, Ar, 1.0, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
-    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
-    if A.Rows() < 8 {
-        t.Logf("  DTrmmUpperTransA: B1 = A*B1\n%v\n", B1)
-    }
-}
-
-func trmmLower(t *testing.T, A *matrix.FloatMatrix, unit bool) {
-    B0 := matrix.FloatWithValue(A.Rows(), 2, 2.0)
-    B1 := B0.Copy()
-    diag := linalg.OptNonUnit
-    if unit {
-        diag = linalg.OptUnit
-    }
-
-    blas.TrmmFloat(A, B0, 1.0, linalg.OptLower, diag)
-    if A.Rows() < 8 {
-        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
-    }
-
-    Ar := A.FloatArray()
-    Br := B1.FloatArray()
-    DTrmmLower(Br, Ar, 1.0, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
-    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
-    if A.Rows() < 8 {
-        t.Logf("  DTrmmLower: B1 = A*B1\n%v\n", B1)
-    }
-}
-
-func trmmLowerTransA(t *testing.T, A *matrix.FloatMatrix, unit bool) {
-    B0 := matrix.FloatWithValue(A.Rows(), 2, 2.0)
-    B1 := B0.Copy()
-    diag := linalg.OptNonUnit
-    if unit {
-        diag = linalg.OptUnit
-    }
-
-    blas.TrmmFloat(A, B0, 1.0, linalg.OptLower, linalg.OptTransA, diag)
-    if A.Rows() < 8 {
-        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
-    }
-
-    Ar := A.FloatArray()
-    Br := B1.FloatArray()
-    DTrmmLowerTransA(Br, Ar, 1.0, unit, B1.LeadingIndex(), A.LeadingIndex(), A.Cols(), 0, B1.Cols())
-    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
-    if A.Rows() < 8 {
-        t.Logf("  DTrmmLowerTransA: B1 = A*B1\n%v\n", B1)
-    }
-}
-
-func TestTrmm(t *testing.T) {
-    //bN := 5
-    Adata := [][]float64{
-        []float64{1.0, 0.0, 0.0, 0.0, 0.0},
-        []float64{1.0, 2.0, 0.0, 0.0, 0.0},
-        []float64{1.0, 2.0, 3.0, 0.0, 0.0},
-        []float64{1.0, 2.0, 3.0, 4.0, 0.0},
-        []float64{1.0, 2.0, 3.0, 4.0, 5.0}}
-
-    A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
-    t.Logf("-- TRMM-UPPER, NON-UNIT ---")
-    trmmUpper(t, A.Transpose(), false)
-    t.Logf("-- TRMM-UPPER, NON-UNIT, MATRIX-LOWER ---")
-    trmmUpper(t, A, false)
-    t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
-    trmmUpperTransA(t, A, false)
-    t.Logf("-- TRMM-LOWER, NON-UNIT ---")
-    trmmLower(t, A, false)
-    t.Logf("-- TRMM-LOWER, NON-UNIT, MATRIX-UPPER ---")
-    trmmLower(t, A.Transpose(), false)
-    t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
-    trmmLowerTransA(t, A, false)
-    A.Diag().SetIndexes(1.0)
-    t.Logf("-- TRMM-UPPER, UNIT, TRANSA ---")
-    trmmUpperTransA(t, A, true)
-    t.Logf("-- TRMM-LOWER, UNIT, TRANSA ---")
-    trmmLowerTransA(t, A, true)
-}
-
-func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) {
+func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) bool {
     var B0 *matrix.FloatMatrix
     N := A.Cols()
     S := 0
@@ -998,13 +888,13 @@ func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) {
     }
     uplo := linalg.OptUpper
     if flags & LOWER != 0 {
-        diag = linalg.OptLower
+        uplo = linalg.OptLower
     }
 
     blas.TrmmFloat(A, B0, 1.0, uplo, diag, trans, side)
     if A.Rows() < 8 {
         //t.Logf("..A\n%v\n", A)
-        t.Logf("  BLAS: B0 = A*B0\n%v\n", B0)
+        t.Logf("  BLAS B0:\n%v\n", B0)
     }
 
     Ar := A.FloatArray()
@@ -1016,96 +906,16 @@ func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) {
         DTrmmUnblk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(),
             N, S, E, 0)
     }
-    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
+    result := B0.AllClose(B1)
+    t.Logf("   B0 == B1: %v\n", result)
     if A.Rows() < 8 {
-        t.Logf("  DTrmmBlk: B1 = A*B1\n%v\n", B1)
+        t.Logf("  DTrmm B1:\n%v\n", B1)
     }
-}
-
-func TestTrmmBlkSmall(t *testing.T) {
-    //bN := 7
-    Udata := [][]float64{
-        []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-        []float64{0.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0},
-        []float64{0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 3.0},
-        []float64{0.0, 0.0, 0.0, 4.0, 4.0, 4.0, 4.0},
-        []float64{0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 5.0},
-        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 6.0, 6.0},
-        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0}}
-    U := matrix.FloatMatrixFromTable(Udata, matrix.RowOrder)
-    _ = U
-
-    Ldata := [][]float64{
-     []float64{1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-     []float64{1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-     []float64{1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0},
-     []float64{1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0},
-     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 0.0, 0.0},
-     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.0},
-     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}}
-    L := matrix.FloatMatrixFromTable(Ldata, matrix.RowOrder)
-    _ = L
-
-    t.Logf("-- TRMM-UPPER, NON-UNIT ---")
-    trmmTest(t, U, UPPER, 4)
-    t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
-    trmmTest(t, U, UPPER|TRANSA, 4)
-    t.Logf("-- TRMM-LOWER, NON-UNIT ---")
-    trmmTest(t, L, LOWER, 4)
-    t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
-    trmmTest(t, L, LOWER|TRANSA, 4)
-    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT ---")
-    trmmTest(t, U, UPPER|RIGHT, 4)
-    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT, TRANSA ---")
-    trmmTest(t, U, UPPER|RIGHT|TRANSA, 4)
+    return result
 }
 
 
-func trmmUnblocked(t *testing.T, A *matrix.FloatMatrix, flags Flags) {
-    var B0 *matrix.FloatMatrix
-    side := linalg.OptLeft
-    trans := linalg.OptNoTrans
-    N := A.Cols()
-    S := 0
-    E := A.Cols()
-    if flags & RIGHT != 0 {
-        B0 = matrix.FloatWithValue(2, A.Rows(), 2.0)
-        side = linalg.OptRight
-        E = B0.Rows()
-    } else {
-        B0 = matrix.FloatWithValue(A.Rows(), 2, 2.0)
-        E = B0.Cols()
-    }
-    B1 := B0.Copy()
-    diag := linalg.OptNonUnit
-    if flags & UNIT != 0 {
-        diag = linalg.OptUnit
-    }
-    uplo := linalg.OptUpper
-    if flags & LOWER != 0 {
-        diag = linalg.OptLower
-    }
-    if flags & TRANSA != 0 {
-        trans = linalg.OptTransA
-    }
-    blas.TrmmFloat(A, B0, 1.0, uplo, diag, side, trans)
-    if A.Rows() < 8 {
-        t.Logf("..A\n%v\n", A)
-        t.Logf("  BLAS: B0\n%v\n", B0)
-    }
-
-    Ar := A.FloatArray()
-    Br := B1.FloatArray()
-    DTrmmUnblk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(),
-        N, S, E, /*0, B1.Rows(),*/ 4)
-
-    t.Logf("   B0 == B1: %v\n", B0.AllClose(B1))
-    if A.Rows() < 8 {
-        t.Logf("  DTrmmBlk: B1\n%v\n", B1)
-    }
-}
-
-func _TestTrmmUnblkSmall(t *testing.T) {
+func TestTrmmUnblkSmall(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{1.0, 1.0, 1.0},
@@ -1142,20 +952,87 @@ func _TestTrmmUnblkSmall(t *testing.T) {
     L3 := matrix.FloatMatrixFromTable(Ldata3, matrix.RowOrder)
     _ = L
 
+    t.Logf("-- TRMM-UPPER, NON-UNIT ---")
+    fail(t, trmmTest(t, U3, UPPER, 0))
+    t.Logf("-- TRMM-UPPER, UNIT ---")
+    fail(t, trmmTest(t, U3, UPPER|UNIT, 0))
+    t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U3, UPPER|TRANSA, 0))
+    t.Logf("-- TRMM-UPPER, UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U3, UPPER|TRANSA|UNIT, 0))
+    t.Logf("-- TRMM-LOWER, NON-UNIT ---")
+    fail(t, trmmTest(t, L3, LOWER, 0))
+    t.Logf("-- TRMM-LOWER, UNIT ---")
+    fail(t, trmmTest(t, L3, LOWER|UNIT, 0))
+    t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, L3, LOWER|TRANSA, 0))
+    t.Logf("-- TRMM-LOWER, UNIT, TRANSA ---")
+    fail(t, trmmTest(t, L3, LOWER|TRANSA|UNIT, 0))
+
     t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT ---")
-    trmmTest(t, U3, UPPER|RIGHT, 0)
-    //trmmUnblocked(t, U, UPPER|RIGHT)
+    fail(t, trmmTest(t, U3, UPPER|RIGHT, 0))
+    t.Logf("-- TRMM-UPPER, UNIT, RIGHT ---")
+    fail(t, trmmTest(t, U3, UPPER|UNIT|RIGHT, 0))
+
     t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT ---")
-    trmmTest(t, L3, LOWER|RIGHT, 0)
-    //trmmUnblocked(t, L, LOWER|RIGHT)
+    fail(t, trmmTest(t, L3, LOWER|RIGHT, 0))
+    t.Logf("-- TRMM-LOWER, UNIT, RIGHT ---")
+    fail(t, trmmTest(t, L3, LOWER|UNIT|RIGHT, 0))
+
     t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT, TRANSA ---")
-    trmmTest(t, U3, UPPER|RIGHT|TRANSA, 0)
-    //trmmUnblocked(t, U, UPPER|RIGHT|TRANSA)
+    fail(t, trmmTest(t, U3, UPPER|RIGHT|TRANSA, 0))
+    t.Logf("-- TRMM-UPPER, UNIT, RIGHT, TRANSA ---")
+    fail(t, trmmTest(t, U3, UPPER|UNIT|RIGHT|TRANSA, 0))
+
     t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT, TRANSA ---")
-    trmmTest(t, L3, LOWER|RIGHT|TRANSA, 0)
-    trmmTest(t, L, LOWER|RIGHT|TRANSA, 0)
+    fail(t, trmmTest(t, L3, LOWER|RIGHT|TRANSA, 0))
+    t.Logf("-- TRMM-LOWER, UNIT, RIGHT, TRANSA ---")
+    fail(t, trmmTest(t, L3, LOWER|UNIT|RIGHT|TRANSA, 0))
 
 }
+
+func _TestTrmmBlkSmall(t *testing.T) {
+    //bN := 7
+    Udata := [][]float64{
+        []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+        []float64{0.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0},
+        []float64{0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 3.0},
+        []float64{0.0, 0.0, 0.0, 4.0, 4.0, 4.0, 4.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 5.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 6.0, 6.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0}}
+    U := matrix.FloatMatrixFromTable(Udata, matrix.RowOrder)
+    _ = U
+
+    Ldata := [][]float64{
+     []float64{1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}}
+    L := matrix.FloatMatrixFromTable(Ldata, matrix.RowOrder)
+    _ = L
+
+    t.Logf("-- TRMM-UPPER, NON-UNIT ---")
+    fail(t, trmmTest(t, U, UPPER, 2))
+    t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U, UPPER|TRANSA, 2))
+    t.Logf("-- TRMM-LOWER, NON-UNIT ---")
+    fail(t, trmmTest(t, L, LOWER, 2))
+    t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, L, LOWER|TRANSA, 2))
+    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT ---")
+    fail(t, trmmTest(t, U, UPPER|RIGHT, 2))
+    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U, UPPER|RIGHT|TRANSA, 2))
+    t.Logf("-- TRMM-LOWER, RIGHT, NON-UNIT ---")
+    fail(t, trmmTest(t, U, LOWER|RIGHT, 2))
+    t.Logf("-- TRMM-LOWER, RIGHT, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U, LOWER|RIGHT|TRANSA, 2))
+}
+
 
 func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nb int) bool {
     var B0 *matrix.FloatMatrix
@@ -1188,7 +1065,7 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nb i
     }
     uplo := linalg.OptUpper
     if flags & LOWER != 0 {
-        diag = linalg.OptLower
+        uplo = linalg.OptLower
     }
     if flags & TRANSA != 0 {
         trans = linalg.OptTransA
@@ -1281,25 +1158,45 @@ func _TestTrsmSmall(t *testing.T) {
     t.Logf("-- TRSM-LOWER, TRANS, UNIT --")
     trsmSolve(t, L3, LOWER|TRANSA|UNIT, false, 0)
 
-    //t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT ---")
-    //trsmSolve(t, U3, UPPER|RIGHT, false, 0)
+    t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT ---")
+    trsmSolve(t, U3, UPPER|RIGHT, false, 0)
 
-    //t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT ---")
-    //trsmSolve(t, L3, LOWER|RIGHT, false, 0)
+    t.Logf("-- TRSM-UPPER, UNIT, RIGHT ---")
+    trsmSolve(t, U3, UPPER|UNIT|RIGHT, false, 0)
 
-    //t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT, TRANS ---")
-    //trsmSolve(t, U3, UPPER|RIGHT|TRANSA, false, 0)
+    t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT ---")
+    trsmSolve(t, L3, LOWER|RIGHT, false, 0)
 
-    //t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT, TRANS ---")
-    //trsmSolve(t, L3, LOWER|RIGHT|TRANSA, false, 0)
+    t.Logf("-- TRSM-LOWER, UNIT, RIGHT ---")
+    trsmSolve(t, L3, LOWER|UNIT|RIGHT, false, 0)
+
+    t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT, TRANS ---")
+    trsmSolve(t, U3, UPPER|RIGHT|TRANSA, false, 0)
+
+    t.Logf("-- TRSM-UPPER, UNIT, RIGHT, TRANS ---")
+    trsmSolve(t, U3, UPPER|UNIT|RIGHT|TRANSA, false, 0)
+
+    t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT, TRANS ---")
+    trsmSolve(t, L3, LOWER|RIGHT|TRANSA, false, 0)
+
+    t.Logf("-- TRSM-LOWER, UNIT, RIGHT, TRANS ---")
+    trsmSolve(t, L3, LOWER|UNIT|RIGHT|TRANSA, false, 0)
 
     t.Logf("-- BLK TRSM-UPPER, NON-UNIT ---")
     //trsmSolve(t, U, UPPER, false, 2)
     trsmSolve(t, U, UPPER, true, 2)
 
+    t.Logf("-- BLK TRSM-UPPER, UNIT ---")
+    //trsmSolve(t, U, UPPER, false, 2)
+    trsmSolve(t, U, UPPER|UNIT, true, 2)
+
     t.Logf("-- BLK TRSM-LOWER, NON-UNIT ---")
     //trsmSolve(t, L, LOWER, false, 2)
     trsmSolve(t, L, LOWER, true, 2)
+
+    t.Logf("-- BLK TRSM-LOWER, UNIT ---")
+    //trsmSolve(t, L, LOWER, false, 2)
+    trsmSolve(t, L, LOWER|UNIT, true, 2)
 
     t.Logf("-- BLK TRSM-UPPER, NON-UNIT, TRANS ---")
     //trsmSolve(t, U, UPPER|TRANSA, false, 2)
@@ -1312,14 +1209,48 @@ func _TestTrsmSmall(t *testing.T) {
     t.Logf("-- BLK TRSM-UPPER, NON-UNIT, RIGHT ---")
     trsmSolve(t, U, UPPER|RIGHT, true, 2)
 
+    t.Logf("-- BLK TRSM-UPPER, UNIT, RIGHT ---")
+    trsmSolve(t, U, UPPER|UNIT|RIGHT, true, 2)
+
     t.Logf("-- BLK TRSM-UPPER, NON-UNIT, RIGHT, TRANSA ---")
     trsmSolve(t, U, UPPER|RIGHT|TRANSA, true, 2)
 
     t.Logf("-- BLK TRSM-LOWER, NON-UNIT, RIGHT ---")
     trsmSolve(t, L, LOWER|RIGHT, true, 2)
 
+    t.Logf("-- BLK TRSM-LOWER, UNIT, RIGHT ---")
+    trsmSolve(t, L, LOWER|UNIT|RIGHT, true, 2)
+
     t.Logf("-- BLK TRSM-LOWER, NON-UNIT, RIGHT, TRANSA ---")
     trsmSolve(t, L, LOWER|RIGHT|TRANSA, true, 2)
+}
+
+func _TestTrsmUnblk(t *testing.T) {
+    //bN := 7
+    Udata3 := [][]float64{
+        []float64{2.0, 2.0, 2.0},
+        []float64{0.0, 3.0, 3.0},
+        []float64{0.0, 0.0, 4.0}}
+    U3 := matrix.FloatMatrixFromTable(Udata3, matrix.RowOrder)
+    _ = U3
+
+    Ldata3 := [][]float64{
+        []float64{1.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 0.0},
+        []float64{1.0, 2.0, 3.0}}
+    L3 := matrix.FloatMatrixFromTable(Ldata3, matrix.RowOrder)
+    _ = L3
+
+    t.Logf("-- TRSM-UPPER, TRANS, RIGHT, NON_UNIT --")
+    trsmSolve(t, U3, UPPER|TRANSA|RIGHT, false, 0)
+    t.Logf("-- TRSM-UPPER, TRANS, RIGHT, UNIT --")
+    trsmSolve(t, U3, UPPER|TRANSA|UNIT|RIGHT, false, 0)
+
+    t.Logf("-- TRSM-LOWER, TRANS, RIGHT, NON-UNIT --")
+    trsmSolve(t, L3, LOWER|TRANSA|RIGHT, false, 0)
+    t.Logf("-- TRSM-LOWER, TRANS, RIGHT, UNIT --")
+    trsmSolve(t, L3, LOWER|TRANSA|UNIT|RIGHT, false, 0)
+
 }
 
 // Local Variables:
