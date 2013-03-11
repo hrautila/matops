@@ -20,21 +20,21 @@
 /*
   B = A*B; A is lower
 
-    a00| 0 | 0   b00|b01
-    a10|a11| 0   b10|b11
-    a20|a21|a22  b20|b21
+    a00| 0 | 0   b00
+    a10|a11| 0   b10
+    a20|a21|a22  b20
 
   b00 = a00*b00
   b10 = a10*b00 + a11*b10
   b20 = a20*b00 + a21*b10 + a22*b20
 
-  --> work it backwards as b12 & b02 are not needed for b11, b01, ...
+  --> work it backwards as b20 is not needed for b10, ...
 
   Calculates backward a diagonal block and updates Xc values from last to first.
   Updates are calculated in breadth first manner by with successive AXPY operations.
  */
 static void
-_dmmat_trid_axpy_backward(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trid_unb_lower(double *Bc, const double *Ac, double alpha, int unit,
                           int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -79,8 +79,8 @@ _dmmat_trid_axpy_backward(double *Bc, const double *Ac, double alpha, int unit,
   Updates are calculated in depth first manner with DOT operations.
  */
 static void
-_dmmat_trid_dot_backward(double *Bc, const double *Ac, double alpha, int unit,
-                         int ldB, int ldA, int nRE, int nC)
+_dmmat_trid_unb_u_trans(double *Bc, const double *Ac, double alpha, int unit,
+                        int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
   register int i, j;
@@ -127,8 +127,8 @@ _dmmat_trid_dot_backward(double *Bc, const double *Ac, double alpha, int unit,
 */
 
 static void
-_dmmat_trid_axpy_forward(double *Bc, const double *Ac, double alpha, int unit,
-                         int ldB, int ldA, int nRE, int nC)
+_dmmat_trid_unb_upper(double *Bc, const double *Ac, double alpha, int unit,
+                      int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
   register int i, j;
@@ -156,7 +156,7 @@ _dmmat_trid_axpy_forward(double *Bc, const double *Ac, double alpha, int unit,
 
 // Calculate forward a diagonal block and current B-values from first to last.
 static void
-_dmmat_trid_dot_forward(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trid_unb_l_trans(double *Bc, const double *Ac, double alpha, int unit,
                         int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -181,7 +181,7 @@ _dmmat_trid_dot_forward(double *Bc, const double *Ac, double alpha, int unit,
   }
 }
 
-/*
+/* UPPER, RIGHT
   for B = B*A; A is [nC, nC], B is [nRE, nC]
   
     b00|b01|b02  a00|a01|a02
@@ -195,8 +195,8 @@ _dmmat_trid_dot_forward(double *Bc, const double *Ac, double alpha, int unit,
     --> work it backwards as b12 & b02 are not needed for b11, b01, ...
 */
 static void
-_dmmat_trid_dot_bleft_backwd(double *Bc, const double *Ac, double alpha, int unit,
-                             int ldB, int ldA, int nRE, int nC)
+_dmmat_trid_unb_r_upper(double *Bc, const double *Ac, double alpha, int unit,
+                        int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
   register int i, j;
@@ -226,9 +226,10 @@ _dmmat_trid_dot_bleft_backwd(double *Bc, const double *Ac, double alpha, int uni
   }
 }
 
+// LOWER, RIGHT
 static void
-_dmmat_trid_dot_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
-                          int ldB, int ldA, int nRE, int nC)
+_dmmat_trid_unb_r_lower(double *Bc, const double *Ac, double alpha, int unit,
+                         int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
   register int i, j;
@@ -258,7 +259,7 @@ _dmmat_trid_dot_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
   }
 }
 
-/*
+/* UPPER, RIGHT, TRANS
   for B = B*A.T; A.T is [nC, nC], B is [nRE, nC], 
   
     b00|b01|b02  a00|a01|a02
@@ -272,7 +273,7 @@ _dmmat_trid_dot_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
     --> work it forward as b00 & b010 are not needed for b01, b11, ... with AXPY
 */
 static void
-_dmmat_trid_axpy_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trid_unb_ru_trans(double *Bc, const double *Ac, double alpha, int unit,
                            int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -302,7 +303,7 @@ _dmmat_trid_axpy_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
   }
 }
 
-/*
+/* LOWER, RIGHT, TRANSA
   for B = B*A.T; A.T is [nC, nC], B is [nRE, nC], 
   
     b00|b01|b02  a00| 0 | 0
@@ -316,8 +317,8 @@ _dmmat_trid_axpy_bleft_fwd(double *Bc, const double *Ac, double alpha, int unit,
     --> work it backward as b02 & b12 are not needed for b01, b11, ... with AXPY
 */
 static void
-_dmmat_trid_axpy_bleft_backwd(double *Bc, const double *Ac, double alpha, int unit,
-                              int ldB, int ldA, int nRE, int nC)
+_dmmat_trid_unb_rl_trans(double *Bc, const double *Ac, double alpha, int unit,
+                         int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
   register int i, j;
@@ -361,15 +362,19 @@ void dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N
     Bc = &B->md[S];  // row of B
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_trid_axpy_bleft_fwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+        // axpy_left_fwd
+        _dmmat_trid_unb_ru_trans(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
       } else {
-        _dmmat_trid_dot_bleft_backwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+        // dot_bleft_backward
+        _dmmat_trid_unb_r_upper(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_trid_axpy_bleft_backwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+        // axpy_bleft_backwd
+        _dmmat_trid_unb_rl_trans(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
       } else {
-        _dmmat_trid_dot_bleft_fwd(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+        // dot_bleft_fwd
+        _dmmat_trid_unb_r_lower(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
       }
     }
   } else {
@@ -377,15 +382,19 @@ void dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N
     Bc = &B->md[S*B->step]; // column of B
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_trid_dot_backward(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
+        // dot_backward
+        _dmmat_trid_unb_u_trans(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
       } else {
-        _dmmat_trid_axpy_forward(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
+        // axpy_forward
+        _dmmat_trid_unb_upper(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_trid_dot_forward(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
+        // dot_forward
+        _dmmat_trid_unb_l_trans(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
       } else {
-        _dmmat_trid_axpy_backward(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
+        // axpy_backward
+        _dmmat_trid_unb_lower(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
       }
     }
   }
