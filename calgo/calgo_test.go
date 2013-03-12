@@ -29,6 +29,7 @@ func fail(t *testing.T, isok bool) {
 }
 
 func TestMakeData(t *testing.T) {
+    blas.PanicOnError(true)
     rand.Seed(time.Now().UnixNano())
 }
 
@@ -1251,6 +1252,88 @@ func _TestTrsmUnblk(t *testing.T) {
     t.Logf("-- TRSM-LOWER, TRANS, RIGHT, UNIT --")
     trsmSolve(t, L3, LOWER|TRANSA|UNIT|RIGHT, false, 0)
 
+}
+
+func syrkTest(t *testing.T, C, A *matrix.FloatMatrix, flags Flags, vlen, nb int) bool {
+    //var B0 *matrix.FloatMatrix
+    P := A.Cols()
+    S := 0
+    E := C.Rows()
+    C0 := C.Copy()
+
+    trans := linalg.OptNoTrans
+    if flags & TRANSA != 0 {
+        trans = linalg.OptTransA
+    }
+    uplo := linalg.OptUpper
+    if flags & LOWER != 0 {
+        uplo = linalg.OptLower
+    }
+
+    blas.SyrkFloat(A, C0, 1.0, 1.0, uplo, trans)
+    if A.Rows() < 8 {
+        //t.Logf("..A\n%v\n", A)
+        t.Logf("  BLAS C0:\n%v\n", C0)
+    }
+
+    Ar := A.FloatArray()
+    Cr := C.FloatArray()
+    DMRankBlk(Cr, Ar, 1.0, 1.0, flags, C.LeadingIndex(), A.LeadingIndex(),
+        P, S, E, vlen, nb)
+    result := C0.AllClose(C)
+    t.Logf("   C0 == C: %v\n", result)
+    if A.Rows() < 8 {
+        t.Logf("  DMRank C:\n%v\n", C)
+    }
+    return result
+}
+
+func TestSyrkSmall(t *testing.T) {
+    //bN := 7
+    Udata3 := [][]float64{
+        []float64{2.0, 2.0, 2.0},
+        []float64{0.0, 3.0, 3.0},
+        []float64{0.0, 0.0, 4.0}}
+
+    Udata := [][]float64{
+        []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+        []float64{0.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0},
+        []float64{0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 3.0},
+        []float64{0.0, 0.0, 0.0, 4.0, 4.0, 4.0, 4.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 5.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 6.0, 6.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0}}
+    U := matrix.FloatMatrixFromTable(Udata, matrix.RowOrder)
+    U3 := matrix.FloatMatrixFromTable(Udata3, matrix.RowOrder)
+    _ = U
+    _ = U3
+
+    Ldata3 := [][]float64{
+        []float64{1.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 0.0},
+        []float64{1.0, 2.0, 3.0}}
+
+    Ldata := [][]float64{
+     []float64{1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}}
+    L := matrix.FloatMatrixFromTable(Ldata, matrix.RowOrder)
+    L3 := matrix.FloatMatrixFromTable(Ldata3, matrix.RowOrder)
+    _ = L
+    _ = L3
+
+    Adata := [][]float64{
+        []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}}
+    A := matrix.FloatMatrixFromTable(Adata);
+    t.Logf("-- SYRK UPPER --")
+    syrkTest(t, U, A, UPPER, 4, 2)
+    t.Logf("-- SYRK LOWER --")
+    syrkTest(t, L, A, LOWER, 4, 2)
 }
 
 // Local Variables:
