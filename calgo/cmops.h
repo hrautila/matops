@@ -163,12 +163,18 @@ extern void
 dmmat_trmm_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
                int N, int S, /*int L, int R,*/ int E, int NB);
 
+// for TRSM
 extern void
 dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int E);
 
 extern void
 dmmat_solve_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
                 int N, int S, int E, int NB);
+
+// for SYRK
+extern void
+dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
+               int flags,  int P, int S, int E, int vlen, int NB);
 
 #endif
 

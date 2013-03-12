@@ -500,6 +500,23 @@ func DMSolveBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, N
 
 }
 
+// S is the start column (LEFT), row (RIGHT); E is the end column (LEFT), row (RIGHT)
+func DMRankBlk(C, A []float64, alpha, beta float64, flags Flags, ldC, ldA, N, S, E, H, NB int) {
+    var Cm C.mdata_t
+    var Am C.mdata_t
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.dmmat_rank_blk(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.double(alpha), C.double(beta),
+        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(H), C.int(NB))
+
+}
+
 /*
 func copy_trans(C, A []float64, ldC, ldA, M, N int) {
     var Cr *C.double
