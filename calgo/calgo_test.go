@@ -1263,7 +1263,8 @@ func syrkTest(t *testing.T, C, A *matrix.FloatMatrix, flags Flags, vlen, nb int)
 
     trans := linalg.OptNoTrans
     if flags & TRANSA != 0 {
-        trans = linalg.OptTransA
+        trans = linalg.OptTrans
+        P = A.Rows()
     }
     uplo := linalg.OptUpper
     if flags & LOWER != 0 {
@@ -1331,9 +1332,14 @@ func TestSyrkSmall(t *testing.T) {
         []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}}
     A := matrix.FloatMatrixFromTable(Adata);
     t.Logf("-- SYRK UPPER --")
-    syrkTest(t, U, A, UPPER, 4, 2)
+    syrkTest(t, U.Copy(), A, UPPER, 4, 2)
     t.Logf("-- SYRK LOWER --")
-    syrkTest(t, L, A, LOWER, 4, 2)
+    syrkTest(t, L.Copy(), A, LOWER, 4, 2)
+    t.Logf("-- SYRK UPPER, TRANSA --")
+    t.Logf("A: \n%v\n", A.Transpose())
+    syrkTest(t, U.Copy(), A.Transpose(), UPPER|TRANSA, 4, 2)
+    t.Logf("-- SYRK LOWER --")
+    syrkTest(t, L.Copy(), A.Transpose(), LOWER|TRANSA, 4, 2)
 }
 
 // Local Variables:
