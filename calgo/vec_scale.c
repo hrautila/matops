@@ -6,6 +6,7 @@
 // any later version. See the COPYING tile included in this archive.
 
 #include <stdio.h>
+#include "cmops.h"
 
 // Kahan summation for DOT product:
 //    http://en.wikipedia.org/wiki/Kahan_summation_algorithm
@@ -155,6 +156,64 @@ void dscale_tile(double *X, int ldX, double f0, int M, int N)
     }
   increment:
     Xc += ldX;
+  }
+  return;
+
+}
+
+// scale triangular; if MTX_UNIT set does not scale diagonal element
+void dscale_triul(double *X, int ldX, double f0, int N, int flags)
+{
+  register double *Xr, *Xc;
+  register int i, j;
+  register int unit = flags & MTX_UNIT ? 1 : 0;
+  if (f0 == 1.0) {
+    return;
+  }
+  Xc = X;
+  // set to zero
+  if (f0 == 0.0) {
+    if (flags & MTX_LOWER) {
+      for (j = 0; j < N; j++) {
+        Xr = Xc + j + unit;
+        for (i = N; i > j+unit; i--) {
+          Xr[0] = 0.0;
+          Xr++;
+        }
+        Xc += ldX;
+      }
+    } else {
+      for (j = 0; j < N; j++) {
+        Xr = Xc;
+        for (i = 0; i < j+unit; i++) {
+          Xr[0] = 0.0;
+          Xr++;
+        }
+        Xc += ldX;
+      }
+    }
+    return;
+  }
+
+  // scale here
+  if (flags & MTX_LOWER) {
+    for (j = 0; j < N; j++) {
+      Xr = Xc + j + unit;
+      for (i = N; i > j+unit; i--) {
+        Xr[0] *= f0;
+        Xr ++;
+      }
+      Xc += ldX;
+    }
+  } else {
+    for (j = 0; j < N; j++) {
+      Xr = Xc;
+      for (i = 0; i < j+unit; i ++) {
+        Xr[0] *= f0;
+        Xr ++;
+      }
+      Xc += ldX;
+    }
   }
   return;
 
