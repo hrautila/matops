@@ -64,46 +64,45 @@ INLINE void _inner_ddot4_2_sse3(double *Cr0, double *Cr1, double *Cr2, double *C
     b2 += 2;
     b3 += 2;
   }
-  if (k == 0) {
-    cval0 = a0[0] * b0[0];
-    cval1 = a0[0] * b1[0]; 
-    cval2 = a0[0] * b2[0];
-    cval3 = a0[0] * b3[0]; 
-    Cr0[0] += cval0 * alpha;
-    Cr1[0] += cval1 * alpha;
-    Cr2[0] += cval2 * alpha;
-    Cr3[0] += cval3 * alpha;
-    cval0 = a1[0] * b0[0];
-    cval1 = a1[0] * b1[0]; 
-    cval2 = a1[0] * b2[0];
-    cval3 = a1[0] * b3[0]; 
-    Cr0[1] += cval0 * alpha;
-    Cr1[1] += cval1 * alpha;
-    Cr2[1] += cval2 * alpha;
-    Cr3[1] += cval3 * alpha;
-  }
   // update result
-  C0_0 = C0_0 * ALP;
-  C1_0 = C1_0 * ALP;
-  C2_0 = C2_0 * ALP;
-  C3_0 = C3_0 * ALP;
   F0 = _mm_hadd_pd(C0_0, C1_0);
   F1 = _mm_hadd_pd(C2_0, C3_0);
+  F0 *= ALP;
+  F1 *= ALP;
   Cr0[0] += F0[0];
   Cr1[0] += F0[1];
   Cr2[0] += F1[0];
   Cr3[0] += F1[1];
 
-  C0_1 = C0_1 * ALP;
-  C1_1 = C1_1 * ALP;
-  C2_1 = C2_1 * ALP;
-  C3_1 = C3_1 * ALP;
   F2 = _mm_hadd_pd(C0_1, C1_1);
   F3 = _mm_hadd_pd(C2_1, C3_1);
+  F2 *= ALP;
+  F3 *= ALP;
   Cr0[1] += F2[0];
   Cr1[1] += F2[1];
   Cr2[1] += F3[0];
   Cr3[1] += F3[1];
+
+  if (k != 0)
+    return;
+
+  // last odd element here
+  cval0 = a0[0] * b0[0];
+  cval1 = a0[0] * b1[0]; 
+  cval2 = a0[0] * b2[0];
+  cval3 = a0[0] * b3[0]; 
+  Cr0[0] += cval0 * alpha;
+  Cr1[0] += cval1 * alpha;
+  Cr2[0] += cval2 * alpha;
+  Cr3[0] += cval3 * alpha;
+  cval0 = a1[0] * b0[0];
+  cval1 = a1[0] * b1[0]; 
+  cval2 = a1[0] * b2[0];
+  cval3 = a1[0] * b3[0]; 
+  Cr0[1] += cval0 * alpha;
+  Cr1[1] += cval1 * alpha;
+  Cr2[1] += cval2 * alpha;
+  Cr3[1] += cval3 * alpha;
 }
 
 
@@ -144,27 +143,28 @@ INLINE void _inner_ddot4_sse3(double *Cr0, double *Cr1, double *Cr2, double *Cr3
     b2 += 2;
     b3 += 2;
   }
-  if (k == 0) {
-    cval0   = Ar[0] * b0[0];
-    cval1   = Ar[0] * b1[0]; 
-    cval2   = Ar[0] * b2[0];
-    cval3   = Ar[0] * b3[0]; 
-    Cr0[0] += cval0 * alpha;
-    Cr1[0] += cval1 * alpha;
-    Cr2[0] += cval2 * alpha;
-    Cr3[0] += cval3 * alpha;
-  }
-
-  C0 = C0 * ALP;
-  C1 = C1 * ALP;
-  C2 = C2 * ALP;
-  C3 = C3 * ALP;
+  // update result
   F0 = _mm_hadd_pd(C0, C1);
   F1 = _mm_hadd_pd(C2, C3);
-  Cr0[0] += F0[0]; //C0[0] + C0[1]; //F0[1];
-  Cr1[0] += F0[1]; //C1[0] + C1[1]; //F0[0];
-  Cr2[0] += F1[0]; //C2[0] + C2[1]; //F1[1];
-  Cr3[0] += F1[1]; //C3[0] + C3[1]; //F1[0];
+  F0 *= ALP;
+  F1 *= ALP;
+  Cr0[0] += F0[0];
+  Cr1[0] += F0[1];
+  Cr2[0] += F1[0];
+  Cr3[0] += F1[1];
+
+  if (k != 0)
+    return;
+
+  // last odd element here
+  cval0   = Ar[0] * b0[0];
+  cval1   = Ar[0] * b1[0]; 
+  cval2   = Ar[0] * b2[0];
+  cval3   = Ar[0] * b3[0]; 
+  Cr0[0] += cval0 * alpha;
+  Cr1[0] += cval1 * alpha;
+  Cr2[0] += cval2 * alpha;
+  Cr3[0] += cval3 * alpha;
 }
 
 // Update 2 columns with 2 by 2 block.
@@ -174,10 +174,9 @@ INLINE void _inner_ddot2_2_sse3(double *Cr0, double *Cr1,
 				double alpha, int nVP)
 {
   register int k, i;
-  register double cval0, cval1, cval2, cval3;
-  register __m128d A0, B0, C0_0, F0, A1, B1, C1_0, F1;
-  register __m128d A2, B2, C2_0, F2, A3, B3, C3_0, F3, ALP;
-  register __m128d C0_1, C1_1, C2_1, C3_1;
+  register double cval0, cval1;
+  register __m128d A0, B0, B1, F0, F1, C0_0, C1_0;
+  register __m128d C0_1, C1_1, C2_1, C3_1, ALP;
 
   C0_0 = _mm_set1_pd(0.0);
   C1_0 = C0_0;
@@ -206,29 +205,29 @@ INLINE void _inner_ddot2_2_sse3(double *Cr0, double *Cr1,
     b0 += 2;
     b1 += 2;
   }
-  if (k == 0) {
-    cval0   = a0[0] * b0[0];
-    cval1   = a0[0] * b1[0]; 
-    Cr0[0] += cval0 * alpha;
-    Cr1[0] += cval1 * alpha;
-    cval0   = a1[0] * b0[0];
-    cval1   = a1[0] * b1[0]; 
-    Cr0[1] += cval0 * alpha;
-    Cr1[1] += cval1 * alpha;
-  }
-
- update:
-  C0_0 = C0_0 * ALP;
-  C1_0 = C1_0 * ALP;
+  // update result
   F0 = _mm_hadd_pd(C0_0, C1_0);
+  F0 *= ALP;
   Cr0[0] += F0[0];
   Cr1[0] += F0[1];
 
-  C0_1 = C0_1 * ALP;
-  C1_1 = C1_1 * ALP;
   F1 = _mm_hadd_pd(C0_1, C1_1);
+  F1 *= ALP;
   Cr0[1] += F1[0];
   Cr1[1] += F1[1];
+
+  if (k != 0)
+    return;
+
+  // the last odd entry here
+  cval0   = a0[0] * b0[0];
+  cval1   = a0[0] * b1[0]; 
+  Cr0[0] += cval0 * alpha;
+  Cr1[0] += cval1 * alpha;
+  cval0   = a1[0] * b0[0];
+  cval1   = a1[0] * b1[0]; 
+  Cr0[1] += cval0 * alpha;
+  Cr1[1] += cval1 * alpha;
 }
 
 
@@ -257,18 +256,21 @@ INLINE void _inner_ddot2_sse3(double *Cr0, double *Cr1, const double *Ar,
     b0 += 2;
     b1 += 2;
   }
-  if (k == 0) {
-    cval0   = Ar[0] * b0[0];
-    cval1   = Ar[0] * b1[0];
-    Cr0[0] += cval0 * alpha;
-    Cr1[0] += cval1 * alpha;
-  }
- update:
-  C0 = C0 * ALP;
-  C1 = C1 * ALP;
+
+  // update result
   F0 = _mm_hadd_pd(C0, C1);
+  F0 *= ALP;
   Cr0[0] += F0[0];
   Cr1[0] += F0[1];
+
+  if (k != 0)
+    return;
+
+  // handle the odd element
+  cval0   = Ar[0] * b0[0];
+  cval1   = Ar[0] * b1[0];
+  Cr0[0] += cval0 * alpha;
+  Cr1[0] += cval1 * alpha;
 }
 
 INLINE void _inner_ddot_sse(double *Cr, const double *Ar,
@@ -327,17 +329,10 @@ INLINE void _inner_ddot4_2_sse4_1(double *Cr0, double *Cr1, double *Cr2, double 
 				  double alpha, int nVP)
 {
   register int k, i;
-  register double cval0, cval1, cval2, cval3, cval4, cval5, cval6, cval7;
-  register __m128d A0, B0, F0, B1, F1, B2, F2, B3, F3;
+  register double cval0, cval1;
+  register __m128d A0, B0, F0, B1, F1, B2, F2, B3, F3, CFA;
 
-  cval0 = 0.0;
-  cval1 = 0.0;
-  cval2 = 0.0;
-  cval3 = 0.0;
-  cval4 = 0.0;
-  cval5 = 0.0;
-  cval6 = 0.0;
-  cval7 = 0.0;
+  F0 = _mm_set1_pd(0.0); F1 = F0; F2 = F0; F3 = F0;
 
   // unrolling of loops;
   for (k = nVP-1; k > 0; k -= 2) {
@@ -347,25 +342,18 @@ INLINE void _inner_ddot4_2_sse4_1(double *Cr0, double *Cr1, double *Cr2, double 
     B2 = _mm_load_pd(b2);
     B3 = _mm_load_pd(b3);
 
-    // 0x13: 3 = ddot of low and high elements from source, 1 = broadcast to low
-    F0 = _mm_dp_pd(A0, B0, 0x13);
-    F1 = _mm_dp_pd(A0, B1, 0x13);
-    F2 = _mm_dp_pd(A0, B2, 0x13);
-    F3 = _mm_dp_pd(A0, B3, 0x13);
-    cval0 += F0[0];
-    cval1 += F1[0];
-    cval2 += F2[0];
-    cval3 += F3[0];
+    // 0x31: 3 = ddot of low and high elements from source, 1 = broadcast to low
+    // 0x32: 3 = ddot of low and high elements from source, 2 = broadcast to high
+    F0 += _mm_dp_pd(A0, B0, 0x31);
+    F0 += _mm_dp_pd(A0, B1, 0x32);
+    F1 += _mm_dp_pd(A0, B2, 0x31);
+    F1 += _mm_dp_pd(A0, B3, 0x32);
 
     A0 = _mm_load_pd(a1);
-    F0 = _mm_dp_pd(A0, B0, 0x13);
-    F1 = _mm_dp_pd(A0, B1, 0x13);
-    F2 = _mm_dp_pd(A0, B2, 0x13);
-    F3 = _mm_dp_pd(A0, B3, 0x13);
-    cval4 += F0[0];
-    cval5 += F1[0];
-    cval6 += F2[0];
-    cval7 += F3[0];
+    F2 += _mm_dp_pd(A0, B0, 0x31);
+    F2 += _mm_dp_pd(A0, B1, 0x32);
+    F3 += _mm_dp_pd(A0, B2, 0x31);
+    F3 += _mm_dp_pd(A0, B3, 0x32);
 
     a0 += 2;
     a1 += 2;
@@ -374,24 +362,37 @@ INLINE void _inner_ddot4_2_sse4_1(double *Cr0, double *Cr1, double *Cr2, double 
     b2 += 2;
     b3 += 2;
   }
-  if (k == 0) {
-    cval0 += a0[0] * b0[0];
-    cval1 += a0[0] * b1[0]; 
-    cval2 += a0[0] * b2[0];
-    cval3 += a0[0] * b3[0]; 
-    cval4 += a1[0] * b0[0];
-    cval5 += a1[0] * b1[0]; 
-    cval6 += a1[0] * b2[0];
-    cval7 += a1[0] * b3[0]; 
-  }
-  Cr0[0] += cval0 * alpha;
-  Cr1[0] += cval1 * alpha;
-  Cr2[0] += cval2 * alpha;
-  Cr3[0] += cval3 * alpha;
-  Cr0[1] += cval4 * alpha;
-  Cr1[1] += cval5 * alpha;
-  Cr2[1] += cval6 * alpha;
-  Cr3[1] += cval7 * alpha;
+  CFA = _mm_set1_pd(alpha);
+  F0 *= CFA; F1 *= CFA; F2 *= CFA; F3 *= CFA;
+  Cr0[0] += F0[0];
+  Cr1[0] += F0[1];
+  Cr2[0] += F1[0];
+  Cr3[0] += F1[1];
+  Cr0[1] += F2[0];
+  Cr1[1] += F2[1];
+  Cr2[1] += F3[0];
+  Cr3[1] += F3[1];
+
+  if (k != 0)
+    return;
+
+  // remaining odd element
+  cval0 = a0[0] * b0[0]; // cval0
+  Cr0[0] += alpha * cval0;
+  cval1 = a0[0] * b1[0]; 
+  Cr1[0] += alpha*cval1;
+  cval0 = a0[0] * b2[0];
+  Cr2[0] += alpha * cval0;
+  cval1 = a0[0] * b3[0]; 
+  Cr3[0] += alpha * cval1;
+  cval0 = a1[0] * b0[0];
+  Cr0[1] += alpha * cval0;
+  cval1 = a1[0] * b1[0]; 
+  Cr1[1] += alpha * cval1;
+  cval0 = a1[0] * b2[0];
+  Cr2[1] += alpha * cval0;
+  cval1 = a1[0] * b3[0]; 
+  Cr3[1] += alpha * cval1;
 }
 
 // Update 4 columns with from 1 by 4 block.
@@ -401,10 +402,10 @@ INLINE void _inner_ddot4_sse4_1(double *Cr0, double *Cr1, double *Cr2, double *C
 {
   register int k, i;
   register double cval0, cval1, cval2, cval3;
-  register __m128d A0, B0, F0, B1, F1, B2, F2, B3, F3;
+  register __m128d A0, B0, F0, B1, F1, B2, F2, B3, F3, CFA;
 
   cval0 = 0.0; cval1 = 0.0; cval2 = 0.0; cval3 = 0.0;
-
+  F0 = _mm_set1_pd(0.0); F1 = F0;
   // unrolling of loops;
   for (k = nVP-1; k > 0; k -= 2) {
     A0 = _mm_load_pd(Ar);
@@ -413,15 +414,11 @@ INLINE void _inner_ddot4_sse4_1(double *Cr0, double *Cr1, double *Cr2, double *C
     B2 = _mm_load_pd(b2);
     B3 = _mm_load_pd(b3);
 
-    // 0x13: 3 = ddot of low and high elements from source, 1 = broadcast to low
-    F0 = _mm_dp_pd(A0, B0, 0x13);
-    F1 = _mm_dp_pd(A0, B1, 0x13);
-    F2 = _mm_dp_pd(A0, B2, 0x13);
-    F3 = _mm_dp_pd(A0, B3, 0x13);
-    cval0 += F0[0];
-    cval1 += F1[0];
-    cval2 += F2[0];
-    cval3 += F3[0];
+    // 0x31: 3 = ddot of low and high elements from source, 1 = broadcast to low
+    F0 += _mm_dp_pd(A0, B0, 0x31);
+    F0 += _mm_dp_pd(A0, B1, 0x32);
+    F1 += _mm_dp_pd(A0, B2, 0x31);
+    F1 += _mm_dp_pd(A0, B3, 0x32);
 
     Ar += 2;
     b0 += 2;
@@ -429,16 +426,24 @@ INLINE void _inner_ddot4_sse4_1(double *Cr0, double *Cr1, double *Cr2, double *C
     b2 += 2;
     b3 += 2;
   }
-  if (k != 0) {
-    cval0 += Ar[0] * b0[0];
-    cval1 += Ar[0] * b1[0]; 
-    cval2 += Ar[0] * b2[0];
-    cval3 += Ar[0] * b3[0]; 
-  }
-  Cr0[0] += cval0 * alpha;
-  Cr1[0] += cval1 * alpha;
-  Cr2[0] += cval2 * alpha;
-  Cr3[0] += cval3 * alpha;
+  CFA = _mm_set1_pd(alpha);
+  F0 *= CFA; F1 *= CFA;
+  Cr0[0] += F0[0];
+  Cr1[0] += F0[1];
+  Cr2[0] += F1[0];
+  Cr3[0] += F1[1];
+
+  if (k != 0)
+    return;
+
+  cval0   = Ar[0] * b0[0];
+  Cr0[0] += alpha * cval0;
+  cval1   = Ar[0] * b1[0]; 
+  Cr1[0] += alpha * cval1;
+  cval0   = Ar[0] * b2[0];
+  Cr2[0] += alpha * cval0;
+  cval1   = Ar[0] * b3[0]; 
+  Cr3[0] += alpha * cval1;
 }
 
 // Update 2 columsn with 2 by 2 block.
@@ -449,9 +454,10 @@ INLINE void _inner_ddot2_2_sse4_1(double *Cr0, double *Cr1,
 {
   register int k, i;
   register double cval0, cval1, cval2, cval3;
-  register __m128d A0, B0, F0, B1, F1, F2;
+  register __m128d A0, B0, F0, B1, F1, CFA;
 
   cval0 = 0.0; cval1 = 0.0;
+  F0 = _mm_set1_pd(0.0); F1 = F0;
 
   // unrolling of loops;
   for (k = nVP-1; k > 0; k -= 2) {
@@ -459,33 +465,40 @@ INLINE void _inner_ddot2_2_sse4_1(double *Cr0, double *Cr1,
     B0 = _mm_load_pd(b0);
     B1 = _mm_load_pd(b1);
 
-    F0 = _mm_dp_pd(A0, B0, 0x13);
-    F1 = _mm_dp_pd(A0, B1, 0x13);
-    cval0 += F0[0];
-    cval1 += F1[0];
+    F0 += _mm_dp_pd(A0, B0, 0x31);
+    F0 += _mm_dp_pd(A0, B1, 0x32);
 
-    // 0x13: 3 = ddot of low and high elements from source, 1 = broadcast to low
+    // 0x31: 3 = ddot of low and high elements from source, 1 = broadcast to low
+    // 0x32: 3 = like above, 2 = broadcast to high
     A0 = _mm_load_pd(a1);
-    F2 = _mm_dp_pd(A0, B0, 0x13);
-    F0 = _mm_dp_pd(A0, B1, 0x13);
-    cval2 += F2[0];
-    cval3 += F0[0];
+    F1 += _mm_dp_pd(A0, B0, 0x31);
+    F1 += _mm_dp_pd(A0, B1, 0x32);
 
     a0 += 2;
     a1 += 2;
     b0 += 2;
     b1 += 2;
   }
-  if (k != 0) {
-    cval0 += a0[0] * b0[0];
-    cval1 += a0[0] * b1[0]; 
-    cval2 += a1[0] * b0[0];
-    cval3 += a1[0] * b1[0]; 
-  }
-  Cr0[0] += cval0 * alpha;
-  Cr1[0] += cval1 * alpha;
-  Cr0[1] += cval2 * alpha;
-  Cr1[1] += cval3 * alpha;
+  // update results
+  CFA = _mm_set1_pd(alpha);
+  F0 *= CFA; F1 *= CFA;
+  Cr0[0] += F0[0]; 
+  Cr1[0] += F0[1]; 
+  Cr0[1] += F1[0]; 
+  Cr1[1] += F1[1]; 
+
+  if (k != 0)
+    return;
+
+  // handle the odd element
+  cval0   = a0[0] * b0[0];
+  Cr0[0] += alpha * cval0;
+  cval1   = a0[0] * b1[0]; 
+  Cr1[0] += alpha * cval1;
+  cval0   = a1[0] * b0[0];
+  Cr0[1] += alpha * cval0;
+  cval1   = a1[0] * b1[0]; 
+  Cr1[1] += alpha * cval1;
 }
 
 // Update 2 columns with 1 by 2 block of length nVP.
@@ -495,9 +508,10 @@ INLINE void _inner_ddot2_sse4_1(double *Cr0, double *Cr1,
 {
   register int k, i;
   register double cval0, cval1;
-  register __m128d A0, B0, F0, B1, F1;
+  register __m128d A0, B0, F0, B1, F1, CFA;
 
   cval0 = 0.0; cval1 = 0.0;
+  F0 = _mm_set1_pd(0.0);
 
   // unrolling of loops;
   for (k = nVP-1; k > 0; k -= 2) {
@@ -505,22 +519,59 @@ INLINE void _inner_ddot2_sse4_1(double *Cr0, double *Cr1,
     B0 = _mm_load_pd(b0);
     B1 = _mm_load_pd(b1);
 
-    // 0x13: 3 = ddot of low and high elements from source, 1 = broadcast to low
-    F0 = _mm_dp_pd(A0, B0, 0x13);
-    F1 = _mm_dp_pd(A0, B1, 0x13);
-    cval0 += F0[0];
-    cval1 += F1[0];
+    // 0x31: 3 = ddot of low and high elements from source, 1 = broadcast to low
+    F0 += _mm_dp_pd(A0, B0, 0x31);
+    F0 += _mm_dp_pd(A0, B1, 0x32);
 
     Ar += 2;
     b0 += 2;
     b1 += 2;
   }
-  if (k == 0) {
-    cval0 += Ar[0] * b0[0];
-    cval1 += Ar[0] * b1[0]; 
+  CFA = _mm_set1_pd(alpha);
+  F0 *= CFA;
+  Cr0[0] += F0[0];
+  Cr1[0] += F0[1];
+
+  if (k != 0)
+    return;
+
+  cval0   = Ar[0] * b0[0];
+  Cr0[0] += alpha * cval0;
+  cval1   = Ar[0] * b1[0]; 
+  Cr1[0] += alpha * cval0;
+}
+
+
+// Update 2 columns with 1 by 2 block of length nVP.
+INLINE void _inner_ddot_sse4_1(double *Cr0, const double *Ar, const double *b0, 
+                               double alpha, int nVP)
+{
+  register int k, i;
+  register double cval0, cval1;
+  register __m128d A0, B0, F0, B1, F1, CFA;
+
+  //cval0 = 0.0; cval1 = 0.0;
+  F0 = _mm_set1_pd(0.0);
+
+  // unrolling of loops;
+  for (k = nVP-1; k > 0; k -= 2) {
+    A0 = _mm_load_pd(Ar);
+    B0 = _mm_load_pd(b0);
+
+    // 0x31: 3 = ddot of low and high elements from source, 1 = broadcast to low
+    F0 += _mm_dp_pd(A0, B0, 0x31);
+
+    Ar += 2;
+    b0 += 2;
   }
-  Cr0[0] += cval0 * alpha;
-  Cr1[0] += cval1 * alpha;
+  CFA = _mm_set1_pd(alpha);
+  F0 *= CFA;
+  Cr0[0] += F0[0];
+  if (k != 0)
+    return;
+
+  cval0   = Ar[0] * b0[0];
+  Cr0[0] += alpha * cval0;
 }
 
 
@@ -532,24 +583,27 @@ INLINE void _inner_ddot4(double *c0, double *c1, double *c2, double *c3,
 {
   register int k;
   register double cval0, cval1, cval2, cval3;
-  register double cval4, cval5, cval6, cval7;
+  register double f0, f1, f2, f3;
 
   cval0 = 0.0; cval1 = 0.0; cval2 = 0.0; cval3 = 0.0;
-  cval4 = 0.0; cval5 = 0.0; cval6 = 0.0; cval7 = 0.0;
 
   // unrolling of loops;
   for (k = nVP-1; k > 0; k -= 2) {
-    cval0 += Ar[0] * b0[0];
-    cval1 += Ar[1] * b0[1];
+    f0 = Ar[0] * b0[0];
+    f1 = Ar[1] * b0[1];
+    cval0 += f0 + f1;
 
-    cval2 += Ar[0] * b1[0];
-    cval3 += Ar[1] * b1[1];
+    f2 = Ar[0] * b1[0];
+    f3 = Ar[1] * b1[1];
+    cval1 += f1 + f2;
 
-    cval4 += Ar[0] * b2[0];
-    cval5 += Ar[1] * b2[1];
+    f0 = Ar[0] * b2[0];
+    f1 = Ar[1] * b2[1];
+    cval2 += f0 + f1;
 
-    cval6 += Ar[0] * b3[0];
-    cval7 += Ar[1] * b3[1];
+    f2 = Ar[0] * b3[0];
+    f3 = Ar[1] * b3[1];
+    cval3 += f2 + f3;
 
     Ar += 2;
     b0 += 2;
@@ -557,72 +611,59 @@ INLINE void _inner_ddot4(double *c0, double *c1, double *c2, double *c3,
     b2 += 2;
     b3 += 2;
   }
-  if (k == 0) {
-    cval0 += Ar[0] * b0[0];
-    cval2 += Ar[0] * b1[0];
-    cval4 += Ar[0] * b2[1];
-    cval6 += Ar[0] * b3[1];
-  }
- update:
-  c0[0] += (cval0 + cval1) * alpha;
-  c1[0] += (cval2 + cval3) * alpha;
-  c2[0] += (cval4 + cval5) * alpha;
-  c3[0] += (cval6 + cval7) * alpha;
+
+  c0[0] += cval0 * alpha;
+  c1[0] += cval1 * alpha;
+  c2[0] += cval2 * alpha;
+  c3[0] += cval3 * alpha;
+  if (k != 0)
+    return;
+
+  f0     = Ar[0] * b0[0];
+  c0[0] += f0 * alpha;
+  f1     = Ar[0] * b1[0];
+  c1[0] += f1 * alpha;
+  f2     = Ar[0] * b2[1];
+  c2[0] += f2 * alpha;
+  f3     = Ar[0] * b3[1];
+  c3[0] += f3 * alpha;
 }
 
 INLINE void _inner_ddot2(double *c0, double *c1, const double *Ar,
                          const double *b0, const double *b1, double alpha, int nVP)
 {
   register int k;
-  register double f0, f1, f2, f3, cval0, cval1, cval2, cval3;
+  register double cval0, cval1;
+  register double f0, f1, f2, f3;
 
-  cval0 = 0.0; cval1 = 0.0; cval2 = 0.0; cval3 = 0.0;
+  cval0 = 0.0; cval1 = 0.0;
+
   // unrolling of loops;
-  for (k = 0; k < nVP-3; k += 4) {
+  for (k = nVP-1; k > 0; k -= 2) {
     f0 = Ar[0] * b0[0];
     f1 = Ar[1] * b0[1];
-    f2 = Ar[2] * b0[2];
-    f3 = Ar[3] * b0[3];
-    cval0 += f0;
-    cval1 += f1;
-    cval0 += f2;
-    cval1 += f3;
-    f0 = Ar[0] * b1[0];
-    f1 = Ar[1] * b1[1];
-    f2 = Ar[2] * b1[2];
-    f3 = Ar[3] * b1[3];
-    cval2 += f0;
-    cval3 += f1;
-    cval2 += f2;
-    cval3 += f3;
-    b0 += 4;
-    b1 += 4;
-    Ar += 4;
-  }
-  if (k == nVP)
-    goto update;
+    cval0 += f0 + f1;
 
-  if (k < nVP-1) {
-    f0 = Ar[0] * b0[0];
-    f1 = Ar[1] * b0[1];
-    cval0 += f0;
-    cval1 += f1;
-    f0 = Ar[0] * b1[0];
-    f1 = Ar[1] * b1[1];
-    cval2 += f0;
-    cval3 += f1;
+    f2 = Ar[0] * b1[0];
+    f3 = Ar[1] * b1[1];
+    cval1 += f2 + f3;
+
+    Ar += 2;
     b0 += 2;
     b1 += 2;
-    Ar += 2;
-    k += 2;
   }
-  if (k < nVP) {
-    cval0 += Ar[0] * b0[0];
-    cval2 += Ar[0] * b1[0];
-  }
- update:
-  c0[0] += (cval0 + cval1) * alpha;
-  c1[0] += (cval2 + cval3) * alpha;
+  // update results
+  c0[0] += cval0 * alpha;
+  c1[0] += cval1 * alpha;
+
+  if (k != 0)
+    return;
+  
+  // handle odd element here
+  f0     = Ar[0] * b0[0];
+  c0[0] += f0 * alpha;
+  f1     = Ar[0] * b1[0];
+  c1[0] += f1 * alpha;
 }
 
 INLINE void _inner_ddot(double *Cr, const double *Ar, const double *Br, double alpha, int nVP)
