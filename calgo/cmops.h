@@ -176,6 +176,12 @@ extern void
 dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
                int flags,  int P, int S, int E, int vlen, int NB);
 
+// for SYR2K
+extern void
+dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                double alpha, double beta, int flags,
+                int P, int S, int E,  int vlen, int NB);
+
 #endif
 
 // Local Variables:

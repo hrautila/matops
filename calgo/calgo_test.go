@@ -1342,6 +1342,101 @@ func TestSyrkSmall(t *testing.T) {
     syrkTest(t, L.Copy(), A.Transpose(), LOWER|TRANSA, 4, 2)
 }
 
+func syrk2Test(t *testing.T, C, A, B *matrix.FloatMatrix, flags Flags, vlen, nb int) bool {
+    //var B0 *matrix.FloatMatrix
+    P := A.Cols()
+    S := 0
+    E := C.Rows()
+    C0 := C.Copy()
+
+    trans := linalg.OptNoTrans
+    if flags & TRANSA != 0 {
+        trans = linalg.OptTrans
+        P = A.Rows()
+    }
+    uplo := linalg.OptUpper
+    if flags & LOWER != 0 {
+        uplo = linalg.OptLower
+    }
+
+    blas.Syr2kFloat(A, B, C0, 1.0, 1.0, uplo, trans)
+    if A.Rows() < 8 {
+        //t.Logf("..A\n%v\n", A)
+        t.Logf("  BLAS C0:\n%v\n", C0)
+    }
+
+    Ar := A.FloatArray()
+    Br := B.FloatArray()
+    Cr := C.FloatArray()
+    DMRank2Blk(Cr, Ar, Br, 1.0, 1.0, flags, C.LeadingIndex(), A.LeadingIndex(),
+        B.LeadingIndex(), P, S, E, vlen, nb)
+    result := C0.AllClose(C)
+    t.Logf("   C0 == C: %v\n", result)
+    if A.Rows() < 8 {
+        t.Logf("  DMRank2 C:\n%v\n", C)
+    }
+    return result
+}
+
+func TestSyrk2Small(t *testing.T) {
+    //bN := 7
+    Udata3 := [][]float64{
+        []float64{2.0, 2.0, 2.0},
+        []float64{0.0, 3.0, 3.0},
+        []float64{0.0, 0.0, 4.0}}
+
+    Udata := [][]float64{
+        []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+        []float64{0.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0},
+        []float64{0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 3.0},
+        []float64{0.0, 0.0, 0.0, 4.0, 4.0, 4.0, 4.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 5.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 6.0, 6.0},
+        []float64{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0}}
+    U := matrix.FloatMatrixFromTable(Udata, matrix.RowOrder)
+    U3 := matrix.FloatMatrixFromTable(Udata3, matrix.RowOrder)
+    _ = U
+    _ = U3
+
+    Ldata3 := [][]float64{
+        []float64{1.0, 0.0, 0.0},
+        []float64{1.0, 2.0, 0.0},
+        []float64{1.0, 2.0, 3.0}}
+
+    Ldata := [][]float64{
+     []float64{1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 0.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.0},
+     []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}}
+    L := matrix.FloatMatrixFromTable(Ldata, matrix.RowOrder)
+    L3 := matrix.FloatMatrixFromTable(Ldata3, matrix.RowOrder)
+    _ = L
+    _ = L3
+
+    Adata := [][]float64{
+        []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0},
+        []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}}
+    Bdata := [][]float64{
+        []float64{7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
+        []float64{7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0}}
+    _ = Bdata
+    A := matrix.FloatMatrixFromTable(Adata);
+    //B := matrix.FloatMatrixFromTable(Bdata);
+    B := matrix.FloatNormal(7, 2);
+    t.Logf("-- SYR2K UPPER --")
+    syrk2Test(t, U.Copy(), A, B, UPPER, 4, 2)
+    t.Logf("-- SYR2K LOWER --")
+    syrk2Test(t, L.Copy(), A, B, LOWER, 4, 2)
+    t.Logf("-- SYR2K UPPER, TRANSA --")
+    //t.Logf("A: \n%v\n", A.Transpose())
+    syrk2Test(t, U.Copy(), A.Transpose(), B.Transpose(), UPPER|TRANSA, 4, 2)
+    t.Logf("-- SYR2K LOWER, TRANS --")
+    syrk2Test(t, L.Copy(), A.Transpose(), B.Transpose(), LOWER|TRANSA, 4, 2)
+}
+
 // Local Variables:
 // tab-width: 4
 // indent-tabs-mode: nil

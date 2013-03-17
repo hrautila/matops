@@ -500,7 +500,7 @@ func DMSolveBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, N
 
 }
 
-// S is the start column (LEFT), row (RIGHT); E is the end column (LEFT), row (RIGHT)
+// S is the start column and row in C; E is the end column and row in C
 func DMRankBlk(C, A []float64, alpha, beta float64, flags Flags, ldC, ldA, N, S, E, H, NB int) {
     var Cm C.mdata_t
     var Am C.mdata_t
@@ -512,6 +512,27 @@ func DMRankBlk(C, A []float64, alpha, beta float64, flags Flags, ldC, ldA, N, S,
     C.dmmat_rank_blk(
         (*C.mdata_t)(unsafe.Pointer(&Cm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
+        C.double(alpha), C.double(beta),
+        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(H), C.int(NB))
+
+}
+
+// S is the start column and row in C; E is the end column and row in C
+func DMRank2Blk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, N, S, E, H, NB int) {
+    var Cm C.mdata_t
+    var Am C.mdata_t
+    var Bm C.mdata_t
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmmat_rank2_blk(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
         C.double(alpha), C.double(beta),
         C.int(flags), C.int(N), C.int(S), C.int(E), C.int(H), C.int(NB))
 

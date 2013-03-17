@@ -15,13 +15,13 @@
 
 
 static void
-_dmmat_rank_diag(mdata_t *C, const mdata_t *A, 
+_dmmat_rank_diag(mdata_t *C, const mdata_t *A, const mdata_t *B, 
 		double alpha, double beta,
 		int flags,  int P, int nC, int vlen, cbuf_t *Acpy, cbuf_t *Bcpy)
 {
   register int i, incA, trans;
   mdata_t A0 = {A->md, A->step};
-  mdata_t B0 = {A->md, A->step};
+  mdata_t B0 = {B->md, B->step};
 
   incA = flags & MTX_TRANSA ? A->step : 1;
   trans = flags & MTX_TRANSA ? MTX_TRANSA : MTX_TRANSB;
@@ -93,7 +93,7 @@ void dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
       Cd.md = &C->md[i*C->step+i];
       Ad.md = &A->md[i*A->step];
       // 1. update on diagonal
-      _dmmat_rank_diag(&Cd, &Ad, alpha, beta, flags, P, nI, vlen, &Acpy, &Bcpy);
+      _dmmat_rank_diag(&Cd, &Ad, &Ad, alpha, beta, flags, P, nI, vlen, &Acpy, &Bcpy);
 
       // 2. update block right of diagonal (UPPER) or left of diagonal (LOWER)
       Cd.md = flags & MTX_LOWER ? &C->md[i] : &C->md[(i+nI)*C->step+i];
@@ -110,7 +110,7 @@ void dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
       Cd.md = &C->md[i*C->step+i];
       Ad.md = &A->md[i];
       // 1. update on diagonal
-      _dmmat_rank_diag(&Cd, &Ad, alpha, beta, flags, P, nI, vlen, &Acpy, &Bcpy);
+      _dmmat_rank_diag(&Cd, &Ad, &Ad, alpha, beta, flags, P, nI, vlen, &Acpy, &Bcpy);
 
       // 2. update block right of diagonal (UPPER) or left of diagonal (LOWER)
       Cd.md = flags & MTX_LOWER ? &C->md[i] : &C->md[(i+nI)*C->step+i];
@@ -124,10 +124,107 @@ void dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
 }
 
 
-// SYRK; C = alpha*A*B.T + alpha*B.T*A + beta*C
-void dmmat_rank2_unb(mdata_t *C, const mdata_t *A, double alpha, double beta,
-		    int flags,  int N, int S, int E)
+// SYR2K;
+//   C = alpha*A*B.T + alpha*B*A.T + beta*C  
+//   C = alpha*A.T*B + alpha*B.T*A + beta*C  if flags & MTX_TRANS
+void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                     double alpha, double beta, int flags,
+                     int P, int S, int E,  int vlen, int NB)
 {
+  mdata_t Cd, Ad, Bd;
+  double Abuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(64)));
+  double Bbuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(64)));
+  cbuf_t Acpy = {Abuf, MAX_VP_ROWS*MAX_VP_COLS};
+  cbuf_t Bcpy = {Bbuf, MAX_VP_ROWS*MAX_VP_COLS};
+
+  register int i, j, nI, nC;
+  if (E-S <= 0 || P <= 0) {
+    return;
+  }
+  if (NB > MAX_VP_COLS || NB <= 0) {
+    NB = MAX_VP_COLS;
+  }
+  if (vlen > MAX_VP_ROWS || vlen <= 0) {
+    NB = MAX_VP_ROWS;
+  }
+  if (NB > E-S) {
+    NB = E-S;
+  }
+
+  Cd.step = C->step;
+  Ad.step = A->step;
+  Bd.step = A->step;
+
+  if (flags & MTX_TRANSA) {
+    //   C = alpha*A.T*B + alpha*B.T*A + beta*C 
+    for (i = S; i < E; i += NB) {
+      nI = E - i < NB ? E - i : NB;
+    
+      Cd.md = &C->md[i*C->step+i];
+      Ad.md = &A->md[i*A->step];
+      Bd.md = &B->md[i*B->step];
+      // 1. update on diagonal
+      _dmmat_rank_diag(&Cd, &Ad, &Bd, alpha, beta, flags, P, nI, vlen, &Acpy, &Bcpy);
+
+      // 2. update block right of diagonal (UPPER) or left of diagonal (LOWER)
+      Cd.md = flags & MTX_LOWER ? &C->md[i] : &C->md[(i+nI)*C->step+i];
+      Ad.md = &A->md[i*A->step];
+      Bd.md = flags & MTX_LOWER ? &B->md[S*B->step] : &B->md[(i+nI)*B->step];
+      nC = flags & MTX_LOWER ? i : E-i-nI;
+
+      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
+
+      // 2nd part
+      Cd.md = &C->md[i*C->step+i];
+      Ad.md = &B->md[i*B->step];
+      Bd.md = &A->md[i*A->step];
+      // 1. update on diagonal
+      _dmmat_rank_diag(&Cd, &Ad, &Bd, alpha, 1.0, flags, P, nI, vlen, &Acpy, &Bcpy);
+
+      // 2. update block right of diagonal (UPPER) or left of diagonal (LOWER)
+      Cd.md = flags & MTX_LOWER ? &C->md[i] : &C->md[(i+nI)*C->step+i];
+      Ad.md = &B->md[i*B->step];
+      Bd.md = flags & MTX_LOWER ? &A->md[S*A->step] : &A->md[(i+nI)*A->step];
+      nC = flags & MTX_LOWER ? i : E-i-nI;
+
+      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
+
+    }
+  } else {
+    //   C = alpha*A*B.T + alpha*B*A.T + beta*C  
+    for (i = S; i < E; i += NB) {
+      nI = E - i < NB ? E - i : NB;
+    
+      Cd.md = &C->md[i*C->step+i];
+      Ad.md = &A->md[i];
+      Bd.md = &B->md[i];
+      // 1. update on diagonal
+      _dmmat_rank_diag(&Cd, &Ad, &Bd, alpha, beta, flags, P, nI, vlen, &Acpy, &Bcpy);
+
+      // 2. update block right of diagonal (UPPER) or left of diagonal (LOWER)
+      Cd.md = flags & MTX_LOWER ? &C->md[i] : &C->md[(i+nI)*C->step+i];
+      Ad.md = &A->md[i];
+      Bd.md = flags & MTX_LOWER ? &B->md[S] : &B->md[i+nI];
+      nC = flags & MTX_LOWER ? i : E-i-nI;
+
+      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
+
+      Cd.md = &C->md[i*C->step+i];
+      Ad.md = &B->md[i];
+      Bd.md = &A->md[i];
+      // 1. update on diagonal
+      _dmmat_rank_diag(&Cd, &Ad, &Bd, alpha, beta, flags, P, nI, vlen, &Acpy, &Bcpy);
+
+      // 2. update block right of diagonal (UPPER) or left of diagonal (LOWER)
+      Cd.md = flags & MTX_LOWER ? &C->md[i] : &C->md[(i+nI)*C->step+i];
+      Ad.md = &B->md[i];
+      Bd.md = flags & MTX_LOWER ? &A->md[S] : &A->md[i+nI];
+      nC = flags & MTX_LOWER ? i : E-i-nI;
+
+      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
+
+    }
+  }
 }
 
 
