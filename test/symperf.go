@@ -31,6 +31,7 @@ var randomData bool
 var check bool
 var verbose bool
 var asGflops bool
+var asEps bool
 var singleTest bool
 var nWorker int
 var testName string
@@ -50,6 +51,7 @@ func init() {
     flag.BoolVar(&check, "C", false, "Check result against reference (gemm).")
     flag.BoolVar(&verbose, "v", false, "Be verbose.")
     flag.BoolVar(&asGflops, "g", false, "Report as Gflops.")
+    flag.BoolVar(&asEps, "e", false, "Report as result elements per seconds.")
     flag.BoolVar(&randomData, "R", true, "Generate random data.")
     flag.BoolVar(&singleTest, "s", false, "Run single test run for given matrix sizes.")
     flag.IntVar(&testCount, "n", 5, "Number of test runs.")
@@ -95,7 +97,17 @@ func CTestSymmUpper2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     B = matrix.FloatNormal(m, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        matops.MMSymm2(C, A, B, 1.0, 1.0, matops.LEFT|matops.UPPER)
+        matops.Symm(C, A, B, 1.0, 1.0, matops.LEFT|matops.UPPER)
+    }
+    return fnc, A, B, C
+}
+
+func CTestSymmLower2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormalSymmetric(m, matrix.Upper)
+    B = matrix.FloatNormal(m, n)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        matops.Symm(C, A, B, 1.0, 1.0, matops.LEFT|matops.LOWER)
     }
     return fnc, A, B, C
 }
@@ -142,7 +154,8 @@ func CheckLower(A, B, C *matrix.FloatMatrix) {
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     // lowel tests: calgo interfaces
-    "SymmUpper2": CTestSymmUpper2,
+    "SymmUp": CTestSymmUpper2,
+    "SymmLo": CTestSymmLower2,
     "SymmUpper": CTestSymmUpper,
     "SymmLower": CTestSymmLower,
     // blas interface reference tests
@@ -167,6 +180,7 @@ func main() {
     runtime.GOMAXPROCS(nWorker)
     matops.NumWorkers(nWorker)
     rand.Seed(time.Now().UnixNano())
+    matops.BlockingParams(VPsize, NB, MB)
 
     testFunc, ok := tests[testName]
     if ! ok {
@@ -196,7 +210,15 @@ func main() {
             }
         }
         //sec, _ := mperf.SingleTest(testName, testFunc, M, N, P, check, verbose)
-        fmt.Printf("%vs\n", tm.Seconds())
+        if asGflops {
+            gflops := 2.0*float64(int64(M)*int64(N)*int64(P))/tm.Seconds() * 1e-9
+            fmt.Printf("%.4f Gflops\n", gflops)
+        } else if asEps {
+            eps := float64(int64(M)*int64(N))/tm.Seconds()
+            fmt.Printf("%.4f Eps\n", eps)
+        } else {
+            fmt.Printf("%vs\n", tm.Seconds())
+        }
         return
     } 
 
@@ -211,7 +233,11 @@ func main() {
         }
         for sz := range times {
             n := int64(sz)
-            times[sz] = 2.0*float64(n*n*n) / times[sz] * 1e-9
+            if asGflops {
+                times[sz] = 2.0*float64(n*n*n) / times[sz] * 1e-9
+            } else {
+                times[sz] = float64(n*n) / times[sz]
+            }
         }
     }
     // print out as python dictionary
