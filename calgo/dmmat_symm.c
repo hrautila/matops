@@ -257,8 +257,8 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
 {
   int i, j, nI, nJ, flags1, flags2;
   mdata_t A0, B0, C0, *Ap, *Bp;
-  double Abuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(16)));
-  double Bbuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(16)));
+  double Abuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(64)));
+  double Bbuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(64)));
   cbuf_t Acpy = {Abuf, MAX_VP_ROWS*MAX_VP_COLS};
   cbuf_t Bcpy = {Bbuf, MAX_VP_ROWS*MAX_VP_COLS};
 
