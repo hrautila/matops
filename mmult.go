@@ -24,30 +24,30 @@ const (
     LEFT   = calgo.LEFT
     RIGHT  = calgo.RIGHT
     UNIT   = calgo.UNIT
+    TRANS  = calgo.TRANS
     NOTRANS = calgo.NOTRANS
     NONE   = calgo.NOTRANS
 )
     
-// blocking parameter size for AXPY based algorithms
-var vpLenAxpy int = 48
-var nBaxpy int = 256
-var mBaxpy int = 256
-
 // blocking parameter size for DOT based algorithms
-var vpLenDot int = 196
-var nBdot int = 68
-var mBdot int = 68
+var vpLen int = 196
+var nB int = 68
+var mB int = 68
 
 // Number of parallel workers to use.
 var nWorker int = 1
 
 // problems small than this do not benefit from parallelism
-var limitOne int = 200*200
+var limitOne int64 = 200*200*200
 
-func ParamsDot(vplen, nb, mb int) {
-    vpLenDot = vplen
-    nBdot = nb
-    mBdot = mb
+// Set blocking parameters for blocked algorithms. Hard limits are set
+// by actual C-implementation in matops.calgo package.
+// Parameter nb defines column direction block size, mb defines row direction
+// block size and vplen defines viewport length for matrix-matrix multiplication.
+func BlockingParams(vplen, nb, mb int) {
+    vpLen = vplen
+    nB = nb
+    mB = mb
 }
 
 func NumWorkers(newWorkers int) int {
@@ -130,8 +130,12 @@ func scheduleWork(colworks, rowworks, cols, rows int, worker task) {
     }
 }
 
-func MMMult2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
-    psize := C.NumElements()
+// blas GEMM
+func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+    if A.Cols() != B.Rows() {
+        return errors.New("A.cols != B.rows: size mismatch")
+    }
+    psize := int64(C.NumElements()*A.Cols())
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
@@ -140,15 +144,15 @@ func MMMult2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) erro
     ldC := C.LeadingIndex()
 
     if nWorker <= 1 || psize <= limitOne {
-        calgo.DMult2(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
             0, C.Cols(), 0, C.Rows(),
-            vpLenDot, nBdot, mBdot)
+            vpLen, nB, mB)
         return nil
     } 
     // here we have more than one worker available
     worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMult2(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
-            cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
+            cstart, cend, rstart, rend, vpLen, nB, mB)
         ready <- 1
     }
     colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
@@ -156,12 +160,16 @@ func MMMult2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) erro
     return nil
 }
 
-func MMSymm2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+// blas SYMM
+func Symm(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
 
     if A.Rows() != A.Cols() {
         return errors.New("A matrix not square matrix.");
     }
-    psize := C.NumElements()
+    if A.Cols() != B.Rows() {
+        return errors.New("A.cols != B.rows: size mismatch")
+    }
+    psize := int64(C.NumElements())*int64(A.Cols())
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
@@ -170,14 +178,14 @@ func MMSymm2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) erro
     ldC := C.LeadingIndex()
 
     if nWorker <= 1 || psize <= limitOne {
-        calgo.DMultSymm2(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
-            A.Cols(),  0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
+        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
+            A.Cols(),  0, C.Cols(), 0, C.Rows(), vpLen, nB, mB)
         return nil
     } 
     // here we have more than one worker available
     worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMultSymm2(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
-            A.Cols(), cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
+        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
+            A.Cols(), cstart, cend, rstart, rend, vpLen, nB, mB)
         ready <- 1
     }
     colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
@@ -185,369 +193,81 @@ func MMSymm2(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) erro
     return nil
 }
 
-// Calculate C = alpha*A*B + beta*C, C is M*N, A is M*P and B is P*N
-func MMMult(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
-    psize := C.NumElements()
+// blas TRMM
+func Trmm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
+    if B.Rows() != A.Cols() {
+        return errors.New("A.cols != B.rows: size mismatch")
+    }
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    
+    E := B.Cols()
+    if flags & RIGHT != 0 {
+        E = B.Rows()
+    }
+    // if more workers available can divide to tasks by B columns if flags&LEFT or by
+    // B rows if flags&RIGHT.
+    calgo.DTrmmBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, A.Cols(), 0, E, nB)
+    return nil
+}
+
+// blas TRSM; B = A.-1*B or B = A.-T*B or B = B*A.-1 or B = B*A.-T
+func Solve(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
+    if B.Rows() != A.Cols() {
+        return errors.New("A.cols != B.rows: size mismatch")
+    }
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    
+    E := B.Cols()
+    if flags & RIGHT != 0 {
+        E = B.Rows()
+    }
+    // if more workers available can divide to tasks by B columns if flags&LEFT or by
+    // B rows if flags&RIGHT.
+    calgo.DSolveBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, A.Cols(), 0, E, nB)
+    return nil
+}
+
+// blas SYRK
+func SymmUpdate(C, A *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+    if C.Rows() != C.Cols() {
+        return errors.New("C not a square matrix")
+    }
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Cr := C.FloatArray()
+    ldC := C.LeadingIndex()
+    S := 0
+    E := C.Rows()
+    // if more workers available C can be divided to blocks [S:E, S:E] along diagonal
+    // and updated in separate tasks. 
+    calgo.DSymmRankBlk(Cr, Ar, alpha, beta, calgo.Flags(flags), ldC, ldA, A.Cols(), S, E,
+        vpLen, nB)
+    return nil
+}
+
+// blas SYR2K
+func Symm2Update(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
     ldB := B.LeadingIndex()
     Cr := C.FloatArray()
     ldC := C.LeadingIndex()
-
-    if nWorker <= 1 || psize <= limitOne {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.NOTRANS, ldC, ldA, ldB, B.Rows(),
-            0, C.Cols(), 0, C.Rows(),
-            vpLenDot, nBdot, mBdot)
-        return nil
-    } 
-    // here we have more than one worker available
-    worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.NOTRANS, ldC, ldA, ldB, B.Rows(),
-            cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
-        ready <- 1
-    }
-    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
-    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
+    S := 0
+    E := C.Rows()
+    // if more workers available C can be divided to blocks [S:E, S:E] along diagonal
+    // and updated in separate tasks. 
+    calgo.DSymmRank2Blk(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
+        A.Cols(), S, E, vpLen, nB)
     return nil
 }
 
-// Calculate C = alpha*A.T*B + beta*C, C is M*N, A is P*M and B is P*N
-func MMMultTransA(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
-    psize := C.NumElements()
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Br := B.FloatArray()
-    ldB := B.LeadingIndex()
-    Cr := C.FloatArray()
-    ldC := C.LeadingIndex()
-    if nWorker <= 1 || psize <= limitOne {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSA, ldC, ldA, ldB,
-            B.Rows(), 0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
-        return nil
-    }
-
-    // here we have more than one worker available
-    worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSA, ldC, ldA, ldB, B.Rows(),
-            cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
-        ready <- 1
-    }
-    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
-    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
-    //scheduleWork(colworks, rowworks, worker)
-    return nil
-}
-
-// Calculate C = alpha*A*B.T + beta*C, C is M*N, A is M*P and B is N*P
-func MMMultTransB(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
-    psize := C.NumElements()
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Br := B.FloatArray()
-    ldB := B.LeadingIndex()
-    Cr := C.FloatArray()
-    ldC := C.LeadingIndex()
-    if nWorker <= 1 || psize <= limitOne {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSB, ldC, ldA, ldB,
-            B.Rows(), 0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
-        return nil
-    }
-
-    // here we have more than one worker available
-    worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSB, ldC, ldA, ldB, B.Rows(),
-            cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
-        ready <- 1
-    }
-    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
-    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
-    //scheduleWork(colworks, rowworks, worker)
-    return nil
-}
-
-// Calculate C = alpha*A.T*B.T + beta*C, C is M*N, A is P*M and B is N*P
-func MMMultTransAB(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
-    psize := C.NumElements()
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Br := B.FloatArray()
-    ldB := B.LeadingIndex()
-    Cr := C.FloatArray()
-    ldC := C.LeadingIndex()
-    if nWorker <= 1 || psize <= limitOne{
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSA|calgo.TRANSB, ldC, ldA, ldB,
-            B.Rows(), 0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
-        return nil
-    }
-
-    // here we have more than one worker available
-    worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.TRANSA|calgo.TRANSB, ldC, ldA, ldB,
-            B.Rows(), cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
-        ready <- 1
-    }
-    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
-    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
-    //scheduleWork(colworks, rowworks, worker)
-    return nil
-}
-
-
-// Calculate C = alpha*A*B + beta*C, C is M*N, A is M*M and B is M*N
-func MMSymm(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
-
-    if A.Rows() != A.Cols() {
-        return errors.New("A matrix not square matrix.");
-    }
-    psize := C.NumElements()
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Br := B.FloatArray()
-    ldB := B.LeadingIndex()
-    Cr := C.FloatArray()
-    ldC := C.LeadingIndex()
-
-    if nWorker <= 1 || psize <= limitOne {
-        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.LEFT|calgo.LOWER, ldC, ldA, ldB,
-            A.Cols(),  0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
-        return nil
-    } 
-    // here we have more than one worker available
-    worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.LEFT|calgo.LOWER, ldC, ldA, ldB,
-            A.Cols(), cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
-        ready <- 1
-    }
-    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
-    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
-    return nil
-}
-
-// Calculate C = alpha*A*B + beta*C, C is M*N, A is M*M and B is M*N
-func MMSymmUpper(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
-
-    if A.Rows() != A.Cols() {
-        return errors.New("A matrix not square matrix.");
-    }
-    psize := C.NumElements()
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Br := B.FloatArray()
-    ldB := B.LeadingIndex()
-    Cr := C.FloatArray()
-    ldC := C.LeadingIndex()
-
-    if nWorker <= 1 || psize <= limitOne {
-        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.LEFT|calgo.UPPER, ldC, ldA, ldB,
-            A.Cols(), 0, C.Cols(), 0, C.Rows(), vpLenDot, nBdot, mBdot)
-        return nil
-    } 
-    // here we have more than one worker available
-    worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMultSymm(Cr, Ar, Br, alpha, beta, calgo.LEFT|calgo.UPPER, ldC, ldA, ldB,
-            A.Cols(), cstart, cend, rstart, rend, vpLenDot, nBdot, mBdot)
-        ready <- 1
-    }
-    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
-    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
-    return nil
-}
-
-// Y = alpha*A*X + beta*Y
-func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
-
-    if Y.Rows() != 1 && Y.Cols() != 1 {
-        return errors.New("Y not a vector.");
-    }
-    if X.Rows() != 1 && X.Cols() != 1 {
-        return errors.New("X not a vector.");
-    }
-
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Yr := Y.FloatArray()
-    incY := 1
-    lenY := Y.Rows()
-    if Y.Rows() == 1 {
-        // row vector
-        incY = Y.LeadingIndex()
-        lenY = Y.Cols()
-    }
-    Xr := X.FloatArray()
-    incX := 1
-    lenX := X.Rows()
-    if X.Rows() == 1 {
-        // row vector
-        incX = X.LeadingIndex()
-        lenX = X.Cols()
-    }
-    // NOTE: This could diveded to parallel tasks by rows.
-    calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.NULL, incY, ldA, incX,
-        0, lenX, 0, lenY, vpLenDot, mBdot)
-    return nil
-}
-
-// Y = alpha*A.T*X + beta*Y
-func MVMultTransA(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
-
-    if Y.Rows() != 1 && Y.Cols() != 1 {
-        return errors.New("Y not a vector.");
-    }
-    if X.Rows() != 1 && X.Cols() != 1 {
-        return errors.New("X not a vector.");
-    }
-
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Yr := Y.FloatArray()
-    incY := 1
-    lenY := Y.Rows()
-    if Y.Rows() == 1 {
-        // row vector
-        incY = Y.LeadingIndex()
-        lenY = Y.Cols()
-    }
-    Xr := X.FloatArray()
-    incX := 1
-    lenX := X.Rows()
-    if X.Rows() == 1 {
-        // row vector
-        incX = X.LeadingIndex()
-        lenX = X.Cols()
-    }
-    calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.TRANSA, incY, ldA, incX,
-        0, lenX, 0, lenY, vpLenDot, mBdot)
-    return nil
-}
-
-// A = A + alpha*X*Y.T; A is M*N, X is row or column vector of length M and
-// Y is row or column vector of legth N.
-func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
-
-    if Y.Rows() != 1 && Y.Cols() != 1 {
-        return errors.New("Y not a vector.");
-    }
-    if X.Rows() != 1 && X.Cols() != 1 {
-        return errors.New("X not a vector.");
-    }
-
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Yr := Y.FloatArray()
-    incY := 1
-    if Y.Rows() == 1 {
-        // row vector
-        incY = Y.LeadingIndex()
-    }
-    Xr := X.FloatArray()
-    incX := 1
-    if X.Rows() == 1 {
-        // row vector
-        incX = X.LeadingIndex()
-    }
-    // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
-    calgo.DRankMV(Ar, Xr, Yr, alpha, ldA, incY, incX, 0, A.Cols(), 0, A.Rows(), 0, 0)
-    return nil
-}
-
-// A = A + alpha*X*Y.T; A is N*N symmetric, X is row or column vector of length N.
-func MVSymmUpdate(A, X *matrix.FloatMatrix, alpha float64) error {
-
-    if X.Rows() != 1 && X.Cols() != 1 {
-        return errors.New("X not a vector.");
-    }
-
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Xr := X.FloatArray()
-    incX := 1
-    if X.Rows() == 1 {
-        // row vector
-        incX = X.LeadingIndex()
-    }
-    // NOTE: This could diveded to parallel tasks per column.
-    calgo.DSymmRankMV(Ar, Xr, alpha, calgo.LOWER, ldA, incX, 0, A.Cols(), 0)
-    return nil
-}
-
-// A = A + alpha*X*Y.T; A is N*N symmetric, X is row or column vector of length N.
-func MVSymmUpdateUpper(A, X *matrix.FloatMatrix, alpha float64) error {
-
-    if X.Rows() != 1 && X.Cols() != 1 {
-        return errors.New("X not a vector.");
-    }
-
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Xr := X.FloatArray()
-    incX := 1
-    if X.Rows() == 1 {
-        // row vector
-        incX = X.LeadingIndex()
-    }
-    // NOTE: This could diveded to parallel tasks per column.
-    calgo.DSymmRankMV(Ar, Xr, alpha, calgo.UPPER, ldA, incX, 0, A.Cols(), 0)
-    return nil
-}
-
-// A = A + alpha*X*Y.T; A is M*N, X is row or column vector of length M and
-// Y is row or column vector of legth N.
-func MVSymm2Update(A, X, Y *matrix.FloatMatrix, alpha float64) error {
-
-    if Y.Rows() != 1 && Y.Cols() != 1 {
-        return errors.New("Y not a vector.");
-    }
-    if X.Rows() != 1 && X.Cols() != 1 {
-        return errors.New("X not a vector.");
-    }
-
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Yr := Y.FloatArray()
-    incY := 1
-    if Y.Rows() == 1 {
-        // row vector
-        incY = Y.LeadingIndex()
-    }
-    Xr := X.FloatArray()
-    incX := 1
-    if X.Rows() == 1 {
-        // row vector
-        incX = X.LeadingIndex()
-    }
-    // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
-    calgo.DSymmRank2MV(Ar, Xr, Yr, alpha, calgo.LOWER, ldA, incY, incX, 0, A.Cols(), 0)
-    return nil
-}
-
-func MVSymm2UpdateUpper(A, X, Y *matrix.FloatMatrix, alpha float64) error {
-
-    if Y.Rows() != 1 && Y.Cols() != 1 {
-        return errors.New("Y not a vector.");
-    }
-    if X.Rows() != 1 && X.Cols() != 1 {
-        return errors.New("X not a vector.");
-    }
-
-    Ar := A.FloatArray()
-    ldA := A.LeadingIndex()
-    Yr := Y.FloatArray()
-    incY := 1
-    if Y.Rows() == 1 {
-        // row vector
-        incY = Y.LeadingIndex()
-    }
-    Xr := X.FloatArray()
-    incX := 1
-    if X.Rows() == 1 {
-        // row vector
-        incX = X.LeadingIndex()
-    }
-    // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
-    calgo.DSymmRank2MV(Ar, Xr, Yr, alpha, calgo.UPPER, ldA, incY, incX, 0, A.Cols(), 0)
-    return nil
-}
 
 // Local Variables:
 // tab-width: 4
