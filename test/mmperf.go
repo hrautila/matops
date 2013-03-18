@@ -44,10 +44,10 @@ func init() {
     flag.IntVar(&M, "M", 600, "Matrix A rows.")
     flag.IntVar(&N, "N", 600, "Matrix B cols.")
     flag.IntVar(&P, "P", 600, "Matrix A cols, B rows.")
-    flag.IntVar(&MB, "MB", 64, "Row blocking size.")
-    flag.IntVar(&NB, "NB", 64, "Column blocking size.")
+    flag.IntVar(&MB, "MB", 68, "Row blocking size.")
+    flag.IntVar(&NB, "NB", 68, "Column blocking size.")
     flag.IntVar(&nWorker, "W", 2, "Number of workers for parallel runs")
-    flag.IntVar(&VPsize, "H", 64, "Viewport size.")
+    flag.IntVar(&VPsize, "H", 68, "Viewport size.")
     flag.BoolVar(&check, "C", false, "Check result against reference (gemm).")
     flag.BoolVar(&verbose, "v", false, "Be verbose.")
     flag.BoolVar(&asGflops, "g", false, "Report as Gflops.")
@@ -124,7 +124,7 @@ func MMTestMult2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     B = matrix.FloatNormal(p, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        matops.MMMult2(C, A, B, 1.0, 1.0, matops.NOTRANS)
+        matops.Mult(C, A, B, 1.0, 1.0, matops.NOTRANS)
     }
     return
 }
@@ -134,7 +134,7 @@ func MMTestMult(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     B = matrix.FloatNormal(p, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        matops.MMMult(C, A, B, 1.0, 1.0)
+        matops.MMMultNoTrans(C, A, B, 1.0, 1.0)
     }
     return
 }
@@ -187,7 +187,7 @@ func CheckTransAB(A, B, C *matrix.FloatMatrix) {
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     // matops interfaces
-    "MMMult2": MMTestMult2,
+    "MMMult": MMTestMult2,
     "MMTestMult": MMTestMult,
     "MMTestMultTransA": MMTestMultTransA,
     "MMTestMultTransB": MMTestMultTransB,
@@ -216,6 +216,7 @@ func main() {
     runtime.GOMAXPROCS(nWorker)
     matops.NumWorkers(nWorker)
     rand.Seed(time.Now().UnixNano())
+    matops.BlockingParams(VPsize, NB, MB)
 
     testFunc, ok := tests[testName]
     if ! ok {
