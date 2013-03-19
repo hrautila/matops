@@ -130,7 +130,14 @@ func scheduleWork(colworks, rowworks, cols, rows int, worker task) {
     }
 }
 
-// blas GEMM
+// Generic matrix-matrix multpily. (blas.GEMM). Calculates
+//   C = beta*C + alpha*A*B     (default)
+//   C = beta*C + alpha*A.T*B   flags&TRANSA
+//   C = beta*C + alpha*A*B.T   flags&TRANSB
+//   C = beta*C + alpha*A.T*B.T flags&(TRANSA|TRANSB)
+//
+// C is M*N, A is M*P or P*M if flags&TRANSA. B is P*N or N*P if flags&TRANSB.
+//
 func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     if A.Cols() != B.Rows() {
         return errors.New("A.cols != B.rows: size mismatch")
@@ -160,8 +167,15 @@ func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     return nil
 }
 
-// blas SYMM
-func Symm(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+// Symmetric matrix multiply. (blas.SYMM)
+//   C = beta*C + alpha*A*B     (default)
+//   C = beta*C + alpha*A.T*B   flags&TRANSA
+//   C = beta*C + alpha*A*B.T   flags&TRANSB
+//   C = beta*C + alpha*A.T*B.T flags&(TRANSA|TRANSB)
+//
+// C is N*P, A is N*N symmetric matrix. B is N*P or P*N if flags&TRANSB.
+//
+func MultSym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
 
     if A.Rows() != A.Cols() {
         return errors.New("A matrix not square matrix.");
@@ -193,11 +207,28 @@ func Symm(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     return nil
 }
 
-// blas TRMM
-func Trmm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
-    if B.Rows() != A.Cols() {
+// Triangular matrix multiply. (blas.TRMM) 
+//    B = alpha*A*B    if flags&LEFT 
+//    B = alpha*A.T*B  if flags&(LEFT|TRANSA) 
+//    B = alpha*B*A    if flags&RIGHT
+//    B = alpha*B*A.T  if flags&(RIGHT|TRANSA)
+//
+// Matrix A is N*N triangular defined with flags bits as follow
+//  LOWER       non-unit lower triangular
+//  LOWER|UNIT  unit lower triangular, A diagonal not used
+//  UPPER       non-unit upper triangular
+//  UPPER|UNIT  unit upper triangular, A diagonal not used
+// 
+// Matrix B is N*P if flags&LEFT or P*N if flags&RIGHT.
+//
+func MultTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
+
+    if flags&LEFT != 0 && B.Rows() != A.Cols() {
+        return errors.New("A.cols != B.rows: size mismatch")
+    } else if flags&RIGHT != 0 && B.Cols() != A.Rows() {
         return errors.New("A.cols != B.rows: size mismatch")
     }
+
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
@@ -213,11 +244,29 @@ func Trmm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
     return nil
 }
 
-// blas TRSM; B = A.-1*B or B = A.-T*B or B = B*A.-1 or B = B*A.-T
+// Solve multiple right sides. If flags&UNIT then A diagonal is assumed to
+// to unit and is not referenced. (blas.TRSM)
+//      alpha*B = A.-1*B if flags&LEFT
+//      alpha*B = A.-T*B if flags&(LEFT|TRANS)
+//      alpha*B = B*A.-1 if flags&RIGHT
+//      alpha*B = B*A.-T if flags&(RIGHT|TRANS)
+//
+// Matrix A is N*N triangular matrix defined with flags bits as follow
+//  LOWER       non-unit lower triangular
+//  LOWER|UNIT  unit lower triangular
+//  UPPER       non-unit upper triangular
+//  UPPER|UNIT  unit upper triangular
+//
+// Matrix B is N*P if flags&LEFT or P*N if flags&RIGHT.
+//
 func Solve(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
-    if B.Rows() != A.Cols() {
+
+    if flags&LEFT != 0 && B.Rows() != A.Cols() {
+        return errors.New("A.cols != B.rows: size mismatch")
+    } else if flags&RIGHT != 0 && B.Cols() != A.Rows() {
         return errors.New("A.cols != B.rows: size mismatch")
     }
+
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
@@ -233,8 +282,9 @@ func Solve(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
     return nil
 }
 
-// blas SYRK
-func SymmUpdate(C, A *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+// Rank update for symmetric lower or upper matrix (blas.SYRK)
+//      C = beta*C + alpha*A*A.T + alpha*A.T*A
+func RankUpdateSym(C, A *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     if C.Rows() != C.Cols() {
         return errors.New("C not a square matrix")
     }
@@ -251,8 +301,13 @@ func SymmUpdate(C, A *matrix.FloatMatrix, alpha, beta float64, flags Flags) erro
     return nil
 }
 
-// blas SYR2K
-func Symm2Update(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+// Rank 2 update for symmetric lower or upper matrix. (blas.SYR2K)
+//      C = beta*C + alpha*A*B.T + alpha*B*A.T 
+//      C = beta*C + alpha*A.T*B + alpha*B.T*A  if flags&TRANS
+// matrix C
+//   lower triangular if flags&LOWER
+//   upper triangular if flags&UPPER
+func RankUpdate2Sym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
