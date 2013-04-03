@@ -294,6 +294,121 @@ void dblock_ddot(mdata_t *C, mdata_t* A, mdata_t *B, double alpha, int nSL, int 
   _dblock_ddot_sse(C->md, A->md, B->md, alpha, C->step, A->step, B->step, nSL, nRE, nVP);
 }
 
+
+// Third version; assumes C is correct destination block i.e C->md points to C[R, E];
+// and that A->md is start of A panel and B->md is start of B panel.
+// Acpy and Bcpy are correctly aligned data buffers to which A, B are copied and
+// transposed if necessary. Size parameters are not checked against copy buffer
+// sizes, they are assumed to be correct.
+void _dblock_mult_gepp(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                        double alpha, int flags, 
+                        int nP, int nSL, int nRE, int mb, cbuf_t *Acpy, cbuf_t *Bcpy)
+{
+  int vpS, vpL, nC, nB, nA, rS, rE;
+  const double *Bc, *Ac, *AvpS;
+  double *Cc;
+
+  if (mb > nRE) {
+    mb = nRE;
+  }
+  rS = 0;
+  rE = mb < nRE ? mb : nRE;
+
+  nB = nP;
+  nB += (nP & 0x1);
+  //printf("  nSL=%d, nP=%d, nRE=%d\n", nSL, nP, nRE);
+  if (flags & MTX_TRANSB) {
+    // transpose B on copy to be able to DOT operations.
+    //Bc = &B->md[vpS*B->step];
+    colcpy4_trans(Bcpy->data, nB, B->md, B->step, nSL, nP);
+  } else {
+    //Bc = &B->md[vpS];
+    colcpy(Bcpy->data, nB, B->md, B->step, nP, nSL);
+  }
+  
+  //printf("B=\n"); print_tile(B->md, B->step, nP, nSL);
+  nA = nB;
+  while (rS < nRE) {
+    //nA = rE - rS;
+    //nA += (nA & 0x1);
+
+    //printf("  rS=%d, rE=%d, nA=%d\n", rS, rE, nA);
+    Cc = &C->md[rS];
+    if (flags & MTX_TRANSA) {
+      AvpS = &A->md[rS*A->step];
+      colcpy(Acpy->data, nA, AvpS, A->step, nP, rE-rS);
+    } else {
+      // transpose A on copy to be able to DOT operations.
+      AvpS = &A->md[rS];
+      colcpy4_trans(Acpy->data, nA, AvpS, A->step, rE-rS, nP);
+    }
+
+    //printf("A=\n"); print_tile(AvpS, A->step, rE-rS, nP);
+    //printf("A.T=\n"); print_tile(Acpy->data, nA, nP, rE-rS);
+    _dblock_ddot_sse(Cc, Acpy->data, Bcpy->data, alpha, C->step, nA, nB, nSL, rE-rS, nP);
+    //printf("C=\n"); print_tile(C->md, C->step, nRE, nSL);
+    rS = rE;
+    rE += mb;
+    if (rE > nRE) {
+      rE = nRE;
+    }
+  }
+}
+
+void dmult_mm_blocked3(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                       double alpha, double beta, int flags,
+                       int P, int S, int L, int R, int E, 
+                       int vlen, int NB, int MB)
+{
+  int i, j, nI, nJ, k, nP;
+  double Abuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(64)));
+  double Bbuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(64)));
+  cbuf_t Acpy = {Abuf, MAX_VP_ROWS*MAX_VP_COLS};
+  cbuf_t Bcpy = {Bbuf, MAX_VP_ROWS*MAX_VP_COLS};
+  mdata_t Ablk, Bblk, Cblk;
+
+  if (L-S <= 0 || E-R <= 0) {
+    // nothing to do, zero columns or rows
+    return;
+  }
+
+  Ablk.step = A->step;
+  Bblk.step = B->step;
+  Cblk.step = C->step;
+
+  // restrict block sizes as data is copied to aligned buffers of predefined max sizes.
+  if (NB > MAX_VP_ROWS || NB <= 0) {
+    NB = MAX_VP_ROWS;
+  }
+  if (MB > MAX_VP_COLS || MB <= 0) {
+    MB = MAX_VP_COLS;
+  }
+  if (vlen > MAX_VP_ROWS || vlen <= 0) {
+    vlen = MAX_VP_ROWS;
+  }
+
+  for (j = S; j < L; j += NB) {
+    nJ = L - j < NB ? L - j : NB;
+    
+    // update block starting point for C;
+    Cblk.md = &C->md[j*C->step + R];
+    // C should be scaled here for all rows in this column block
+    dscale_tile(Cblk.md, Cblk.step, beta, E-R, nJ);
+
+    for (k = 0; k < P; k += vlen) {
+      // update block starting points for A, B;
+      nP = P - k < vlen ? P - k : vlen;
+      Ablk.md = flags & MTX_TRANSA ? &A->md[R*A->step+k] : &A->md[k*A->step+R];
+      Bblk.md = flags & MTX_TRANSB ? &B->md[k*B->step+j] : &B->md[j*B->step+k];
+
+      //printf("j=%d, k=%d, nJ=%d, nP=%d\n", j, k, nJ, nP);
+      // B block size is vlen*NB or NB*vlen if TRANSPOSED, A block size is (E-R)*vlen or
+      // vlen*(E-R) if A is TRANSPOSED.
+      _dblock_mult_gepp(&Cblk, &Ablk, &Bblk, alpha, flags, nP, nJ, E-R, MB, &Acpy, &Bcpy);
+    }
+  }
+}
+
 // Local Variables:
 // indent-tabs-mode: nil
 // End:
