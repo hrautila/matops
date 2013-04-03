@@ -129,6 +129,16 @@ func MMTestMult2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return
 }
 
+func MMTestMult3(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormal(m, p)
+    B = matrix.FloatNormal(p, n)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        matops.Mult3(C, A, B, 1.0, 1.0, matops.NOTRANS)
+    }
+    return
+}
+
 func MMTestMult(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormal(m, p)
     B = matrix.FloatNormal(p, n)
@@ -188,6 +198,7 @@ func CheckTransAB(A, B, C *matrix.FloatMatrix) {
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     // matops interfaces
     "MMMult": MMTestMult2,
+    "MMMult3": MMTestMult3,
     "MMTestMult": MMTestMult,
     "MMTestMultTransA": MMTestMultTransA,
     "MMTestMultTransB": MMTestMultTransB,
