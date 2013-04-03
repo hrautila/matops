@@ -106,6 +106,12 @@ dmult_mm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
                   int P, int S, int L, int R, int E, 
                   int vlen, int NB, int MB);
 
+extern void
+dmult_mm_blocked3(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                  double alpha, double beta, int flags,
+                  int P, int S, int L, int R, int E, 
+                  int vlen, int NB, int MB);
+
 
 extern void 
 dmult_symm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
