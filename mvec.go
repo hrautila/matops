@@ -83,7 +83,7 @@ func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
 // Matrix-vector symmetric rank update A = A + alpha*X*X.T
 //   A is N*N symmetric,
 //   X is row or column vector of length N.
-func MVSymmUpdate(A, X *matrix.FloatMatrix, alpha float64, flags Flags) error {
+func MVRankUpdateSym(A, X *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
     if X.Rows() != 1 && X.Cols() != 1 {
         return errors.New("X not a vector.");
@@ -106,7 +106,7 @@ func MVSymmUpdate(A, X *matrix.FloatMatrix, alpha float64, flags Flags) error {
 //   A is N*N symmetric matrix,
 //   X is row or column vector of length N
 //   Y is row or column vector of legth N.
-func MVSymm2Update(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) error {
+func MVRankUpdate2Sym(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
     if Y.Rows() != 1 && Y.Cols() != 1 {
         return errors.New("Y not a vector.");
@@ -131,6 +131,53 @@ func MVSymm2Update(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) erro
     }
     // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
     calgo.DSymmRank2MV(Ar, Xr, Yr, alpha, calgo.Flags(flags), ldA, incY, incX, 0, A.Cols(), 0)
+    return nil
+}
+
+
+// Matrix-vector solve X = A.-1*X or X = A.-T*X
+//   A is N*N tridiagonal lower or upper,
+//   X is row or column vector of length N.
+// flags
+//   LOWER  A is lower tridiagonal
+//   UPPER  A is upper tridiagonal
+//   UNIT   A diagonal is unit
+//   TRANSA A is transpose
+func MVSolve(A, X *matrix.FloatMatrix, alpha float64, flags Flags) error {
+
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+    }
+    calgo.DSolveBlkMV(Xr, Ar, calgo.Flags(flags), incX, ldA, A.Cols(), nB)
+    return nil
+}
+
+
+// Tridiagonal multiplication;
+func MVMultTrm(A, X *matrix.FloatMatrix, flags Flags) error {
+
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+    }
+    calgo.DTrimvUnblkMV(Xr, Ar, calgo.Flags(flags), incX, ldA, A.Cols())
     return nil
 }
 
