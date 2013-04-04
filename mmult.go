@@ -142,7 +142,7 @@ func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     if A.Cols() != B.Rows() {
         return errors.New("A.cols != B.rows: size mismatch")
     }
-    psize := int64(C.NumElements()*A.Cols())
+    psize := int64(C.NumElements())*int64(A.Cols())
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
@@ -171,7 +171,7 @@ func Mult3(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error 
     if A.Cols() != B.Rows() {
         return errors.New("A.cols != B.rows: size mismatch")
     }
-    psize := int64(C.NumElements()*A.Cols())
+    psize := int64(C.NumElements())*int64(A.Cols())
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
