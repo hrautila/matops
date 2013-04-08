@@ -14,6 +14,7 @@ import (
     "github.com/hrautila/linalg"
     "testing"
     "math/rand"
+    "math"
     "time"
 )
 
@@ -33,7 +34,7 @@ func TestMakeData(t *testing.T) {
     rand.Seed(time.Now().UnixNano())
 }
 
-func TestMultSmall(t *testing.T) {
+func _TestMultSmall(t *testing.T) {
     bM := 6
     bN := 6
     bP := 6
@@ -103,7 +104,7 @@ func TestMultBig(t *testing.T) {
 }
 
 
-func TestMultTransASmall(t *testing.T) {
+func _TestMultTransASmall(t *testing.T) {
     bM := 7
     bN := 7
     bP := 7
@@ -162,7 +163,7 @@ func _TestMultTransABig(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func TestMultTransBSmall(t *testing.T) {
+func _TestMultTransBSmall(t *testing.T) {
     bM := 7
     bN := 7
     bP := 7
@@ -221,7 +222,7 @@ func _TestMultTransBBig(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func TestMultTransABSmall(t *testing.T) {
+func _TestMultTransABSmall(t *testing.T) {
     bM := 7
     bN := 7
     bP := 7
@@ -697,7 +698,7 @@ func _TestSolveBlockedSmall(t *testing.T) {
     solveMVTest(t, A, X1, UPPER|UNIT, A.Rows(), 4)
 }
 
-func TestSolveRandom(t *testing.T) {
+func _TestSolveRandom(t *testing.T) {
     bN := 22
     A := matrix.FloatNormalSymmetric(bN, matrix.Lower)
     At := A.Transpose()
@@ -915,7 +916,7 @@ func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) bool {
 }
 
 
-func TestTrmmUnblkSmall(t *testing.T) {
+func _TestTrmmUnblkSmall(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{1.0, 1.0, 1.0},
@@ -1034,7 +1035,17 @@ func _TestTrmmBlkSmall(t *testing.T) {
 }
 
 
-func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nb int) bool {
+func isClose(a, b float64) bool {
+    const RTOL = 1.0000000000000001e-05
+    const ATOL = 1e-8
+    df := math.Abs(a - b)
+    if df > ATOL + RTOL*math.Abs(b) {
+        return false
+    }
+    return true
+}
+
+func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nrhs, nb int) bool {
     var B0 *matrix.FloatMatrix
     side := linalg.OptLeft
     trans := linalg.OptNoTrans
@@ -1044,17 +1055,17 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nb i
     _ = S; _ = E
     if flags & RIGHT != 0 {
         if rand {
-            B0 = matrix.FloatNormal(2, A.Rows())
+            B0 = matrix.FloatNormal(nrhs, A.Rows())
         } else {
-            B0 = matrix.FloatWithValue(2, A.Rows(), 2.0)
+            B0 = matrix.FloatWithValue(nrhs, A.Rows(), 2.0)
         }
         side = linalg.OptRight
         E = B0.Rows()
     } else {
         if rand {
-            B0 = matrix.FloatNormal(A.Rows(), 2)
+            B0 = matrix.FloatNormal(A.Rows(), nrhs)
         } else {
-            B0 = matrix.FloatWithValue(A.Rows(), 2, 2.0)
+            B0 = matrix.FloatWithValue(A.Rows(), nrhs, 2.0)
         }
         E = B0.Cols()
     }
@@ -1071,10 +1082,6 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nb i
         trans = linalg.OptTransA
     }
     blas.TrsmFloat(A, B0, 1.0, uplo, diag, side, trans)
-    if N < 8 {
-        //t.Logf("A=\n%v\n", A)
-        t.Logf("blas: B0\n%v\n", B0)
-    }
 
     Ar := A.FloatArray()
     Br := B1.FloatArray()
@@ -1085,8 +1092,19 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nb i
     }
     result := B1.AllClose(B0)
     t.Logf("B1 == B0: %v\n", result)
-    if N < 8 {
-        t.Logf("B1:\n%v\n", B1)
+    if ! result {
+        if nrhs < 10 {
+            t.Logf("blas: B0\n%v\n", B0)
+            t.Logf("B1:\n%v\n", B1)
+        } else {
+            b0 := B0.FloatArray(); b1 := B1.FloatArray();
+            for k := 0; k < len(b0); k++ {
+                if ! isClose(b0[k], b1[k]) {
+                    t.Logf("first divergences at %d ... col %d, row %d\n", k, k/B0.Rows(), k%B0.Rows())
+                    break
+                }
+            }
+        }
     }
     return result
 }
@@ -1130,102 +1148,106 @@ func _TestTrsmSmall(t *testing.T) {
     _ = L
     _ = L3
 
+    nP := 2
+    nb := 0
     t.Logf("-- TRSM-LOWER, NON-UNIT --")
-    trsmSolve(t, L3, LOWER, false, 0)
-    //trsmSolve(t, L, LOWER, false, 0)
-    //trsmSolve(t, L, LOWER, true, 0)
+    trsmSolve(t, L3, LOWER|LEFT, false, nP, nb)
+    //trsmSolve(t, L, LOWER, false, nP, nb)
+    //trsmSolve(t, L, LOWER, true, nP, nb)
 
     t.Logf("- TRSM-LOWER, UNIT --")
-    trsmSolve(t, L3, LOWER|UNIT, false, 0)
+    trsmSolve(t, L3, LOWER|LEFT|UNIT, false, nP, nb)
 
     t.Logf("-- TRSM-UPPER, NON-UNIT --")
-    trsmSolve(t, U3, UPPER, false, 0)
-    //trsmSolve(t, U, UPPER, false, 0)
-    //trsmSolve(t, U, UPPER, true, 0)
+    trsmSolve(t, U3, UPPER|LEFT, false, nP, nb)
+    //trsmSolve(t, U, UPPER, false, nP, nb)
+    //trsmSolve(t, U, UPPER, true, nP, nb)
 
     t.Logf("-- TRSM-UPPER, UNIT --")
-    trsmSolve(t, U3, UPPER|UNIT, false, 0)
+    trsmSolve(t, U3, UPPER|LEFT|UNIT, false, nP, nb)
 
     t.Logf("-- TRSM-UPPER, TRANS, NON_UNIT --")
-    trsmSolve(t, U3, UPPER|TRANSA, false, 0)
+    trsmSolve(t, U3, UPPER|LEFT|TRANSA, false, nP, nb)
 
     t.Logf("-- TRSM-UPPER, TRANS, UNIT --")
-    trsmSolve(t, U3, UPPER|TRANSA|UNIT, false, 0)
+    trsmSolve(t, U3, UPPER|LEFT|TRANSA|UNIT, false, nP, nb)
 
     t.Logf("-- TRSM-LOWER, TRANS, NON-UNIT --")
-    trsmSolve(t, L3, LOWER|TRANSA, false, 0)
+    trsmSolve(t, L3, LOWER|LEFT|TRANSA, false, nP, nb)
 
     t.Logf("-- TRSM-LOWER, TRANS, UNIT --")
-    trsmSolve(t, L3, LOWER|TRANSA|UNIT, false, 0)
+    trsmSolve(t, L3, LOWER|LEFT|TRANSA|UNIT, false, nP, nb)
 
     t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT ---")
-    trsmSolve(t, U3, UPPER|RIGHT, false, 0)
+    trsmSolve(t, U3, UPPER|RIGHT, false, nP, nb)
 
     t.Logf("-- TRSM-UPPER, UNIT, RIGHT ---")
-    trsmSolve(t, U3, UPPER|UNIT|RIGHT, false, 0)
+    trsmSolve(t, U3, UPPER|UNIT|RIGHT, false, nP, nb)
 
     t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT ---")
-    trsmSolve(t, L3, LOWER|RIGHT, false, 0)
+    trsmSolve(t, L3, LOWER|RIGHT, false, nP, nb)
 
     t.Logf("-- TRSM-LOWER, UNIT, RIGHT ---")
-    trsmSolve(t, L3, LOWER|UNIT|RIGHT, false, 0)
+    trsmSolve(t, L3, LOWER|UNIT|RIGHT, false, nP, nb)
 
     t.Logf("-- TRSM-UPPER, NON-UNIT, RIGHT, TRANS ---")
-    trsmSolve(t, U3, UPPER|RIGHT|TRANSA, false, 0)
+    trsmSolve(t, U3, UPPER|RIGHT|TRANSA, false, nP, nb)
 
     t.Logf("-- TRSM-UPPER, UNIT, RIGHT, TRANS ---")
-    trsmSolve(t, U3, UPPER|UNIT|RIGHT|TRANSA, false, 0)
+    trsmSolve(t, U3, UPPER|UNIT|RIGHT|TRANSA, false, nP, nb)
 
     t.Logf("-- TRSM-LOWER, NON-UNIT, RIGHT, TRANS ---")
-    trsmSolve(t, L3, LOWER|RIGHT|TRANSA, false, 0)
+    trsmSolve(t, L3, LOWER|RIGHT|TRANSA, false, nP, nb)
 
     t.Logf("-- TRSM-LOWER, UNIT, RIGHT, TRANS ---")
-    trsmSolve(t, L3, LOWER|UNIT|RIGHT|TRANSA, false, 0)
+    trsmSolve(t, L3, LOWER|UNIT|RIGHT|TRANSA, false, nP, nb)
 
+    nP = 4
+    nb = 2
     t.Logf("-- BLK TRSM-UPPER, NON-UNIT ---")
     //trsmSolve(t, U, UPPER, false, 2)
-    trsmSolve(t, U, UPPER, true, 2)
+    trsmSolve(t, U, UPPER, true, nP, nb)
 
     t.Logf("-- BLK TRSM-UPPER, UNIT ---")
-    //trsmSolve(t, U, UPPER, false, 2)
-    trsmSolve(t, U, UPPER|UNIT, true, 2)
+    //trsmSolve(t, U, UPPER, false, nP, nb)
+    trsmSolve(t, U, UPPER|UNIT, true, nP, nb)
 
     t.Logf("-- BLK TRSM-LOWER, NON-UNIT ---")
-    //trsmSolve(t, L, LOWER, false, 2)
-    trsmSolve(t, L, LOWER, true, 2)
+    //trsmSolve(t, L, LOWER, false, nP, nb)
+    trsmSolve(t, L, LOWER, true, nP, nb)
 
     t.Logf("-- BLK TRSM-LOWER, UNIT ---")
-    //trsmSolve(t, L, LOWER, false, 2)
-    trsmSolve(t, L, LOWER|UNIT, true, 2)
+    //trsmSolve(t, L, LOWER, false, nP, nb)
+    trsmSolve(t, L, LOWER|UNIT, true, nP, nb)
 
     t.Logf("-- BLK TRSM-UPPER, NON-UNIT, TRANS ---")
-    //trsmSolve(t, U, UPPER|TRANSA, false, 2)
-    trsmSolve(t, U, UPPER|TRANSA, true, 2)
+    //trsmSolve(t, U, UPPER|TRANSA, false, nP, nb)
+    trsmSolve(t, U, UPPER|TRANSA, true, nP, nb)
     
     t.Logf("-- BLK TRSM-LOWER, NON-UNIT, TRANS ---")
-    //trsmSolve(t, L, LOWER|TRANSA, false, 2)
-    trsmSolve(t, L, LOWER|TRANSA, true, 2)
+    //trsmSolve(t, L, LOWER|TRANSA, false, nP, nb)
+    trsmSolve(t, L, LOWER|TRANSA, true, nP, nb)
 
     t.Logf("-- BLK TRSM-UPPER, NON-UNIT, RIGHT ---")
-    trsmSolve(t, U, UPPER|RIGHT, true, 2)
+    trsmSolve(t, U, UPPER|RIGHT, true, nP, nb)
 
     t.Logf("-- BLK TRSM-UPPER, UNIT, RIGHT ---")
-    trsmSolve(t, U, UPPER|UNIT|RIGHT, true, 2)
+    trsmSolve(t, U, UPPER|UNIT|RIGHT, true, nP, nb)
 
     t.Logf("-- BLK TRSM-UPPER, NON-UNIT, RIGHT, TRANSA ---")
-    trsmSolve(t, U, UPPER|RIGHT|TRANSA, true, 2)
+    trsmSolve(t, U, UPPER|RIGHT|TRANSA, true, nP, nb)
 
     t.Logf("-- BLK TRSM-LOWER, NON-UNIT, RIGHT ---")
-    trsmSolve(t, L, LOWER|RIGHT, true, 2)
+    trsmSolve(t, L, LOWER|RIGHT, true, nP, nb)
 
     t.Logf("-- BLK TRSM-LOWER, UNIT, RIGHT ---")
-    trsmSolve(t, L, LOWER|UNIT|RIGHT, true, 2)
+    trsmSolve(t, L, LOWER|UNIT|RIGHT, true, nP, nb)
 
     t.Logf("-- BLK TRSM-LOWER, NON-UNIT, RIGHT, TRANSA ---")
-    trsmSolve(t, L, LOWER|RIGHT|TRANSA, true, 2)
+    trsmSolve(t, L, LOWER|RIGHT|TRANSA, true, nP, nb)
 }
 
-func _TestTrsmUnblk(t *testing.T) {
+func TestTrsmUnblk(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{2.0, 2.0, 2.0},
@@ -1241,15 +1263,72 @@ func _TestTrsmUnblk(t *testing.T) {
     L3 := matrix.FloatMatrixFromTable(Ldata3, matrix.RowOrder)
     _ = L3
 
-    t.Logf("-- TRSM-UPPER, TRANS, RIGHT, NON_UNIT --")
-    trsmSolve(t, U3, UPPER|TRANSA|RIGHT, false, 0)
-    t.Logf("-- TRSM-UPPER, TRANS, RIGHT, UNIT --")
-    trsmSolve(t, U3, UPPER|TRANSA|UNIT|RIGHT, false, 0)
+    bN := 10
+    nP := 7
+    nb := 4
+    L := matrix.FloatNormalSymmetric(bN, matrix.Lower)
+    
+    //t.Logf("-- TRSM-UPPER, TRANS, RIGHT, NON_UNIT --")
+    //trsmSolve(t, U3, UPPER|TRANSA|RIGHT, false, 2, 0)
+    //t.Logf("-- TRSM-UPPER, TRANS, RIGHT, UNIT --")
+    //trsmSolve(t, U3, UPPER|TRANSA|UNIT|RIGHT, false, 2, 0)
 
-    t.Logf("-- TRSM-LOWER, TRANS, RIGHT, NON-UNIT --")
-    trsmSolve(t, L3, LOWER|TRANSA|RIGHT, false, 0)
-    t.Logf("-- TRSM-LOWER, TRANS, RIGHT, UNIT --")
-    trsmSolve(t, L3, LOWER|TRANSA|UNIT|RIGHT, false, 0)
+    t.Logf("-- UNBLK TRSM-LOWER, TRANS, RIGHT, NON-UNIT --")
+    trsmSolve(t, L, LOWER|TRANSA|RIGHT, false, nP, 0)
+    t.Logf("-- BLK   TRSM-LOWER, TRANS, RIGHT, NON-UNIT --")
+    trsmSolve(t, L, LOWER|TRANSA|RIGHT, false, nP, nb)
+
+}
+
+func TestTrsmBig(t *testing.T) {
+    bN := 900
+    nP := 40
+    nb := 16
+    L := matrix.FloatNormalSymmetric(bN, matrix.Lower)
+    U := matrix.FloatNormalSymmetric(bN, matrix.Upper)
+    _, _ = L, U
+
+    t.Logf("-- BLK TRSM-UPPER, LEFT, NON_UNIT --")
+    trsmSolve(t, U, UPPER|LEFT, false, nP, nb)
+    t.Logf("-- BLK TRSM-UPPER, LEFT, UNIT --")
+    trsmSolve(t, U, UPPER|LEFT|UNIT, false, nP, nb)
+
+    t.Logf("-- BLK TRSM-LOWER, LEFT, NON_UNIT --")
+    trsmSolve(t, L, LOWER|LEFT, false, nP, nb)
+    t.Logf("-- BLK TRSM-LOWER, LEFT, UNIT --")
+    trsmSolve(t, L, LOWER|LEFT|UNIT, false, nP, nb)
+
+    t.Logf("-- BLK TRSM-UPPER, LEFT, TRANSA, NON_UNIT --")
+    trsmSolve(t, U, UPPER|LEFT|TRANSA, false, nP, nb)
+    t.Logf("-- BLK TRSM-UPPER, LEFT, TRANSA, UNIT --")
+    trsmSolve(t, U, UPPER|LEFT|TRANSA|UNIT, false, nP, nb)
+
+    t.Logf("-- BLK TRSM-LOWER, LEFT, TRANSA, NON_UNIT --")
+    trsmSolve(t, L, LOWER|LEFT|TRANSA, false, nP, nb)
+    t.Logf("-- BLK TRSM-LOWER, LEFT, TRANSA, UNIT --")
+    trsmSolve(t, L, LOWER|LEFT|TRANSA|UNIT, false, nP, nb)
+
+    t.Logf("-- BLK TRSM-UPPER, RIGHT, NON_UNIT --")
+    trsmSolve(t, U, UPPER|RIGHT, false, nP, nb)
+    t.Logf("-- BLK TRSM-UPPER, RIGHT, UNIT --")
+    trsmSolve(t, U, UPPER|UNIT|RIGHT, false, nP, nb)
+
+    t.Logf("-- BLK TRSM-LOWER, RIGHT, NON-UNIT --")
+    trsmSolve(t, L, LOWER|RIGHT, false, nP, nb)
+    t.Logf("-- BLK TRSM-LOWER, RIGHT, UNIT --")
+    trsmSolve(t, L, LOWER|UNIT|RIGHT, false, nP, nb)
+
+    t.Logf("-- BLK TRSM-UPPER, RIGHT, TRANSA, NON_UNIT --")
+    trsmSolve(t, U, UPPER|RIGHT|TRANSA, false, nP, nb)
+    t.Logf("-- BLK TRSM-UPPER, RIGHT, TRANSA, UNIT --")
+    trsmSolve(t, U, UPPER|RIGHT|TRANSA|UNIT, false, nP, nb)
+
+    
+    nb = 0
+    t.Logf("-- BLK TRSM-LOWER, RIGHT, TRANSA, NON_UNIT --")
+    trsmSolve(t, L, LOWER|RIGHT|TRANSA, false, nP, nb)
+    t.Logf("-- BLK TRSM-LOWER, RIGHT, TRANSA, UNIT --")
+    trsmSolve(t, L, LOWER|RIGHT|TRANSA|UNIT, false, nP, nb)
 
 }
 
@@ -1288,7 +1367,7 @@ func syrkTest(t *testing.T, C, A *matrix.FloatMatrix, flags Flags, vlen, nb int)
     return result
 }
 
-func TestSyrkSmall(t *testing.T) {
+func _TestSyrkSmall(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{2.0, 2.0, 2.0},
@@ -1377,7 +1456,7 @@ func syrk2Test(t *testing.T, C, A, B *matrix.FloatMatrix, flags Flags, vlen, nb 
     return result
 }
 
-func TestSyrk2Small(t *testing.T) {
+func _TestSyrk2Small(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{2.0, 2.0, 2.0},
