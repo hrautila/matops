@@ -92,6 +92,11 @@ _dblock_mult_panel(mdata_t *C, const mdata_t *A, const mdata_t *B,
                    double alpha, int flags, 
                    int nP, int nSL, int nRE, int vlen, cbuf_t *Acpy, cbuf_t *Bcpy);
 
+extern void
+_dmult_mm_intern(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                 double alpha, int flags,
+                 int P, int nSL, int nRE, int vlen, int NB, int MB,
+                 cbuf_t *Acpy, cbuf_t *Bcpy);
 
 
 extern void
