@@ -438,7 +438,8 @@ void _dmmat_trmm_blk_upper(mdata_t *B, const mdata_t *A,
       // update current part with diagonal
       dmmat_trid_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      _dblock_mult_panel(&B0, &A1, &B1, alpha, 0, N-i-nI, nJ, nI, NB, Acpy, Bcpy);
+      //_dblock_mult_panel(&B0, &A1, &B1, alpha, 0, N-i-nI, nJ, nI, NB, Acpy, Bcpy);
+      _dmult_mm_intern(&B0, &A1, &B1, alpha, 0, N-i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
     }
   }
 }
@@ -484,7 +485,8 @@ void _dmmat_trmm_blk_u_trans(mdata_t *B, const mdata_t *A,
       // update current part with diagonal
       dmmat_trid_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      _dblock_mult_panel(&B1, &A0, &B0, alpha, MTX_TRANSA, i-nI, nJ, nI, NB, Acpy, Bcpy);
+      //_dblock_mult_panel(&B1, &A0, &B0, alpha, MTX_TRANSA, i-nI, nJ, nI, NB, Acpy, Bcpy);
+      _dmult_mm_intern(&B1, &A0, &B0, alpha, MTX_TRANSA, i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
     }
   }
 }
@@ -532,7 +534,8 @@ void _dmmat_trmm_blk_lower(mdata_t *B, const mdata_t *A,
       // update current part with diagonal
       dmmat_trid_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      _dblock_mult_panel(&B1, &A0, &B0, alpha, 0, i-nI, nJ, nI, NB, Acpy, Bcpy);
+      //_dblock_mult_panel(&B1, &A0, &B0, alpha, 0, i-nI, nJ, nI, NB, Acpy, Bcpy);
+      _dmult_mm_intern(&B1, &A0, &B0, alpha, 0, i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
     }
   }
 }
@@ -572,7 +575,8 @@ void _dmmat_trmm_blk_l_trans(mdata_t *B, const mdata_t *A,
       // update current part with diagonal
       dmmat_trid_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      _dblock_mult_panel(&B0, &A1, &B1, alpha, MTX_TRANSA, N-i-nI, nJ, nI, NB, Acpy, Bcpy);
+      //_dblock_mult_panel(&B0, &A1, &B1, alpha, MTX_TRANSA, N-i-nI, nJ, nI, NB, Acpy, Bcpy);
+      _dmult_mm_intern(&B0, &A1, &B1, alpha, MTX_TRANSA, N-i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
     }
   }
 }
@@ -619,7 +623,8 @@ void _dmmat_trmm_blk_r_upper(mdata_t *B, const mdata_t *A,
       // update current part with diagonal
       dmmat_trid_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      _dblock_mult_panel(&B1, &B0, &A0, alpha, 0, i-nI, nI, nJ, NB, Acpy, Bcpy);
+      //_dblock_mult_panel(&B1, &B0, &A0, alpha, 0, i-nI, nI, nJ, NB, Acpy, Bcpy);
+      _dmult_mm_intern(&B1, &B0, &A0, alpha, 0, i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
     }
   }
 }
@@ -660,7 +665,8 @@ void _dmmat_trmm_blk_ru_trans(mdata_t *B, const mdata_t *A,
       // update current part with diagonal; left with diagonal
       dmmat_trid_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      _dblock_mult_panel(&B0, &B1, &A1, alpha, MTX_TRANSB, N-i-nI, nI, nJ, NB, Acpy, Bcpy);
+      //_dblock_mult_panel(&B0, &B1, &A1, alpha, MTX_TRANSB, N-i-nI, nI, nJ, NB, Acpy, Bcpy);
+      _dmult_mm_intern(&B0, &B1, &A1, alpha, MTX_TRANSB, N-i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
     }
   }
 }
@@ -701,7 +707,8 @@ void _dmmat_trmm_blk_r_lower(mdata_t *B, const mdata_t *A,
       // update current part with diagonal; left with diagonal
       dmmat_trid_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      _dblock_mult_panel(&B0, &B1, &A1, alpha, 0, N-i-nI, nI, nJ, NB, Acpy, Bcpy);
+      //_dblock_mult_panel(&B0, &B1, &A1, alpha, 0, N-i-nI, nI, nJ, NB, Acpy, Bcpy);
+      _dmult_mm_intern(&B0, &B1, &A1, alpha, 0, N-i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
     }
   }
 }
@@ -748,7 +755,8 @@ void _dmmat_trmm_blk_rl_trans(mdata_t *B, const mdata_t *A,
       // update current part with diagonal
       dmmat_trid_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      _dblock_mult_panel(&B1, &B0, &A0, alpha, MTX_TRANSB, i-nI, nI, nJ, NB, Acpy, Bcpy);
+      //_dblock_mult_panel(&B1, &B0, &A0, alpha, MTX_TRANSB, i-nI, nI, nJ, NB, Acpy, Bcpy);
+      _dmult_mm_intern(&B1, &B0, &A0, alpha, MTX_TRANSB, i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
     }
   }
 }
