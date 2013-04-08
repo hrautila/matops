@@ -409,6 +409,44 @@ void dmult_mm_blocked3(mdata_t *C, const mdata_t *A, const mdata_t *B,
   }
 }
 
+
+void _dmult_mm_intern(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                      double alpha, int flags,
+                      int P, int nSL, int nRE, int vlen, int NB, int MB,
+                      cbuf_t *Acpy, cbuf_t *Bcpy)
+{
+  int i, j, nI, nJ, k, nP;
+  mdata_t Ablk, Bblk, Cblk;
+
+  if (nSL <= 0 || nRE <= 0) {
+    // nothing to do, zero columns or rows
+    return;
+  }
+
+  Ablk.step = A->step;
+  Bblk.step = B->step;
+  Cblk.step = C->step;
+
+  for (j = 0; j < nSL; j += NB) {
+    nJ = nSL - j < NB ? nSL - j : NB;
+    
+    // update block starting point for C;
+    Cblk.md = &C->md[j*C->step];
+
+    for (k = 0; k < P; k += vlen) {
+      // update block starting points for A, B;
+      nP = P - k < vlen ? P - k : vlen;
+      Ablk.md = flags & MTX_TRANSA ? &A->md[k] : &A->md[k*A->step];
+      Bblk.md = flags & MTX_TRANSB ? &B->md[k*B->step+j] : &B->md[j*B->step+k];
+
+      //printf("j=%d, k=%d, nJ=%d, nP=%d\n", j, k, nJ, nP);
+      // B block size is vlen*NB or NB*vlen if TRANSPOSED, A block size is (E-R)*vlen or
+      // vlen*(E-R) if A is TRANSPOSED.
+      _dblock_mult_gepp(&Cblk, &Ablk, &Bblk, alpha, flags, nP, nJ, nRE, MB, Acpy, Bcpy);
+    }
+  }
+}
+
 // Local Variables:
 // indent-tabs-mode: nil
 // End:
