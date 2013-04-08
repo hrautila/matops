@@ -76,6 +76,17 @@ func isSquared(num int) (int, bool) {
     return nsqrt, issquared
 }
 
+func isVector(X *matrix.FloatMatrix) bool {
+    return X.Rows() == 1 || X.Cols() == 1
+}
+
+func isRowVector(X *matrix.FloatMatrix) bool {
+    return X.Rows() == 1
+}
+
+func isColumnVector(X *matrix.FloatMatrix) bool {
+    return X.Cols() == 1
+}
 
 func divideWork(rows, cols, workers int) (colWorkers int, rowWorkers int) {
     colWorkers = 0
