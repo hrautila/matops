@@ -57,8 +57,8 @@ func repartition2x2to3x3(ATL,
     A11.SubMatrixOf(A, k, k,    nb, nb)
     A12.SubMatrixOf(A, k, k+nb, nb, A.Cols()-k-nb)
 
-    A20.SubMatrixOf(A, k+nb, 0,    nb, k)
-    A21.SubMatrixOf(A, k+nb, k,    nb, nb)
+    A20.SubMatrixOf(A, k+nb, 0,    A.Rows()-k-nb, k)
+    A21.SubMatrixOf(A, k+nb, k,    A.Rows()-k-nb, nb)
     A22.SubMatrixOf(A, k+nb, k+nb)
 }
 
