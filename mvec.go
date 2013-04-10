@@ -16,6 +16,9 @@ import (
 // Y = alpha*A*X + beta*Y
 func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
 
+    if A.Rows() == 0 || A.Cols() == 0 {
+        return nil
+    }
     if Y.Rows() != 1 && Y.Cols() != 1 {
         return errors.New("Y not a vector.");
     }
@@ -54,6 +57,9 @@ func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
 //    Y is row or column vector of legth N.
 func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
 
+    if A.Rows() == 0 || A.Cols() == 0 {
+        return nil
+    }
     if Y.Rows() != 1 && Y.Cols() != 1 {
         return errors.New("Y not a vector.");
     }
@@ -76,7 +82,7 @@ func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
         incX = X.LeadingIndex()
     }
     // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
-    calgo.DRankMV(Ar, Xr, Yr, alpha, ldA, incY, incX, 0, A.Cols(), 0, A.Rows(), 0, 0)
+    calgo.DRankMV(Ar, Xr, Yr, alpha, ldA, incX, incY, 0, A.Cols(), 0, A.Rows(), 0, 0)
     return nil
 }
 
@@ -85,6 +91,9 @@ func MVRankUpdate(A, X, Y *matrix.FloatMatrix, alpha float64) error {
 //   X is row or column vector of length N.
 func MVRankUpdateSym(A, X *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
+    if A.Rows() == 0 || A.Cols() == 0 {
+        return nil
+    }
     if X.Rows() != 1 && X.Cols() != 1 {
         return errors.New("X not a vector.");
     }
@@ -108,6 +117,9 @@ func MVRankUpdateSym(A, X *matrix.FloatMatrix, alpha float64, flags Flags) error
 //   Y is row or column vector of legth N.
 func MVRankUpdate2Sym(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
+    if A.Rows() == 0 || A.Cols() == 0 {
+        return nil
+    }
     if Y.Rows() != 1 && Y.Cols() != 1 {
         return errors.New("Y not a vector.");
     }
@@ -143,8 +155,11 @@ func MVRankUpdate2Sym(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) e
 //   UPPER  A is upper tridiagonal
 //   UNIT   A diagonal is unit
 //   TRANSA A is transpose
-func MVSolve(A, X *matrix.FloatMatrix, alpha float64, flags Flags) error {
+func MVSolve(X, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
+    if A.Rows() == 0 || A.Cols() == 0 {
+        return nil
+    }
     if X.Rows() != 1 && X.Cols() != 1 {
         return errors.New("X not a vector.");
     }
@@ -162,9 +177,12 @@ func MVSolve(A, X *matrix.FloatMatrix, alpha float64, flags Flags) error {
 }
 
 
-// Tridiagonal multiplication;
-func MVMultTrm(A, X *matrix.FloatMatrix, flags Flags) error {
+// Tridiagonal multiplication; X = A*X
+func MVMultTrm(X, A*matrix.FloatMatrix, flags Flags) error {
 
+    if A.Rows() == 0 || A.Cols() == 0 {
+        return nil
+    }
     if X.Rows() != 1 && X.Cols() != 1 {
         return errors.New("X not a vector.");
     }
