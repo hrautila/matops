@@ -107,11 +107,11 @@ _dmvec_vpur_rank(mdata_t *A, const mvec_t *X, const mvec_t *Y,  double alpha,
 
   Ac = &A->md[S*A->step + R];
   y  = &Y->md[S*Y->inc];
+  x  = &X->md[R*X->inc];
   nRE = E - R;
   nSL = L - S;
 
-  for (j = 0; j < nSL; j += 2) {
-    x  = &X->md[R*X->inc];
+  for (j = 0; j < nSL-1; j += 2) {
     //Ar = Ac;
     _inner_mv_daxpy2(Ac, Ac+A->step, x, X->inc, y, y+Y->inc, alpha, nRE);
     y += 2*Y->inc;
@@ -270,11 +270,11 @@ _dmvec_vpur_syr2(mdata_t *A, const mvec_t *X, const mvec_t *Y,  double alpha,
   
   Ac = &A->md[S*A->step + R];
   y  = &Y->md[S*Y->inc];
+  x  = &X->md[R*X->inc];
   nRE = E - R;
   nSL = L - S;
 
-  for (j = 0; j < nSL; j += 2) {
-    x  = &X->md[R*X->inc];
+  for (j = 0; j < nSL-1; j += 2) {
     Ar = Ac;
     _inner_mv_daxpy2(Ac, Ac+A->step, x, X->inc, y, y+Y->inc, alpha, nRE);
     y += 2*Y->inc;
