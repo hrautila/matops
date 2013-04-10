@@ -18,7 +18,7 @@ func unblockedLUnoPiv(A *matrix.FloatMatrix) (err error) {
     var A00, a01, A02, a10, a11, a12, A20, a21, A22 matrix.FloatMatrix
 
     err = nil
-    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 1)
+    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 0)
     for ATL.Rows() < A.Rows() {
         repartition2x2to3x3(&ATL,
             &A00, &a01, &A02,
@@ -40,7 +40,7 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     var A00, A01, A02, A10, A11, A12, A20, A21, A22 matrix.FloatMatrix
 
     err = nil
-    partition2x2(&ATL, &ATR, &ABL, &ABR, A, nb)
+    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 0)
     for ATL.Rows() < A.Rows() {
         repartition2x2to3x3(&ATL,
             &A00, &A01, &A02,
@@ -61,8 +61,9 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     return
 }
 
-func DecomposeLUnoPiv(A *matrix.FloatMatrix) error {
-    return unblockedLUnoPiv(A)
+func DecomposeLUnoPiv(A *matrix.FloatMatrix) (*matrix.FloatMatrix, error) {
+    err := unblockedLUnoPiv(A)
+    return A, err
 }
 
 
