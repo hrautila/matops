@@ -12,6 +12,11 @@ import (
     //"fmt"
 )
 
+var decompNB int = 0
+
+func DecomposeBlockSize(nb int) {
+    decompNB = nb
+}
 
 func unblockedLUnoPiv(A *matrix.FloatMatrix) (err error) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
@@ -35,6 +40,10 @@ func unblockedLUnoPiv(A *matrix.FloatMatrix) (err error) {
     return
 }
 
+func m(A *matrix.FloatMatrix) int {
+    return A.Rows()
+}
+
 func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
     var A00, A01, A02, A10, A11, A12, A20, A21, A22 matrix.FloatMatrix
@@ -48,11 +57,11 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
             &A20, &A21, &A22, A, nb)
 
         // A00 = LU(A00)
-        unblockedLUnoPiv(&A00)
+        unblockedLUnoPiv(&A11)
         // A12 = trilu(A00)*A12.-1  (TRSM)
-        Solve(&A12, &A00, 1.0, LEFT|LOWER|UNIT)
+        Solve(&A12, &A11, 1.0, LEFT|LOWER|UNIT)
         // A21 = A21.-1*triu(A00) (TRSM)
-        Solve(&A21, &A00, 1.0, RIGHT|UPPER)
+        Solve(&A21, &A11, 1.0, RIGHT|UPPER)
         // A22 = A22 - A21*A12
         Mult(&A22, &A21, &A12, -1.0, 1.0, NOTRANS)
 
@@ -61,8 +70,13 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     return
 }
 
-func DecomposeLUnoPiv(A *matrix.FloatMatrix) (*matrix.FloatMatrix, error) {
-    err := unblockedLUnoPiv(A)
+func DecomposeLUnoPiv(A *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error) {
+    var err error
+    if nb == 0 {
+        err = unblockedLUnoPiv(A)
+    } else {
+        err = blockedLUnoPiv(A, nb)
+    }
     return A, err
 }
 
