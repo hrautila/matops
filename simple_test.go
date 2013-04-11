@@ -17,7 +17,31 @@ func TestCompile(t *testing.T) {
 }
 
 
-func TestViewUpdate(t *testing.T) {
+func _TestPartition(t *testing.T) {
+    var ATL, ATR, ABL, ABR, As matrix.FloatMatrix
+    var A00, a01, A02, a10, a11, a12, A20, a21, A22 matrix.FloatMatrix
+
+    A := matrix.FloatZeros(6, 6)
+    As.SubMatrixOf(A, 1, 1, 4, 4)
+    As.SetIndexes(1.0)
+    partition2x2(&ATL, &ATR, &ABL, &ABR, &As, 0)
+    t.Logf("ATL:\n%v\n", &ATL)
+
+    for ATL.Rows() < As.Rows() {
+        repartition2x2to3x3(&ATL, 
+            &A00, &a01, &A02,
+            &a10, &a11, &a12,
+            &A20, &a21, &A22, &As, 1)
+        t.Logf("m(a12)=%d [%d], m(a11)=%d\n", a12.Cols(), a12.NumElements(), a11.NumElements())
+        a11.Add(1.0)
+        a21.Add(-2.0)
+
+        continue3x3to2x2(&ATL, &ATR, &ABL, &ABR, &A00, &a11, &A22, &As)
+    }
+    t.Logf("A:\n%v\n", A)
+}
+
+func _TestViewUpdate(t *testing.T) {
     Adata2 := [][]float64{
         []float64{4.0, 2.0, 2.0},
         []float64{6.0, 4.0, 2.0},
