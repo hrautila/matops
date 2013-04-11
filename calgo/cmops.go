@@ -48,6 +48,9 @@ func DMult(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, P
     var Am C.mdata_t
     var Bm C.mdata_t
 
+    if C == nil || B == nil || A == nil {
+        return
+    }
     Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
     Cm.step = C.int(ldC)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -70,6 +73,9 @@ func DMult3(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, 
     var Am C.mdata_t
     var Bm C.mdata_t
 
+    if C == nil || B == nil || A == nil {
+        return
+    }
     Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
     Cm.step = C.int(ldC)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -94,6 +100,9 @@ func DMultSymm(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ld
     var Am C.mdata_t
     var Bm C.mdata_t
 
+    if C == nil || B == nil || A == nil {
+        return
+    }
     Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
     Cm.step = C.int(ldC)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -115,6 +124,10 @@ func DMultSymm(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ld
 func DTrmmUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB int) {
     var Bm C.mdata_t
     var Am C.mdata_t
+
+    if B == nil || A == nil {
+        return
+    }
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -132,6 +145,10 @@ func DTrmmUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, N
 func DTrmmBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB int) {
     var Bm C.mdata_t
     var Am C.mdata_t
+
+    if B == nil || A == nil {
+        return
+    }
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -150,6 +167,10 @@ func DTrmmBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB 
 func DSolveUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E int) {
     var Bm C.mdata_t
     var Am C.mdata_t
+
+    if B == nil || A == nil {
+        return
+    }
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -167,6 +188,10 @@ func DSolveUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E i
 func DSolveBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB int) {
     var Bm C.mdata_t
     var Am C.mdata_t
+
+    if B == nil || A == nil {
+        return
+    }
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -184,6 +209,10 @@ func DSolveBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB
 func DSymmRankBlk(C, A []float64, alpha, beta float64, flags Flags, ldC, ldA, N, S, E, H, NB int) {
     var Cm C.mdata_t
     var Am C.mdata_t
+
+    if C == nil || A == nil {
+        return
+    }
     Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
     Cm.step = C.int(ldC)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -203,6 +232,10 @@ func DSymmRank2Blk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA
     var Cm C.mdata_t
     var Am C.mdata_t
     var Bm C.mdata_t
+
+    if C == nil || A == nil {
+        return
+    }
     Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
     Cm.step = C.int(ldC)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -228,6 +261,10 @@ func DMultMV(Y, A, X []float64, alpha, beta float64, flags Flags, incY, ldA, inc
     var Yv C.mvec_t;
     var Xv C.mvec_t;
     var Am C.mdata_t;
+
+    if Y == nil || A == nil || X == nil {
+        return
+    }
     Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
     Yv.inc = C.int(incY)
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -251,6 +288,11 @@ func DRankMV(A, X, Y []float64, alpha float64, ldA, incX, incY, S, L, R, E, NB, 
     var Yv C.mvec_t;
     var Xv C.mvec_t;
     var Am C.mdata_t;
+    
+    if A == nil || X == nil || Y == nil {
+        return
+    }
+
     Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
     Yv.inc = C.int(incY)
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -274,6 +316,10 @@ func DRankMV(A, X, Y []float64, alpha float64, ldA, incX, incY, S, L, R, E, NB, 
 func DSymmRankMV(A, X []float64, alpha float64, flags Flags, ldA, incX, S, L, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
+
+    if A == nil || X == nil {
+        return
+    }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
     Xv.inc = C.int(incX)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -293,6 +339,10 @@ func DSymmRank2MV(A, X, Y []float64, alpha float64, flags Flags, ldA, incX, incY
     var Xv C.mvec_t;
     var Yv C.mvec_t;
     var Am C.mdata_t;
+
+    if A == nil || X == nil || Y == nil {
+        return
+    }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
     Xv.inc = C.int(incX)
     Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
@@ -313,6 +363,10 @@ func DSymmRank2MV(A, X, Y []float64, alpha float64, flags Flags, ldA, incX, incY
 func DSolveUnblkMV(X, A []float64, flags Flags, incX, ldA, N int) {
     var Xv C.mvec_t
     var Am C.mdata_t
+
+    if A == nil || X == nil {
+        return
+    }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
     Xv.inc = C.int(incX)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -329,6 +383,10 @@ func DSolveUnblkMV(X, A []float64, flags Flags, incX, ldA, N int) {
 func DSolveBlkMV(X, A []float64, flags Flags, incX, ldA, N, NB int) {
     var Xv C.mvec_t
     var Am C.mdata_t
+
+    if A == nil || X == nil {
+        return
+    }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
     Xv.inc = C.int(incX)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -345,6 +403,10 @@ func DSolveBlkMV(X, A []float64, flags Flags, incX, ldA, N, NB int) {
 func DTrimvUnblkMV(X, A []float64, flags Flags, incX, ldA, N int) {
     var Xv C.mvec_t
     var Am C.mdata_t
+
+    if A == nil || X == nil {
+        return
+    }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
     Xv.inc = C.int(incX)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
