@@ -7,6 +7,35 @@ import (
 	"errors"
 )
 
+func Mult0(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+    if A.Cols() != B.Rows() {
+        return errors.New("A.cols != B.rows: size mismatch")
+    }
+    psize := int64(C.NumElements())*int64(A.Cols())
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    Cr := C.FloatArray()
+    ldC := C.LeadingIndex()
+
+    if nWorker <= 1 || psize <= limitOne {
+        calgo.DMult0(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
+            0, C.Cols(), 0, C.Rows(),
+            vpLen, nB, mB)
+        return nil
+    } 
+    // here we have more than one worker available
+    worker := func(cstart, cend, rstart, rend int, ready chan int) {
+        calgo.DMult0(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
+            cstart, cend, rstart, rend, vpLen, nB, mB)
+        ready <- 1
+    }
+    colworks, rowworks := divideWork(C.Rows(), C.Cols(), nWorker)
+    scheduleWork(colworks, rowworks, C.Cols(), C.Rows(), worker)
+    return nil
+}
+
 // Calculate C = alpha*A*B + beta*C, C is M*N, A is M*P and B is P*N
 func MMMultNoTrans(C, A, B *matrix.FloatMatrix, alpha, beta float64) error {
     psize := int64(C.NumElements()*A.Cols())
