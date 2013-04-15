@@ -15,6 +15,88 @@ import (
 // Functions here are support functions for libFLAME-like implementation
 // of various linear algebra algorithms.
 
+type pDirection int
+const (
+    pLEFT = iota
+    pRIGHT 
+    pTOP
+    pBOTTOM
+    pTOPLEFT
+    pBOTTOMRIGHT
+)
+
+
+/*
+ Partition A to 1 by 2 blocks.
+
+  A -->  AL | AR
+
+ Parameter nb is initial block size for AL (pLEFT) or AR (pRIGHT).  
+ */
+func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, pdir int) {
+    switch (pdir) {
+    case pRIGHT:
+        AL.SubMatrixOf(A, 0, 0, A.Rows(), nb)
+        AR.SubMatrixOf(A, 0, nb, A.Rows(), A.Cols()-nb)
+    case pLEFT:
+        AL.SubMatrixOf(A, 0, nb, A.Rows(), A.Cols()-nb)
+        AR.SubMatrixOf(A, 0, A.Cols()-1-nb, nb, A.Rows())
+    }
+}
+
+/*
+ Repartition 1 by 2 blocks to 1 by 3 blocks.
+
+ pRIGHT: AL | AR  -->  A0 | A1 A2 
+ pLEFT:  AL | AR  -->  A0 A1 | A2 
+
+ Parameter As is left or right block of original 1x2 block.
+ */
+func repartition1x2to1x3(AL, A0, A1, A2, A *matrix.FloatMatrix, nb int, pdir int) {
+    k := AL.Cols()
+    if k + nb > A.Cols() {
+        nb = A.Cols() - k
+    }
+    switch (pdir) {
+    case pRIGHT:
+        // A0 is AL; [A1; A2] is AR
+        A0.SubMatrixOf(A, 0, 0,    A.Rows(), k)
+        A1.SubMatrixOf(A, 0, k,    A.Rows(), nb)
+        A2.SubMatrixOf(A, 0, k+nb, A.Rows(), A.Cols()-nb-k)
+    case pLEFT:
+        // A2 is AR; [A0; A1] is AL
+        A0.SubMatrixOf(A, 0, 0, A.Rows(), k-nb)
+        A1.SubMatrixOf(A, 0, A.Cols()-k-nb, A.Rows(), nb)
+        A2.SubMatrixOf(A, 0, A.Cols()-k,    A.Rows(), A.Cols()-k)
+    }
+}
+
+/*
+ Repartition 1 by 2 blocks to 1 by 3 blocks.
+
+ pRIGHT: AL | AR  --  A0 A1 | A2 
+ pLEFT:  AL | AR  <--  A0 | A1 A2 
+
+ */
+func continue1x3to1x2(AL, AR, A0, A1, A *matrix.FloatMatrix, pdir int) {
+
+    k := A0.Cols()
+    nb := A1.Cols()
+    switch (pdir) {
+    case pRIGHT:
+        // AL is [A0; A1], AR is A2
+        AL.SubMatrixOf(A, 0, 0, A.Rows(), k+nb)
+        AR.SubMatrixOf(A, 0, AL.Cols(), A.Rows(), A.Cols()-AL.Cols())
+    case pLEFT:
+        // AL is A0; AR is [A1; A2]
+        if k - nb < 0 {
+            nb = k
+        }
+        AL.SubMatrixOf(A, 0, 0, A.Rows(), k)
+        AR.SubMatrixOf(A, 0, AL.Cols()-1, A.Rows(), A.Cols()-AL.Cols())
+    }
+}
+
 /*
  Partition A to 2 by 2 blocks.
 
@@ -84,6 +166,90 @@ func continue3x3to2x2(
 
     ABL.SubMatrixOf(A, k+mb, 0, A.Rows()-k-mb, k+mb)
     ABR.SubMatrixOf(A, k+mb, k+mb)
+}
+
+
+
+type pPivots struct {
+    pivots []int
+}
+
+/*
+ Partition p to 2 by 1 blocks.
+
+        pT
+  p --> --
+        pB
+
+ Parameter nb is initial block size for pT (pBOTTOM) or pB (pTOP).  
+ */
+func partitionPivot2x1(pT, pB, p *pPivots, nb, pdir int) {
+    switch (pdir) {
+    case pBOTTOM:
+        if nb == 0 {
+            pT.pivots = nil
+        } else {
+            pT.pivots = p.pivots[:nb]
+        }
+        pB.pivots = p.pivots[nb:]
+    case pTOP:
+        if nb > 0 {
+            pT.pivots = p.pivots[:-nb]
+            pT.pivots = p.pivots[len(p.pivots)-nb:]
+        } else {
+            pT.pivots = p.pivots
+            pB.pivots = nil
+        }
+    }
+}
+
+/*
+ Repartition 2 by 1 block to 3 by 1 block.
+ 
+           pT      p0            pT       p0
+ pBOTTOM: --  --> --   ; pTOP:   --  -->  p1
+           pB      p1            pB       --
+                   p2                     p2
+
+ */
+func repartPivot2x1to3x1(pT, p0, p1, p2, p *pPivots, nb, pdir int) {
+    nT := len(pT.pivots)
+    if nT + nb > len(p.pivots) {
+        nb = len(p.pivots) - nT
+    }
+    switch (pdir) {
+    case pBOTTOM:
+        p0.pivots = pT.pivots
+        p1.pivots = p.pivots[nT:nT+nb]
+        p2.pivots = p.pivots[nT+nb:]
+    case pTOP:
+        p0.pivots = p.pivots[:nT-nb]
+        p1.pivots = p.pivots[nT-nb:nT]
+        p2.pivots = p.pivots[nT:]
+    }
+}
+
+/*
+ Continue with 2 by 1 block from 3 by 1 block.
+ 
+           pT      p0            pT       p0
+ pBOTTOM: --  <--  p1   ; pTOP:   -- <--  --
+           pB      --            pB       p1
+                   p2                     p2
+
+ */
+func contPivot3x1to2x1(pT, pB, p0, p1, p *pPivots, pdir int) {
+    var n0, n1 int
+    n0 = len(p0.pivots)
+    n1 = len(p1.pivots)
+    switch (pdir) {
+    case pBOTTOM:
+        pT.pivots = p.pivots[:n0+n1]
+        pB.pivots = p.pivots[n0+n1:]
+    case pTOP:
+        pT.pivots = p.pivots[:n0]
+        pB.pivots = p.pivots[n0:]
+    }
 }
 
 
