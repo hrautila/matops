@@ -16,8 +16,13 @@ import (
 func TriU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
     var k int
-    for k = 0; k < A.Cols()-1; k++ {
+    mlen := min(A.Rows(), A.Cols())
+    for k = 0; k < mlen-1; k++ {
         Ac.SubMatrixOf(A, k+1, k, A.Rows()-k-1, 1)
+        Ac.SetIndexes(0.0)
+    }
+    if A.Cols() < A.Rows() {
+        Ac.SubMatrixOf(A, 0, A.Cols())
         Ac.SetIndexes(0.0)
     }
     return A
@@ -28,13 +33,18 @@ func TriU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
 func TriUU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
     var k int
-    for k = 0; k < A.Cols()-1; k++ {
+    mlen := min(A.Rows(), A.Cols())
+    for k = 0; k < mlen-1; k++ {
         Ac.SubMatrixOf(A, k+1, k, A.Rows()-k-1, 1)
         Ac.SetIndexes(0.0)
         A.SetAt(k, k, 1.0)
     }
     // last element on diagonal
     A.SetAt(k, k, 1.0)
+    if A.Cols() < A.Rows() {
+        Ac.SubMatrixOf(A, 0, A.Cols())
+        Ac.SetIndexes(0.0)
+    }
     return A
 }
 
@@ -42,10 +52,15 @@ func TriUU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
 // of the matrix and setting diagonal elements to one.
 func TriLU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
+    mlen := min(A.Rows(), A.Cols())
     A.SetAt(0, 0, 1.0)
-    for k := 1; k < A.Cols(); k++ {
+    for k := 1; k < mlen; k++ {
         A.SetAt(k, k, 1.0)
         Ac.SubMatrixOf(A, 0, k, k, 1)
+        Ac.SetIndexes(0.0)
+    }
+    if A.Cols() > A.Rows() {
+        Ac.SubMatrixOf(A, 0, A.Rows())
         Ac.SetIndexes(0.0)
     }
     return A
@@ -56,9 +71,14 @@ func TriLU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
 func TriL(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
     A.SetAt(0, 0, 1.0)
-    for k := 1; k < A.Cols(); k++ {
+    mlen := min(A.Rows(), A.Cols())
+    for k := 1; k < mlen; k++ {
         A.SetAt(k, k, 1.0)
         Ac.SubMatrixOf(A, 0, k, k, 1)
+        Ac.SetIndexes(0.0)
+    }
+    if A.Cols() > A.Rows() {
+        Ac.SubMatrixOf(A, 0, A.Rows())
         Ac.SetIndexes(0.0)
     }
     return A
