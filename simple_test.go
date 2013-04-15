@@ -16,8 +16,58 @@ func TestCompile(t *testing.T) {
 	t.Logf("Compile OK\n")
 }
 
+func newPivots(sz int) *pPivots {
+    p := new(pPivots)
+    p.pivots = make([]int, sz, sz)
+    return p
+}
 
-func _TestPartition(t *testing.T) {
+
+func (p *pPivots) Size() int {
+    return len(p.pivots)
+}
+
+func _TestSwap(t *testing.T) {
+    A := matrix.FloatUniform(5, 5)
+    t.Logf("A:\n%v\n", A)
+    swapRows(A, 0, 4)
+    t.Logf("A: 0,4 swapped\n%v\n", A)
+    swapRows(A, 4, 0)
+    t.Logf("A: 4,0 swapped again\n%v\n", A)
+}
+
+func _TestPivot1Dv(t *testing.T) {
+    var pT, pB, p0, p1, p2 pPivots
+    p := newPivots(6)
+    partitionPivot2x1(&pT, &pB, p, 0, pBOTTOM)
+    t.Logf("m(pT)=%d, m(pB)=%d\n", pT.Size(), pB.Size())
+    k := 0
+    for pT.Size() < p.Size() {
+        t.Logf("m(pB)=%d; %v\n", pB.Size(), pB)
+        repartPivot2x1to3x1(&pT, &p0, &p1, &p2, p, 1, pBOTTOM)
+        p1.pivots[0] += k
+        t.Logf("m(p0)=%d, m(p2)=%d, p1=%d\n", p0.Size(), p2.Size(), p1.pivots[0])
+        contPivot3x1to2x1(&pT, &pB, &p0, &p1, p, pBOTTOM)
+        k += 1
+    }
+    t.Logf("pivots: %v\n", p.pivots)
+}
+
+func _TestPartition1Dh(t *testing.T) {
+    var AL, AR, A0, a1, A2 matrix.FloatMatrix
+    A := matrix.FloatZeros(1, 6)
+    partition1x2(&AL, &AR, A, 0, pRIGHT)
+    t.Logf("m(AL)=%d, m(AR)=%d\n", AL.Cols(), AR.Cols())
+    for AL.Cols() < A.Cols() {
+        AR.Add(1.0)
+        t.Logf("m(AR)=%d; %v\n", AR.Cols(), AR)
+        repartition1x2to1x3(&AL, &A0, &a1, &A2, A, 1, pRIGHT)
+        t.Logf("m(A0)=%d, m(A2)=%d, a1=%.1f\n", A0.Cols(), A2.Cols(), a1.Float())
+        continue1x3to1x2(&AL, &AR, &A0, &a1, A, pRIGHT)
+    }
+}
+
+func _TestPartition2D(t *testing.T) {
     var ATL, ATR, ABL, ABR, As matrix.FloatMatrix
     var A00, a01, A02, a10, a11, a12, A20, a21, A22 matrix.FloatMatrix
 
