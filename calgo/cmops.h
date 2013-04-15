@@ -99,6 +99,14 @@ _dmult_mm_intern(mdata_t *C, const mdata_t *A, const mdata_t *B,
                  cbuf_t *Acpy, cbuf_t *Bcpy);
 
 
+extern void dvec_invscal(mvec_t *X,  double alpha, int N);
+extern void dvec_scal(mvec_t *X,  double alpha, int N);
+extern void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, double beta, int N);
+extern double dvec_dot(const mvec_t *X,  const mvec_t *Y, double alpha, int N);
+extern double dvec_nrm2(const mvec_t *X,  const mvec_t *Y, int N);
+extern void dvec_swap(mvec_t *X,  mvec_t *Y, int N);
+
+
 extern void
 dmult_mm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
                  double alpha, double beta, int flags,

@@ -58,31 +58,6 @@ func DMult(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, P
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
 
-    C.dmult_mm_blocked2(
-        (*C.mdata_t)(unsafe.Pointer(&Cm)),
-        (*C.mdata_t)(unsafe.Pointer(&Am)),
-        (*C.mdata_t)(unsafe.Pointer(&Bm)),
-        C.double(alpha), C.double(beta), C.int(trans),
-        C.int(P), C.int(S), C.int(L), C.int(R), C.int(E),
-        C.int(H), C.int(NB), C.int(MB))
-}
-
-func DMult3(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, P, S, L, R, E, H, NB, MB int) {
-
-    var Cm C.mdata_t
-    var Am C.mdata_t
-    var Bm C.mdata_t
-
-    if C == nil || B == nil || A == nil {
-        return
-    }
-    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
-    Cm.step = C.int(ldC)
-    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
-    Am.step = C.int(ldA)
-    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
-    Bm.step = C.int(ldB)
-
     C.dmult_mm_blocked3(
         (*C.mdata_t)(unsafe.Pointer(&Cm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
@@ -419,17 +394,124 @@ func DTrimvUnblkMV(X, A []float64, flags Flags, incX, ldA, N int) {
 
 }
 
+// Z[0] = beta*Z[0] + alpha * X * Y
+func DDotSum(Z, X, Y []float64, alpha, beta float64, incZ, incX, incY, N int) {
 
+    var Zv C.mvec_t
+    var Xv C.mvec_t
+    var Yv C.mvec_t
 
-/*
-func copy_trans(C, A []float64, ldC, ldA, M, N int) {
-    var Cr *C.double
-    var Ar *C.double
-    Cr =  (*C.double)(unsafe.Pointer(&C[0]))
-    Ar =  (*C.double)(unsafe.Pointer(&A[0]))
-    C.colcpy_trans(Cr, C.int(ldC), Ar, C.int(ldA), C.int(M), C.int(N))
+    if Z == nil || X == nil || Y == nil {
+        return
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Zv.md =  (*C.double)(unsafe.Pointer(&Z[0]))
+    Zv.inc = C.int(incZ)
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+
+    C.dvec_dots(
+        (*C.mvec_t)(unsafe.Pointer(&Zv)),
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        C.double(alpha), C.double(beta),
+        C.int(N))
 }
-*/
+
+// return: alpha * X * Y
+func DDot(X, Y []float64, alpha float64, incX, incY, N int) float64 {
+
+    var dot C.double
+    var Xv C.mvec_t
+    var Yv C.mvec_t
+
+    if X == nil || Y == nil {
+        return 0.0
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+
+    dot = C.dvec_dot(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        C.double(alpha),
+        C.int(N))
+    return float64(dot)
+}
+
+// return: sum (X[i]-Y[i])^2
+func DNorm2(X, Y []float64, incX, incY, N int) float64 {
+
+    var nrm C.double
+    var Xv C.mvec_t
+    var Yv C.mvec_t
+
+    if X == nil || Y == nil {
+        return 0.0
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+
+    nrm =  C.dvec_nrm2(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        C.int(N))
+    return float64(nrm)
+}
+
+func DSwap(X, Y []float64, incX, incY, N int) {
+
+    var Xv C.mvec_t
+    var Yv C.mvec_t
+
+    if X == nil || Y == nil {
+        return
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+
+    C.dvec_swap(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        C.int(N))
+}
+
+func DInvScal(X []float64, alpha float64, incX, N int) {
+
+    var Xv C.mvec_t
+
+    if X == nil  {
+        return
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+
+    C.dvec_invscal(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.double(alpha), C.int(N))
+}
+
+func DScal(X []float64, alpha float64, incX, N int) {
+
+    var Xv C.mvec_t
+
+    if X == nil  {
+        return
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+
+    C.dvec_scal(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.double(alpha), C.int(N))
+}
 
 
 
