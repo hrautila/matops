@@ -43,9 +43,9 @@ var limitOne int64 = 200*200*200
 // Set blocking parameters for blocked algorithms. Hard limits are set
 // by actual C-implementation in matops.calgo package.
 // Parameter nb defines column direction block size, mb defines row direction
-// block size and vplen defines viewport length for matrix-matrix multiplication.
-func BlockingParams(vplen, nb, mb int) {
-    vpLen = vplen
+// block size and kb defines inner block size for matrix-matrix multiplication.
+func BlockingParams(mb, nb, kb int) {
+    vpLen = kb
     nB = nb
     mB = mb
 }

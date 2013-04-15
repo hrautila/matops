@@ -227,7 +227,7 @@ func main() {
     runtime.GOMAXPROCS(nWorker)
     matops.NumWorkers(nWorker)
     rand.Seed(time.Now().UnixNano())
-    matops.BlockingParams(VPsize, NB, MB)
+    matops.BlockingParams(MB, NB, VPsize)
 
     testFunc, ok := tests[testName]
     if ! ok {
