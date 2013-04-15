@@ -11,6 +11,7 @@ import (
     "github.com/hrautila/matrix"
     "github.com/hrautila/matops/calgo"
     "errors"
+    "math"
 )
 
 // Y = alpha*A*X + beta*Y
@@ -197,6 +198,162 @@ func MVMultTrm(X, A*matrix.FloatMatrix, flags Flags) error {
     }
     calgo.DTrimvUnblkMV(Xr, Ar, calgo.Flags(flags), incX, ldA, A.Cols())
     return nil
+}
+
+// Norm2: ||X - Y||^2
+func Norm2(X, Y *matrix.FloatMatrix) float64 {
+    if X == nil || Y == nil {
+        return math.NaN()
+    }
+    if X.NumElements() == 0 || Y.NumElements() == 0 {
+        return math.NaN()
+    }
+    if !isVector(X)  {
+        return math.NaN()
+    }
+    if !isVector(Y)  {
+        return math.NaN()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Cols() != 1 {
+        // Row vector
+        incY = Y.LeadingIndex()
+    }
+    return calgo.DNorm2(Xr, Yr, incX, incY, X.NumElements())
+}
+
+// Inner product: alpha * X * Y
+func Dot(X, Y *matrix.FloatMatrix, alpha float64) float64 {
+    if X == nil || Y == nil {
+        return math.NaN()
+    }
+    if X.NumElements() == 0 || Y.NumElements() == 0 {
+        return math.NaN()
+    }
+    if !isVector(X)  {
+        return math.NaN()
+    }
+    if !isVector(Y)  {
+        return math.NaN()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Cols() != 1 {
+        // Row vector
+        incY = Y.LeadingIndex()
+    }
+    return calgo.DDot(Xr, Yr, alpha, incX, incY, X.NumElements())
+}
+
+// Add inner product: Z[index] = beta*Z[index] + alpha * X * Y
+func AddDot(Z, X, Y *matrix.FloatMatrix, alpha, beta float64, index int) {
+    if X == nil || Y == nil {
+        return
+    }
+    if X.NumElements() == 0 || Y.NumElements() == 0 {
+        return
+    }
+    if !isVector(X)  {
+        return
+    }
+    if !isVector(Y)  {
+        return
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Cols() != 1 {
+        // Row vector
+        incY = Y.LeadingIndex()
+    }
+    Zr := Z.FloatArray()
+    incZ := 1
+    if Z.Cols() != 1 {
+        // Row vector
+        incZ = Z.LeadingIndex()
+    }
+    calgo.DDotSum(Zr[incZ*index:], Xr, Yr, alpha, beta, incZ, incX, incY, X.NumElements())
+}
+
+// Inverse scaling of vector. X = X / alpha.
+func InvScale(X *matrix.FloatMatrix, alpha float64) {
+    if X == nil || X.NumElements() == 0 {
+        return
+    }
+    if !isVector(X)  {
+        return
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    calgo.DInvScal(Xr, alpha, incX, X.NumElements())
+}
+
+// Scaling with scalar: X = alpha * X
+func Scale(X *matrix.FloatMatrix, alpha float64) {
+    if X == nil || X.NumElements() == 0 {
+        return
+    }
+    if !isVector(X)  {
+        return
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    calgo.DScal(Xr, alpha, incX, X.NumElements())
+}
+
+// Swap X and Y.
+func Swap(X, Y *matrix.FloatMatrix)  {
+    if X == nil || Y == nil {
+        return 
+    }
+    if X.NumElements() == 0 || Y.NumElements() == 0 {
+        return 
+    }
+    if !isVector(X)  {
+        return 
+    }
+    if !isVector(Y)  {
+        return 
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Cols() != 1 {
+        // Row vector
+        incY = Y.LeadingIndex()
+    }
+    calgo.DSwap(Xr, Yr, incX, incY, X.NumElements())
 }
 
 // Local Variables:
