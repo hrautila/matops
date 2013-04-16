@@ -12,6 +12,7 @@ import (
     "github.com/hrautila/matops/calgo"
     "errors"
     "math"
+    //"fmt"
 )
 
 // Y = alpha*A*X + beta*Y
@@ -205,9 +206,6 @@ func Norm2(X, Y *matrix.FloatMatrix) float64 {
     if X == nil || Y == nil {
         return math.NaN()
     }
-    if X.NumElements() == 0 || Y.NumElements() == 0 {
-        return math.NaN()
-    }
     if !isVector(X)  {
         return math.NaN()
     }
@@ -232,9 +230,6 @@ func Norm2(X, Y *matrix.FloatMatrix) float64 {
 // Inner product: alpha * X * Y
 func Dot(X, Y *matrix.FloatMatrix, alpha float64) float64 {
     if X == nil || Y == nil {
-        return math.NaN()
-    }
-    if X.NumElements() == 0 || Y.NumElements() == 0 {
         return math.NaN()
     }
     if !isVector(X)  {
