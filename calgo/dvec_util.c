@@ -27,7 +27,7 @@ void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, doubl
     Xc += X->inc;
     Yc += Y->inc;
   }    
-  if (i != N) {
+  if (i < N) {
     c0 += Xc[0] * Yc[0];
   }
   Z->md[0] *= beta;
@@ -51,7 +51,7 @@ double dvec_dot(const mvec_t *X,  const mvec_t *Y, double alpha, int N)
     Xc += X->inc;
     Yc += Y->inc;
   }    
-  if (i != N) {
+  if (i < N) {
     c0 += Xc[0] * Yc[0];
   }
   return alpha * (c0 + c1);
@@ -77,7 +77,7 @@ double dvec_nrm2(const mvec_t *X,  const mvec_t *Y, int N)
     Xc += X->inc;
     Yc += Y->inc;
   }    
-  if (i != N) {
+  if (i < N) {
     d0 = Xc[0] - Yc[0];
     c0 += d0 * d0;
   }
@@ -104,7 +104,7 @@ void dvec_swap(mvec_t *X,  mvec_t *Y, int N)
     Xc += X->inc;
     Yc += Y->inc;
   }    
-  if (i != N) {
+  if (i < N) {
     tmp = Xc[0];
     Xc[0] = Yc[0];
     Yc[0] = tmp;
@@ -123,7 +123,7 @@ void dvec_invscal(mvec_t *X,  double alpha, int N)
     Xc[0] /= alpha;
     Xc += X->inc;
   }    
-  if (i != N) {
+  if (i < N) {
     Xc[0] /= alpha;
   }
 }
