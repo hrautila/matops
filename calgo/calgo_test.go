@@ -76,7 +76,7 @@ func _TestMultSmall(t *testing.T) {
     blas.GemmFloat(D, E, C0, 1.0, 1.0)
     t.Logf("blas: C=D*E\n%v\n", C0)
 
-    DMult3(C1r, Dr, Er, 1.0, 1.0, NOTRANS, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    DMult(C1r, Dr, Er, 1.0, 1.0, NOTRANS, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1=D*E\n%v\n", C1)
 }
@@ -98,7 +98,7 @@ func TestMultBig(t *testing.T) {
     blas.GemmFloat(D, E, C0, 1.0, 1.0)
     //t.Logf("blas: C=D*E\n%v\n", C0)
 
-    DMult3(C1r, Dr, Er, 1.0, 1.0, NOTRANS, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
+    DMult(C1r, Dr, Er, 1.0, 1.0, NOTRANS, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
     res := C0.AllClose(C1)
     t.Logf("C0 == C1: %v\n", res)
 }
@@ -137,7 +137,7 @@ func _TestMultTransASmall(t *testing.T) {
     blas.GemmFloat(Dt, E, C0, 1.0, 1.0, linalg.OptTransA)
     t.Logf("blas: C=D*E\n%v\n", C0)
 
-    DMult3(C1r, Dr, Er, 1.0, 1.0, TRANSA, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    DMult(C1r, Dr, Er, 1.0, 1.0, TRANSA, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1=D*E\n%v\n", C1)
 }
@@ -159,7 +159,7 @@ func _TestMultTransABig(t *testing.T) {
 
     blas.GemmFloat(Dt, E, C0, 1.0, 1.0, linalg.OptTransA)
 
-    DMult3(C1r, Dr, Er, 1.0, 1.0, TRANSA, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
+    DMult(C1r, Dr, Er, 1.0, 1.0, TRANSA, bM, bM, bP, bP, 0,  bN, 0,  bM, 32, 32, 32)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
@@ -195,7 +195,7 @@ func _TestMultTransBSmall(t *testing.T) {
     blas.GemmFloat(D, Et, C0, 1.0, 1.0, linalg.OptTransB)
     t.Logf("blas: C=D*E.T\n%v\n", C0)
 
-    DMult3(C1r, Dr, Er, 1.0, 1.0, TRANSB, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    DMult(C1r, Dr, Er, 1.0, 1.0, TRANSB, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1=D*E.T\n%v\n", C1)
 }
@@ -242,7 +242,7 @@ func _TestMultTransABSmall(t *testing.T) {
     blas.GemmFloat(Dt, Et, C0, 1.0, 1.0, linalg.OptTransA, linalg.OptTransB)
     t.Logf("blas: C=D.T*E.T\n%v\n", C0)
 
-    DMult3(C1r, Dr, Er, 1.0, 1.0, TRANSA|TRANSB, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
+    DMult(C1r, Dr, Er, 1.0, 1.0, TRANSA|TRANSB, bM, bM, bP, bP, 0,  bN, 0,  bM, 4, 4, 4)
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
     t.Logf("C1: C1=D.T*E.T\n%v\n", C1)
 }
@@ -1513,6 +1513,19 @@ func _TestSyrk2Small(t *testing.T) {
     syrk2Test(t, U.Copy(), A.Transpose(), B.Transpose(), UPPER|TRANSA, 4, 2)
     t.Logf("-- SYR2K LOWER, TRANS --")
     syrk2Test(t, L.Copy(), A.Transpose(), B.Transpose(), LOWER|TRANSA, 4, 2)
+}
+
+func TestVectors(t *testing.T) {
+    a := matrix.FloatWithValue(1, 5, 1.0)
+    b := matrix.FloatWithValue(1, 5, 2.0)
+    c := matrix.FloatWithValue(5, 1, 2.0)
+    ar := a.FloatArray()
+    br := b.FloatArray()
+    cr := c.FloatArray()
+    v := DDot(ar, br, 1.0, a.LeadingIndex(), b.LeadingIndex(), a.NumElements())
+    t.Logf("a*b = %.1f\n", v)
+    v = DDot(cr, br, 1.0, 1, b.LeadingIndex(), c.NumElements())
+    t.Logf("c*b = %.1f\n", v)
 }
 
 // Local Variables:
