@@ -70,10 +70,8 @@ func TriLU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
 // of the matrix.
 func TriL(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
-    A.SetAt(0, 0, 1.0)
     mlen := min(A.Rows(), A.Cols())
     for k := 1; k < mlen; k++ {
-        A.SetAt(k, k, 1.0)
         Ac.SubMatrixOf(A, 0, k, k, 1)
         Ac.SetIndexes(0.0)
     }
