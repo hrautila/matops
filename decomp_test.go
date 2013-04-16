@@ -133,20 +133,75 @@ func TestBlkLUPiv(t *testing.T) {
     A := matrix.Times(L, U)
     A0 := A.Copy()
     piv := make([]int, N, N)
-    t.Logf("A\n%v\n", A)
     DecomposeBlockSize(nb)
     R, _ := DecomposeLU(A.Copy(), piv)
     t.Logf("piv: %v\n", piv)
-    t.Logf("R\n%v\n", R)
 
     piv0 := make([]int32, N, N)
     lapack.Getrf(A0, piv0)
-    t.Logf("lapack result: piv0 %v\n%v\n", piv0, A0)
+    t.Logf("lapack result: piv0 %v\n", piv0)
     t.Logf("R == A0: %v\n", A0.AllClose(R))
+}
 
-    //Ld := TriLU(R.Copy())
-    //Ud := TriU(R)
-    //t.Logf("A == L*U: %v\n", A.AllClose(matrix.Times(Ld, Ud)))
+func TestCHOL3x3(t *testing.T) {
+    Ldata2 := [][]float64{
+        []float64{3.0, 0.0, 0.0},
+        []float64{6.0, 4.0, 0.0},
+        []float64{4.0, 6.0, 3.0},
+    }
+    L := matrix.FloatMatrixFromTable(Ldata2, matrix.RowOrder)
+    A := matrix.Times(L, L.Transpose())
+    DecomposeBlockSize(0)
+    DecomposeCHOL(A, LOWER)
+    Ld := TriL(A.Copy())
+    t.Logf("Ld:\n%v\n", Ld)
+    t.Logf("result L == Ld: %v\n", L.AllClose(Ld))
+}
+
+func TestCHOLUpLo(t *testing.T) {
+    N := 10
+    L := matrix.FloatUniformSymmetric(N, matrix.Lower)
+    A := matrix.Times(L, L.Transpose())
+    DecomposeBlockSize(0)
+    DecomposeCHOL(A, LOWER)
+    Ld := TriL(A)
+    t.Logf("result L == Ld: %v\n", L.AllClose(Ld))
+
+    U := matrix.FloatUniformSymmetric(N, matrix.Upper)
+    A = matrix.Times(U.Transpose(), U)
+    DecomposeBlockSize(0)
+    DecomposeCHOL(A, UPPER)
+    Ud := TriU(A)
+    t.Logf("result U == Ud: %v\n", U.AllClose(Ud))
+}
+
+
+func TestBlkCHOLUpLo(t *testing.T) {
+    N := 10
+    nb := 4
+    L := matrix.FloatUniformSymmetric(N, matrix.Lower)
+    A := matrix.Times(L, L.Transpose())
+    DecomposeBlockSize(nb)
+    DecomposeCHOL(A, LOWER)
+    Ld := TriL(A)
+    ok := L.AllClose(Ld)
+    t.Logf("result L == Ld: %v\n", ok)
+    if ! ok {
+        t.Logf("L:\n%v\n", L)
+        t.Logf("Ld:\n%v\n", Ld)
+    }
+
+    U := matrix.FloatUniformSymmetric(N, matrix.Upper)
+    A = matrix.Times(U.Transpose(), U)
+    DecomposeBlockSize(nb)
+    DecomposeCHOL(A, UPPER)
+    Ud := TriU(A)
+    ok = U.AllClose(Ud)
+    t.Logf("result U == Ud: %v\n", ok)
+
+    //lapack.Potrf(A0)
+    //t.Logf("lapack result:\n%v\n", A0)
+    //t.Logf("A == A0: %v\n", A0.AllClose(A))
 }
 
 // Local Variables:
