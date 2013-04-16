@@ -10,6 +10,7 @@ package matops
 import (
     "github.com/hrautila/matrix"
     "errors"
+    "math"
     //"fmt"
 )
 
@@ -20,12 +21,22 @@ func min(a, b int) int {
     return b
 }
 
+func m(A *matrix.FloatMatrix) int {
+    return A.Rows()
+}
+
+func n(A *matrix.FloatMatrix) int {
+    return A.Cols()
+}
+
 var decompNB int = 0
 
+// Set global decomposition block size for blocked versions.
 func DecomposeBlockSize(nb int) {
     decompNB = nb
 }
 
+// unblocked LU decomposition w/o pivots, FLAME LU nopivots variant 5
 func unblockedLUnoPiv(A *matrix.FloatMatrix) (err error) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
     var A00, a01, A02, a10, a11, a12, A20, a21, A22 matrix.FloatMatrix
@@ -49,10 +60,8 @@ func unblockedLUnoPiv(A *matrix.FloatMatrix) (err error) {
     return
 }
 
-func m(A *matrix.FloatMatrix) int {
-    return A.Rows()
-}
 
+// blocked LU decomposition w/o pivots, FLAME LU nopivots variant 5
 func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
     var A00, A01, A02, A10, A11, A12, A20, A21, A22 matrix.FloatMatrix
@@ -117,10 +126,11 @@ func applyPivots(A *matrix.FloatMatrix, p *pPivots) {
 }
 
 func pivotIndex(A *matrix.FloatMatrix, p *pPivots) {
-    max := A.GetAt(0, 0)
+    max := math.Abs(A.GetAt(0, 0))
     for k := 1; k < A.Rows(); k++ {
-        v := A.GetAt(k, 0)
-        if v != 0 && (v > max || max == 0.0) {
+        v := math.Abs(A.GetAt(k, 0))
+        //if v != 0 && (v > max || max == 0.0) {
+        if v > max {
             p.pivots[0] = k
             max = v
         }
@@ -138,6 +148,7 @@ func VDot(X, Y *matrix.FloatMatrix) float64 {
     return rval
 }
 
+// unblocked LU decomposition with pivots: FLAME LU variant 3
 func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
     var err error
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
@@ -163,7 +174,9 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
 
         // a01 = trilu(A00) \ a01 (TRSV)
         MVSolve(&a01, &A00, 1.0, LOWER|UNIT)
-        a11.Add(-VDot(&a10, &a01))
+        // a11 = a11 - a10 *a01 
+        a11.Add(Dot(&a10, &a01, -1.0))
+        // a21 = a21 -A20*a01
         MVMult(&a21, &A20, &a01, -1.0, 1.0)
 
         // pivot index on current column [a11, a21].T
@@ -174,7 +187,8 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
         applyPivots(&aB1, &p1)
         
         // a21 = a21 / a11
-        a21.Scale(1.0/a11.Float())
+        //a21.Scale(1.0/a11.Float())
+        InvScale(&a21, a11.Float())
 
         // apply pivots to previous columns
         AB0.SubMatrixOf(&ABL, 0, 0)
@@ -194,6 +208,7 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
     return err
 }
 
+// blocked LU decomposition with pivots: FLAME LU variant 3
 func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
     var err error
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
