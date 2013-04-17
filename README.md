@@ -10,7 +10,7 @@ Supported functionality is:
     Mult(C, A, B, alpha, beta, flags)           General matrix-matrix multiplication  (GEMM)
     MultSymm(C, A, B, alpha, beta, flags)       Symmetric matrix-matrix multipication (SYMM)
     MultTrm(B, A, alpha, flags)                 Tridiagonal matrix-matrix multiplication (TRMM)  
-    Solve(B, A, alpha, flags)                   Tridiagonal solve for multiple RHS (TRSM)
+    Solve(B, A, alpha, flags)                   Tridiagonal solve with multiple RHS (TRSM)
     RankUpdateSym(C, A, alpha, beta,flags)      Symmetric matrix rank update (SYRK)
     RankUpdate2Sym(C, A, B, alpha, beta, flags) Symmetric matrix rank 2 update (SYR2K)
 
@@ -21,7 +21,7 @@ Supported functionality is:
     MVRankUpdateSym(A, X, alpha, flags)         Symmetric matrix rank update (SYR)
     MVRankUpdate2Sym(A, X, Y, alpha, flags)     Symmetric matrix rank 2 update (SYR2)
     MVSolve(X, A, alpha, flags)                 Tridiagonal solve (TRSV)
-    MVMultTrm(X, A, flags)                      Tridiagonal matrix-vector multiplication (TRSV)
+    MVMultTrm(X, A, flags)                      Tridiagonal matrix-vector multiplication (TRMV)
 
   Blas level 1
 
@@ -35,7 +35,7 @@ Supported functionality is:
   
     DecomposeLUnoPiv(A)       LU decomposition without pivoting
     DecomposeLU(A, pivots)    LU decomposition with pivoting (GETRF)
-    DecomposeCHOL(A)          Cholesky decomposition
+    DecomposeCHOL(A)          Cholesky decomposition (POTRF)
 
   Support functions
 
