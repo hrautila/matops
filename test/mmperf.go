@@ -119,7 +119,7 @@ func CTestGemmTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return fnc, A, B, C
 }
 
-func MMTestMult2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+func MMTestMult(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormal(m, p)
     B = matrix.FloatNormal(p, n)
     C = matrix.FloatZeros(m, n)
@@ -129,32 +129,12 @@ func MMTestMult2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return
 }
 
-func MMTestMult3(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
-    A = matrix.FloatNormal(m, p)
-    B = matrix.FloatNormal(p, n)
-    C = matrix.FloatZeros(m, n)
-    fnc = func() {
-        matops.Mult3(C, A, B, 1.0, 1.0, matops.NOTRANS)
-    }
-    return
-}
-
-func MMTestMult(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
-    A = matrix.FloatNormal(m, p)
-    B = matrix.FloatNormal(p, n)
-    C = matrix.FloatZeros(m, n)
-    fnc = func() {
-        matops.MMMultNoTrans(C, A, B, 1.0, 1.0)
-    }
-    return
-}
-
 func MMTestMultTransA(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormal(p, m)
     B = matrix.FloatNormal(p, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        matops.MMMultTransA(C, A, B, 1.0, 1.0)
+        matops.Mult(C, A, B, 1.0, 1.0, matops.TRANSA)
     }
     return
 }
@@ -164,7 +144,7 @@ func MMTestMultTransB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     B = matrix.FloatNormal(n, p)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        matops.MMMultTransB(C, A, B, 1.0, 1.0)
+        matops.Mult(C, A, B, 1.0, 1.0, matops.TRANSB)
     }
     return
 }
@@ -174,7 +154,7 @@ func MMTestMultTransAB(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     B = matrix.FloatNormal(n, p)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        matops.MMMultTransAB(C, A, B, 1.0, 1.0)
+        matops.Mult(C, A, B, 1.0, 1.0, matops.TRANSA|matops.TRANSB)
     }
     return
 }
@@ -197,12 +177,10 @@ func CheckTransAB(A, B, C *matrix.FloatMatrix) {
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     // matops interfaces
-    "MMMult": MMTestMult2,
-    "MMMult3": MMTestMult3,
-    "MMTestMult": MMTestMult,
-    "MMTestMultTransA": MMTestMultTransA,
-    "MMTestMultTransB": MMTestMultTransB,
-    "MMTestMultTransAB": MMTestMultTransAB,
+    "Mult": MMTestMult,
+    "MultTransA": MMTestMultTransA,
+    "MultTransB": MMTestMultTransB,
+    "MultTransAB": MMTestMultTransAB,
     // blas interface reference tests
     "GemmTransA": CTestGemmTransA,
     "GemmTransB": CTestGemmTransB,

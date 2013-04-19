@@ -82,62 +82,44 @@ func TestTemplate(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     return
 }
 
+
 func CTestSymmUpper(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormalSymmetric(m, matrix.Upper)
     B = matrix.FloatNormal(m, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        matops.MMSymmUpper(C, A, B, 1.0, 1.0)
-    }
-    return fnc, A, B, C
-}
-
-func CTestSymmUpper2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
-    A = matrix.FloatNormalSymmetric(m, matrix.Upper)
-    B = matrix.FloatNormal(m, n)
-    C = matrix.FloatZeros(m, n)
-    fnc = func() {
-        matops.Symm(C, A, B, 1.0, 1.0, matops.LEFT|matops.UPPER)
-    }
-    return fnc, A, B, C
-}
-
-func CTestSymmLower2(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
-    A = matrix.FloatNormalSymmetric(m, matrix.Upper)
-    B = matrix.FloatNormal(m, n)
-    C = matrix.FloatZeros(m, n)
-    fnc = func() {
-        matops.Symm(C, A, B, 1.0, 1.0, matops.LEFT|matops.LOWER)
+        matops.MultSym(C, A, B, 1.0, 1.0, matops.LEFT|matops.UPPER)
     }
     return fnc, A, B, C
 }
 
 func CTestSymmLower(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
-    A = matrix.FloatNormalSymmetric(m, matrix.Lower)
-    B = matrix.FloatNormal(m, n)
-    C = matrix.FloatZeros(m, n)
-    fnc = func() {
-        matops.MMSymm(C, A, B, 1.0, 1.0)
-    }
-    return fnc, A, B, C
-}
-
-func CTestBlasSymm(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormalSymmetric(m, matrix.Upper)
     B = matrix.FloatNormal(m, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
-        blas.SymmFloat(A, B, C, 1.0, 1.0, linalg.OptUpper)
+        matops.MultSym(C, A, B, 1.0, 1.0, matops.LEFT|matops.LOWER)
     }
     return fnc, A, B, C
 }
 
-func CTestBlasSymmLow(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+
+func CTestBlasLo(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
     A = matrix.FloatNormalSymmetric(m, matrix.Lower)
     B = matrix.FloatNormal(m, n)
     C = matrix.FloatZeros(m, n)
     fnc = func() {
         blas.SymmFloat(A, B, C, 1.0, 1.0, linalg.OptLower)
+    }
+    return fnc, A, B, C
+}
+
+func CTestBlasUp(m, n, p int) (fnc func(), A, B, C *matrix.FloatMatrix) {
+    A = matrix.FloatNormalSymmetric(m, matrix.Lower)
+    B = matrix.FloatNormal(m, n)
+    C = matrix.FloatZeros(m, n)
+    fnc = func() {
+        blas.SymmFloat(A, B, C, 1.0, 1.0, linalg.OptUpper)
     }
     return fnc, A, B, C
 }
@@ -154,13 +136,11 @@ func CheckLower(A, B, C *matrix.FloatMatrix) {
 
 var tests map[string]mperf.MatrixTestFunc = map[string]mperf.MatrixTestFunc{
     // lowel tests: calgo interfaces
-    "SymmUp": CTestSymmUpper2,
-    "SymmLo": CTestSymmLower2,
-    "SymmUpper": CTestSymmUpper,
-    "SymmLower": CTestSymmLower,
+    "SymmUp": CTestSymmUpper,
+    "SymmLo": CTestSymmLower,
     // blas interface reference tests
-    "BlasSymmLow": CTestBlasSymmLow,
-    "BlasSymm": CTestBlasSymm}
+    "BlasLo": CTestBlasLo,
+    "BlasUp": CTestBlasUp}
 
     
 func parseSizeList(s string) []int {
