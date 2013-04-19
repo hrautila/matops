@@ -215,13 +215,13 @@ void dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N)
     return;
   }
   if (flags & MTX_UPPER) {
-    if (flags & MTX_TRANSA) {
+    if (flags & MTX_TRANSA || flags & MTX_TRANS) {
       _dmvec_trid_dot_backward(X->md, A->md, unit, X->inc, A->step, N);
     } else {
       _dmvec_trid_axpy_forward(X->md, A->md, unit, X->inc, A->step, N);
     }
   } else {
-    if (flags & MTX_TRANSA) {
+    if (flags & MTX_TRANSA || flags & MTX_TRANS) {
       _dmvec_trid_dot_forward(X->md, A->md, unit, X->inc, A->step, N);
     } else {
       _dmvec_trid_axpy_backward(X->md, A->md, unit, X->inc, A->step, N);
