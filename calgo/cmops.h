@@ -20,6 +20,7 @@ enum {
   MTX_LEFT    = 0x10,
   MTX_RIGHT   = 0x20,
   MTX_UNIT    = 0x40,
+  MTX_TRANS   = 0x80,
   MTX_NOSCALE = 0x800
 };
   
