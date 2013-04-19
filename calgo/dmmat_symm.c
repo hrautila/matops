@@ -316,7 +316,8 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
         // above|left diagonal
         A0.md = flags & MTX_UPPER ? &A->md[i*A->step] : &A->md[i];
         B0.md = &B->md[j*B->step];
-        _dblock_mult_panel(&C0, &A0, &B0, alpha, flags1, i, nJ, nI, vlen, &Acpy, &Bcpy);
+        //_dblock_mult_panel(&C0, &A0, &B0, alpha, flags1, i, nJ, nI, vlen, &Acpy, &Bcpy);
+        _dmult_mm_intern(&C0, &A0, &B0, alpha, flags1, i, nJ, nI, vlen, NB, MB, &Acpy, &Bcpy);
 
         // diagonal block
         A0.md = &A->md[i*A->step + i];
@@ -326,7 +327,8 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
         // right|below of diagonal
         A0.md = flags & MTX_UPPER ? &A->md[(i+nI)*A->step + i] : &A->md[i*A->step + i+nI];
         B0.md = &B->md[j*B->step + i+nI];
-        _dblock_mult_panel(&C0, &A0, &B0, alpha, flags2, P-i-nI, nJ, nI, vlen, &Acpy, &Bcpy);
+        //_dblock_mult_panel(&C0, &A0, &B0, alpha, flags2, P-i-nI, nJ, nI, vlen, &Acpy, &Bcpy);
+        _dmult_mm_intern(&C0, &A0, &B0, alpha, flags2, P-i-nI, nJ, nI, vlen, NB, MB, &Acpy, &Bcpy);
       }
     }
   } else {
@@ -369,7 +371,8 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
         // above|left diagonal
         A0.md = flags & MTX_UPPER ? &A->md[ic*A->step] : &A->md[ic];
         B0.md = &B->md[ir];
-        _dblock_mult_panel(&C0, &B0, &A0, alpha, flags1, ic, nC, nR, vlen, &Acpy, &Bcpy);
+        //_dblock_mult_panel(&C0, &B0, &A0, alpha, flags1, ic, nC, nR, vlen, &Acpy, &Bcpy);
+        _dmult_mm_intern(&C0, &B0, &A0, alpha, flags1, ic, nC, nR, vlen, NB, MB, &Acpy, &Bcpy);
 
         // diagonal block
         A0.md = &A->md[ic*A->step + ic];
@@ -379,7 +382,8 @@ void dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
         // right|below of diagonal
         A0.md = flags & MTX_UPPER ? &A->md[(ic+nC)*A->step + ic] : &A->md[ic*A->step +ic+nC];
         B0.md = &B->md[(ic+nC)*B->step+ir];
-        _dblock_mult_panel(&C0, &B0, &A0, alpha, flags2, P-ic-nC, nC, nR, vlen, &Acpy, &Bcpy);
+        //_dblock_mult_panel(&C0, &B0, &A0, alpha, flags2, P-ic-nC, nC, nR, vlen, &Acpy, &Bcpy);
+        _dmult_mm_intern(&C0, &B0, &A0, alpha, flags2, P-ic-nC, nC, nR, vlen, NB, MB, &Acpy, &Bcpy);
       }
     }
   }

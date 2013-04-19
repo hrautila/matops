@@ -101,7 +101,8 @@ void dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
       Bd.md = flags & MTX_LOWER ? &A->md[S*A->step] : &A->md[(i+nI)*A->step];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
+      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
+      _dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
     }
   } else {
     for (i = S; i < E; i += NB) {
@@ -118,7 +119,8 @@ void dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
       Bd.md = flags & MTX_LOWER ? &A->md[S] : &A->md[i+nI];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
+      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
+      _dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
     }
   }
 }
@@ -172,7 +174,8 @@ void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_LOWER ? &B->md[S*B->step] : &B->md[(i+nI)*B->step];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
+      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
+      _dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
 
       // 2nd part
       Cd.md = &C->md[i*C->step+i];
@@ -187,7 +190,8 @@ void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_LOWER ? &A->md[S*A->step] : &A->md[(i+nI)*A->step];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
+      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
+      _dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
 
     }
   } else {
@@ -207,7 +211,8 @@ void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_LOWER ? &B->md[S] : &B->md[i+nI];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
+      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
+      _dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
 
       Cd.md = &C->md[i*C->step+i];
       Ad.md = &B->md[i];
@@ -221,7 +226,8 @@ void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_LOWER ? &A->md[S] : &A->md[i+nI];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      _dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
+      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
+      _dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
 
     }
   }
