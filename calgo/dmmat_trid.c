@@ -65,13 +65,13 @@ _dmmat_trid_unb_lower(double *Bc, const double *Ac, double alpha, int unit,
 /*
   B = A*B; A is upper, trans A
 
-    a00|a01|a02  b00|b01
-     0 |a11|a12  b10|b11
-     0 | 0 |a22  b20|b21
+    a00|a01|a02  b00
+     0 |a11|a12  b10
+     0 | 0 |a22  b20
 
-  b00 = a00*b00 + a01*b10 + a02*b20
-  b10 =           a11*b10 + a12*b20
-  b20 =                     a22*b20
+  b00 = a00*b00
+  b10 = a01*b00 + a11*b10
+  b20 = a02*b00 + a12*b10 + a22*b20
 
   --> work it backwards with DOT products
 
@@ -113,9 +113,9 @@ _dmmat_trid_unb_u_trans(double *Bc, const double *Ac, double alpha, int unit,
 /*
     B = A*B; A is upper
 
-      a00|a01|a02  b00|b01
-       0 |a11|a12  b10|b11
-       0 | 0 |a22  b20|b21
+      a00|a01|a02  b00
+       0 |a11|a12  b10
+       0 | 0 |a22  b20
 
     b00 = a00*b00 + a01*b10 + a02*b20
     b10 =           a11*b10 + a12*b20
@@ -184,8 +184,8 @@ _dmmat_trid_unb_l_trans(double *Bc, const double *Ac, double alpha, int unit,
 /* UPPER, RIGHT
   for B = B*A; A is [nC, nC], B is [nRE, nC]
   
-    b00|b01|b02  a00|a01|a02
-    b10|b11|b12   0 |a11|a12
+                 a00|a01|a02
+    b00|b01|b02   0 |a11|a12
                   0 | 0 |a22
 
     b00 = b00*a00
@@ -262,8 +262,8 @@ _dmmat_trid_unb_r_lower(double *Bc, const double *Ac, double alpha, int unit,
 /* UPPER, RIGHT, TRANS
   for B = B*A.T; A.T is [nC, nC], B is [nRE, nC], 
   
-    b00|b01|b02  a00|a01|a02
-    b10|b11|b12   0 |a11|a12
+                 a00|a01|a02
+    b00|b01|b02   0 |a11|a12
                   0 | 0 |a22
 
     b00 = b00*a00 + a01*b01 + a02*b02
@@ -306,8 +306,8 @@ _dmmat_trid_unb_ru_trans(double *Bc, const double *Ac, double alpha, int unit,
 /* LOWER, RIGHT, TRANSA
   for B = B*A.T; A.T is [nC, nC], B is [nRE, nC], 
   
-    b00|b01|b02  a00| 0 | 0
-    b10|b11|b12  a10|a11| 0
+                 a00| 0 | 0
+    b00|b01|b02  a10|a11| 0
                  a20|a21|a22
 
     b00 = b00*a00
