@@ -7,8 +7,11 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <math.h>
 
 #include "cmops.h"
+#include "inner_vec_dot.h"
+#include "inner_vec_axpy.h"
 
 void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, double beta, int N)
 {
@@ -57,7 +60,26 @@ double dvec_dot(const mvec_t *X,  const mvec_t *Y, double alpha, int N)
   return alpha * (c0 + c1);
 }
 
-double dvec_nrm2(const mvec_t *X,  const mvec_t *Y, int N)
+void dvec_axpy(mvec_t *Y,  const mvec_t *X, double alpha, int N)
+{
+  register int i;
+  register double *Yc;
+  register const double *Xc;
+
+  Xc = X->md;
+  Yc = Y->md;
+  for (i = 0; i < N-1; i += 2) {
+    Yc[0]      += alpha * Xc[0];
+    Yc[Y->inc] += alpha * Xc[X->inc];
+    Xc += (X->inc << 1);
+    Yc += (Y->inc << 1);
+  }    
+  if (i < N) {
+    Yc[0] += alpha * Xc[0];
+  }
+}
+
+double dvec_diff_nrm2(const mvec_t *X,  const mvec_t *Y, int N)
 {
   register int i;
   register double c0, c1, d0, d1;
@@ -67,21 +89,89 @@ double dvec_nrm2(const mvec_t *X,  const mvec_t *Y, int N)
   Yc = Y->md;
   c0 = 0.0; c1 = 0.0;
   for (i = 0; i < N-1; i += 2) {
-    d0 = Xc[0] - Yc[0];
+    d0 = fabs(Xc[0] - Yc[0]);
     c0 += d0 * d0;
-    Xc += X->inc;
-    Yc += Y->inc;
 
-    d1 = Xc[0] - Yc[0];
+    d1 = fabs(Xc[X->inc] - Yc[Y->inc]);
     c1 += d1 * d1;
-    Xc += X->inc;
-    Yc += Y->inc;
+    Xc += (X->inc << 1);
+    Yc += (Y->inc << 1);
   }    
   if (i < N) {
-    d0 = Xc[0] - Yc[0];
+    d0 = fabs(Xc[0] - Yc[0]);
     c0 += d0 * d0;
   }
+  return sqrt(c0 + c1);
+}
+
+// return vector norm 
+double dvec_nrm2(const mvec_t *X,  int N)
+{
+  register int i;
+  register double c0, c1, d0, d1, absx;
+  register const double *Xc;
+
+  Xc = X->md;
+  c0 = 0.0; c1 = 0.0;
+  for (i = 0; i < N-1; i += 2) {
+    absx = fabs(Xc[0]);
+    c0 += absx * absx;
+
+    absx = fabs(Xc[X->inc]);
+    c1 += absx * absx;
+    Xc += (X->inc << 1);
+  }    
+  if (i < N) {
+    absx = fabs(Xc[0]);
+    c0 += absx * absx;
+  }
+  return sqrt(c0 + c1);
+}
+
+// return sum of absolute values
+double dvec_asum(const mvec_t *X,  int N)
+{
+  register int i;
+  register double c0, c1;
+  register const double *Xc;
+
+  Xc = X->md;
+  c0 = 0.0; c1 = 0.0;
+  for (i = 0; i < N-1; i += 2) {
+    c0 += fabs(Xc[0]);
+    c1 += fabs(Xc[X->inc]);
+    Xc += (X->inc << 1);
+  }    
+  if (i < N) {
+    c0 += fabs(Xc[0]);
+  }
   return c0 + c1;
+}
+
+// return index of max absolute value
+int dvec_iamax(const mvec_t *X,  int N)
+{
+  register int i, ix;
+  register double max, c0, c1;
+  register const double *Xc;
+
+  Xc = X->md;
+  max = fabs(Xc[0]);
+  ix = 0;
+  Xc += X->inc;
+  N--;
+  for (i = 0; i < N-1; i += 2) {
+    c0 = fabs(Xc[0]);
+    c1 = fabs(Xc[X->inc]);
+    ix = c0 > max ? i : ix;
+    ix = c1 > max ? i+1 : ix;
+    Xc += (X->inc << 1);
+  }    
+  if (i < N) {
+    c0 = fabs(Xc[0]);
+    ix = c0 > max ? i+1 : ix;
+  }
+  return ix;
 }
 
 void dvec_swap(mvec_t *X,  mvec_t *Y, int N)
