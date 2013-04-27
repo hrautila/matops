@@ -11,6 +11,7 @@ package calgo
 // -O3 -msse4.1 -funroll-loops -fomit-frame-pointer -ffast-math 
 
 // #cgo CFLAGS: -O3 -msse4.1 -fomit-frame-pointer -ffast-math 
+// #cgo LDFLAGS: -lm
 // #include "cmops.h"
 import "C"
 import "unsafe"
@@ -401,7 +402,7 @@ func DDotSum(Z, X, Y []float64, alpha, beta float64, incZ, incX, incY, N int) {
     var Xv C.mvec_t
     var Yv C.mvec_t
 
-    if Z == nil || X == nil || Y == nil {
+    if Z == nil || X == nil || Y == nil || N <= 0 {
         return
     }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -426,7 +427,7 @@ func DDot(X, Y []float64, alpha float64, incX, incY, N int) float64 {
     var Xv C.mvec_t
     var Yv C.mvec_t
 
-    if X == nil || Y == nil {
+    if X == nil || Y == nil || N <= 0 {
         return 0.0
     }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -442,14 +443,35 @@ func DDot(X, Y []float64, alpha float64, incX, incY, N int) float64 {
     return float64(dot)
 }
 
-// return: sum (X[i]-Y[i])^2
-func DNorm2(X, Y []float64, incX, incY, N int) float64 {
+// Y := alpha*X + Y
+func DAxpy(Y, X []float64, alpha float64, incX, incY, N int) {
+
+    var Xv C.mvec_t
+    var Yv C.mvec_t
+
+    if X == nil || Y == nil || N <= 0 {
+        return 
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+
+    C.dvec_axpy(
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.double(alpha),
+        C.int(N))
+}
+
+// return: sum (abs(X[i]-Y[i]))^2
+func DiffNorm2(X, Y []float64, incX, incY, N int) float64 {
 
     var nrm C.double
     var Xv C.mvec_t
     var Yv C.mvec_t
 
-    if X == nil || Y == nil {
+    if X == nil || Y == nil || N <= 0 {
         return 0.0
     }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -457,11 +479,65 @@ func DNorm2(X, Y []float64, incX, incY, N int) float64 {
     Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
     Yv.inc = C.int(incY)
 
-    nrm =  C.dvec_nrm2(
+    nrm =  C.dvec_diff_nrm2(
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         (*C.mvec_t)(unsafe.Pointer(&Yv)),
         C.int(N))
     return float64(nrm)
+}
+
+// return: sum (abs(X[i]))^2; Euclidaen norm
+func DNorm2(X []float64, incX, N int) float64 {
+
+    var nrm C.double
+    var Xv C.mvec_t
+
+    if X == nil || N <= 0 {
+        return 0.0
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+
+    nrm =  C.dvec_nrm2(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.int(N))
+    return float64(nrm)
+}
+
+// return: sum (abs(X[i]))
+func DAsum(X []float64, incX, N int) float64 {
+
+    var asum C.double
+    var Xv C.mvec_t
+
+    if X == nil || N <= 0 {
+        return 0.0
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+
+    asum =  C.dvec_asum(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.int(N))
+    return float64(asum)
+}
+
+// return: index of max absolute value
+func DIAMax(X []float64, incX, N int) int {
+
+    var ix C.int
+    var Xv C.mvec_t
+
+    if X == nil || N <= 0 {
+        return -1
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+
+    ix =  C.dvec_iamax(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.int(N))
+    return int(ix)
 }
 
 func DSwap(X, Y []float64, incX, incY, N int) {
@@ -469,7 +545,7 @@ func DSwap(X, Y []float64, incX, incY, N int) {
     var Xv C.mvec_t
     var Yv C.mvec_t
 
-    if X == nil || Y == nil {
+    if X == nil || Y == nil || N <= 0 {
         return
     }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -483,11 +559,12 @@ func DSwap(X, Y []float64, incX, incY, N int) {
         C.int(N))
 }
 
+// inverse scaling: X = X/alpha
 func DInvScal(X []float64, alpha float64, incX, N int) {
 
     var Xv C.mvec_t
 
-    if X == nil  {
+    if X == nil || N <= 0 {
         return
     }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
@@ -498,11 +575,12 @@ func DInvScal(X []float64, alpha float64, incX, N int) {
         C.double(alpha), C.int(N))
 }
 
+// scaling: X = alpha*X
 func DScal(X []float64, alpha float64, incX, N int) {
 
     var Xv C.mvec_t
 
-    if X == nil  {
+    if X == nil || N <= 0 {
         return
     }
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))

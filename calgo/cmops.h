@@ -100,12 +100,17 @@ _dmult_mm_intern(mdata_t *C, const mdata_t *A, const mdata_t *B,
                  cbuf_t *Acpy, cbuf_t *Bcpy);
 
 
-extern void dvec_invscal(mvec_t *X,  double alpha, int N);
+extern void dvec_axpy(mvec_t *Y,  const mvec_t *X, double alpha, int N);
 extern void dvec_scal(mvec_t *X,  double alpha, int N);
-extern void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, double beta, int N);
+extern int dvec_iamax(const mvec_t *X,  int N);
+extern double dvec_asum(const mvec_t *X,  int N);
+extern double dvec_nrm2(const mvec_t *X,  int N);
 extern double dvec_dot(const mvec_t *X,  const mvec_t *Y, double alpha, int N);
-extern double dvec_nrm2(const mvec_t *X,  const mvec_t *Y, int N);
 extern void dvec_swap(mvec_t *X,  mvec_t *Y, int N);
+
+extern void dvec_invscal(mvec_t *X,  double alpha, int N);
+extern double dvec_diff_nrm2(const mvec_t *X,  const mvec_t *Y, int N);
+extern void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, double beta, int N);
 
 
 extern void
@@ -120,6 +125,7 @@ dmult_mm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
                   int P, int S, int L, int R, int E, 
                   int vlen, int NB, int MB);
 
+// matrix-matrix: C = alpha* A*B + beta*C  (GEMM)
 extern void
 dmult_mm_blocked3(mdata_t *C, const mdata_t *A, const mdata_t *B,
                   double alpha, double beta, int flags,
@@ -133,6 +139,7 @@ dmult_symm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
                    int P, int S, int L, int R, int E,
                    int vlen, int NB, int MB);
 
+// matrix-matrix: C = alpha* A*B + beta*C  (SYMM); A is nxn symmetric
 extern void 
 dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
                     double alpha, double beta, int flags,
