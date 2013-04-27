@@ -15,8 +15,14 @@ import (
     //"fmt"
 )
 
-// Y = alpha*A*X + beta*Y
-func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
+// Compute Y = alpha*A*X + beta*Y;
+//    A is M*N generic matrix,
+//    X is row or column vector of length N 
+//    Y is row or column vector of legth M.
+//
+// MVMult is vector orientation agnostic. It does not matter if Y, X are row or
+// column vectors, they are always handled as if they were column vectors.
+func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
 
     if A.Rows() == 0 || A.Cols() == 0 {
         return nil
@@ -47,7 +53,7 @@ func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64) error {
         lenX = X.Cols()
     }
     // NOTE: This could diveded to parallel tasks by rows.
-    calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.NULL, incY, ldA, incX,
+    calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.Flags(flags), incY, ldA, incX,
         0, lenX, 0, lenY, vpLen, mB)
     return nil
 }
@@ -201,8 +207,8 @@ func MVMultTrm(X, A*matrix.FloatMatrix, flags Flags) error {
     return nil
 }
 
-// Norm2: ||X - Y||^2
-func Norm2(X, Y *matrix.FloatMatrix) float64 {
+// DiffNorm2: sqrt(||X - Y||^2)
+func DiffNorm2(X, Y *matrix.FloatMatrix) float64 {
     if X == nil || Y == nil {
         return math.NaN()
     }
@@ -224,7 +230,7 @@ func Norm2(X, Y *matrix.FloatMatrix) float64 {
         // Row vector
         incY = Y.LeadingIndex()
     }
-    return calgo.DNorm2(Xr, Yr, incX, incY, X.NumElements())
+    return calgo.DiffNorm2(Xr, Yr, incX, incY, X.NumElements())
 }
 
 // Inner product: alpha * X * Y
@@ -286,6 +292,23 @@ func AddDot(Z, X, Y *matrix.FloatMatrix, alpha, beta float64, index int) {
         incZ = Z.LeadingIndex()
     }
     calgo.DDotSum(Zr[incZ*index:], Xr, Yr, alpha, beta, incZ, incX, incY, X.NumElements())
+}
+
+// Norm2 of vector: sqrt(||x||^2)
+func Norm2(X *matrix.FloatMatrix) float64 {
+    if X == nil {
+        return math.NaN()
+    }
+    if !isVector(X)  {
+        return math.NaN()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    return calgo.DNorm2(Xr, incX, X.NumElements())
 }
 
 // Inverse scaling of vector. X = X / alpha.
