@@ -19,12 +19,15 @@ func unblockedCHOL(A *matrix.FloatMatrix, flags Flags) (err error) {
     var A00, a01, A02, a10, a11, a12, A20, a21, A22 matrix.FloatMatrix
 
     err = nil
-    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 0)
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR,   A, 0, pTOPLEFT)
+
     for ATL.Rows() < A.Rows() {
         repartition2x2to3x3(&ATL,
             &A00, &a01, &A02,
             &a10, &a11, &a12,
-            &A20, &a21, &A22, A, 1)
+            &A20, &a21, &A22,   A, 1, pBOTTOMRIGHT)
 
         // a11 = sqrt(a11)
         a11.Sqrt()
@@ -41,7 +44,9 @@ func unblockedCHOL(A *matrix.FloatMatrix, flags Flags) (err error) {
             err = MVRankUpdateSym(&A22, &a12, -1.0, flags)
         }
 
-        continue3x3to2x2(&ATL, &ATR, &ABL, &ABR, &A00, &a11, &A22, A)
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR,   &A00, &a11, &A22,  A, pBOTTOMRIGHT)
     }
     return
 }
@@ -52,13 +57,15 @@ func blockedCHOL(A *matrix.FloatMatrix, flags Flags, nb int) error {
     var A00, A01, A02, A10, A11, A12, A20, A21, A22 matrix.FloatMatrix
 
     err = nil
-    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 0)
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR,   A, 0, pTOPLEFT)
 
     for ATL.Rows() < A.Rows() && ATL.Cols() < A.Cols() {
         repartition2x2to3x3(&ATL,
             &A00, &A01, &A02,
             &A10, &A11, &A12,
-            &A20, &A21, &A22, A, nb)
+            &A20, &A21, &A22,   A, nb, pBOTTOMRIGHT)
 
         // A11 = chol(A11)
         err = unblockedCHOL(&A11, flags)
@@ -75,7 +82,9 @@ func blockedCHOL(A *matrix.FloatMatrix, flags Flags, nb int) error {
             RankUpdateSym(&A22, &A12, -1.0, 1.0, UPPER|TRANSA)
         }
 
-        continue3x3to2x2(&ATL, &ATR, &ABL, &ABR, &A00, &A11, &A22, A)
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR,   &A00, &A11, &A22,   A, pBOTTOMRIGHT)
     }
     return err
 }

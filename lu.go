@@ -42,12 +42,15 @@ func unblockedLUnoPiv(A *matrix.FloatMatrix) (err error) {
     var A00, a01, A02, a10, a11, a12, A20, a21, A22 matrix.FloatMatrix
 
     err = nil
-    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 0)
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR,   A, 0, pTOPLEFT)
+
     for ATL.Rows() < A.Rows() {
         repartition2x2to3x3(&ATL,
             &A00, &a01, &A02,
             &a10, &a11, &a12,
-            &A20, &a21, &A22, A, 1)
+            &A20, &a21, &A22,   A, 1, pBOTTOMRIGHT)
 
         // a21 = a21/a11
         //a21.Scale(1.0/a11.Float())
@@ -55,7 +58,9 @@ func unblockedLUnoPiv(A *matrix.FloatMatrix) (err error) {
         // A22 = A22 - a21*a12
         err = MVRankUpdate(&A22, &a21, &a12, -1.0)
 
-        continue3x3to2x2(&ATL, &ATR, &ABL, &ABR, &A00, &a11, &A22, A)
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR,   &A00, &a11, &A22,   A, pBOTTOMRIGHT)
     }
     return
 }
@@ -67,13 +72,15 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     var A00, A01, A02, A10, A11, A12, A20, A21, A22 matrix.FloatMatrix
 
     err = nil
-    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 0)
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR,   A, 0, pTOPLEFT)
 
     for ATL.Rows() < A.Rows() {
         repartition2x2to3x3(&ATL,
             &A00, &A01, &A02,
             &A10, &A11, &A12,
-            &A20, &A21, &A22, A, nb)
+            &A20, &A21, &A22,   A, nb, pBOTTOMRIGHT)
 
         // A00 = LU(A00)
         unblockedLUnoPiv(&A11)
@@ -84,7 +91,9 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
         // A22 = A22 - A21*A12
         Mult(&A22, &A21, &A12, -1.0, 1.0, NOTRANS)
 
-        continue3x3to2x2(&ATL, &ATR, &ABL, &ABR, &A00, &A11, &A22, A)
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR,   &A00, &A11, &A22,   A, pBOTTOMRIGHT)
     }
     return
 }
@@ -108,13 +117,6 @@ func swapRows(A *matrix.FloatMatrix, src, dst int) {
     r0.SubMatrixOf(A, src, 0, 1, A.Cols())
     r1.SubMatrixOf(A, dst, 0, 1, A.Cols())
     Swap(&r0, &r1)
-    /*
-    for k := 0; k < r0.Cols(); k++ {
-        tmp := r0.GetAt(0, k)
-        r0.SetAt(0, k, r1.GetAt(0, k))
-        r1.SetAt(0, k, tmp)
-    }
-     */
 }
 
 func applyPivots(A *matrix.FloatMatrix, p *pPivots) {
@@ -157,17 +159,24 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
     var pT, pB, p0, p1, p2 pPivots
 
     err = nil
-    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 0)
-    partition1x2(&AL, &AR, A, 0, pRIGHT)
-    partitionPivot2x1(&pT, &pB, p, 0, pBOTTOM)
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR, A, 0, pTOPLEFT)
+    partition1x2(
+        &AL, &AR, A, 0, pLEFT)
+    partitionPivot2x1(
+        &pT,
+        &pB, p, 0, pTOP)
 
     for ATL.Rows() < A.Rows() && ATL.Cols() < A.Cols() {
-        repartition2x2to3x3(&ATL,
+        repartition2x2to3x3(&ATL, 
             &A00, &a01, &A02,
             &a10, &a11, &a12,
-            &A20, &a21, &A22, A, 1)
-        repartition1x2to1x3(&AL, &A0, &a1, &A2, A, 1, pRIGHT)
-        repartPivot2x1to3x1(&pT, &p0, &p1, &p2, p, 1, pBOTTOM)
+            &A20, &a21, &A22,   A, 1, pBOTTOMRIGHT)
+        repartition1x2to1x3(
+            &AL, /**/ &A0, &a1, &A2,   A, 1, pRIGHT)
+        repartPivot2x1to3x1(
+            &pT, /**/ &p0, &p1, &p2,   p, 1, pBOTTOM)
 
         // apply previously computed pivots
         applyPivots(&a1, &p0)
@@ -177,7 +186,7 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
         // a11 = a11 - a10 *a01 
         a11.Add(Dot(&a10, &a01, -1.0))
         // a21 = a21 -A20*a01
-        MVMult(&a21, &A20, &a01, -1.0, 1.0)
+        MVMult(&a21, &A20, &a01, -1.0, 1.0, NOTRANS)
 
         // pivot index on current column [a11, a21].T
         aB1.SubMatrixOf(&ABR, 0, 0, ABR.Rows(), 1)
@@ -196,12 +205,16 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
         // scale last pivots to origin matrix row numbers
         p1.pivots[0] += ATL.Rows()
 
-        continue3x3to2x2(&ATL, &ATR, &ABL, &ABR, &A00, &a11, &A22, A)
-        continue1x3to1x2(&AL, &AR, &A0, &a1, A, pRIGHT)
-        contPivot3x1to2x1(&pT, &pB, &p0, &p1, p, pBOTTOM)
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR,   &A00, &a11, &A22,   A, pBOTTOMRIGHT)
+        continue1x3to1x2(
+            &AL, &AR,     &A0, &a1,   A, pRIGHT)
+        contPivot3x1to2x1(
+            &pT,
+            &pB,    &p0, &p1,    p, pBOTTOM)
     }
     if ATL.Cols() < A.Cols() {
-        //AB0.SubMatrixOf(A, 0, ATL.Cols())
         applyPivots(&ATR, p)
         Solve(&ATR, &ATL, 1.0, LEFT|UNIT|LOWER)
     }
@@ -217,17 +230,25 @@ func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
     var pT, pB, p0, p1, p2 pPivots
 
     err = nil
-    partition2x2(&ATL, &ATR, &ABL, &ABR, A, 0)
-    partition1x2(&AL, &AR, A, 0, pRIGHT)
-    partitionPivot2x1(&pT, &pB, p, 0, pBOTTOM)
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR, A, 0, pTOPLEFT)
+    partition1x2(
+        &AL, &AR, A, 0, pLEFT)
+    partitionPivot2x1(
+        &pT,
+        &pB, p, 0, pTOP)
 
     for ATL.Rows() < A.Rows() && ATL.Cols() < A.Cols() {
         repartition2x2to3x3(&ATL,
             &A00, &A01, &A02,
             &A10, &A11, &A12,
-            &A20, &A21, &A22, A, nb)
-        repartition1x2to1x3(&AL, &A0, &A1, &A2, A, nb, pRIGHT)
-        repartPivot2x1to3x1(&pT, &p0, &p1, &p2, p, nb, pBOTTOM)
+            &A20, &A21, &A22, A, nb, pBOTTOMRIGHT)
+        repartition1x2to1x3(
+            &AL,/**/ &A0, &A1, &A2, A, nb, pRIGHT)
+        repartPivot2x1to3x1(
+            &pT,/**/ &p0, &p1, &p2, p, nb, pBOTTOM)
+
         // apply previously computed pivots
         applyPivots(&A1, &p0)
 
@@ -250,9 +271,14 @@ func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
             p1.pivots[k] += ATL.Rows()
         }
 
-        continue3x3to2x2(&ATL, &ATR, &ABL, &ABR, &A00, &A11, &A22, A)
-        continue1x3to1x2(&AL, &AR, &A0, &A1, A, pRIGHT)
-        contPivot3x1to2x1(&pT, &pB, &p0, &p1, p, pBOTTOM)
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR, /**/ &A00, &A11, &A22, A, pBOTTOMRIGHT)
+        continue1x3to1x2(
+            &AL, &AR, /**/ &A0, &A1, A, pRIGHT)
+        contPivot3x1to2x1(
+            &pT,
+            &pB, /**/ &p0, &p1, p, pBOTTOM)
     }
     if ATL.Cols() < A.Cols() {
         applyPivots(&ATR, p)
