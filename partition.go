@@ -25,6 +25,75 @@ const (
     pBOTTOMRIGHT
 )
 
+/*
+ Partition p to 2 by 1 blocks.
+
+        AT
+  A --> --
+        AB
+
+ Parameter nb is initial block size for AT (pTOP) or AB (pBOTTOM).  
+ */
+func partition2x1(AT, AB, A *matrix.FloatMatrix, nb, side int) {
+    switch (side) {
+    case pTOP:
+        AT.SubMatrixOf(A, 0, 0, nb, A.Cols())
+        AB.SubMatrixOf(A, nb, 0, A.Rows()-nb, A.Cols())
+    case pBOTTOM:
+        AT.SubMatrixOf(A, 0, 0, A.Rows()-nb, A.Cols())
+        AB.SubMatrixOf(A, A.Rows()-nb, 0, nb, A.Cols())
+    }
+}
+
+/*
+ Repartition 2 by 1 block to 3 by 1 block.
+ 
+           AT      A0            AT       A0
+ pBOTTOM: --  --> --   ; pTOP:   --  -->  A1
+           AB      A1            AB       --
+                   A2                     A2
+
+ */
+func repartition2x1to3x1(AT, A0, A1, A2, A *matrix.FloatMatrix, nb, pdir int) {
+    nT := AT.Rows()
+    if nT + nb > A.Rows() {
+        nb = A.Rows() - nT
+    }
+    switch (pdir) {
+    case pBOTTOM:
+        A0.SubMatrixOf(A, 0,     0, nT, A.Cols())
+        A1.SubMatrixOf(A, nT,    0, nb, A.Cols())
+        A2.SubMatrixOf(A, nT+nb, 0, A.Rows()-nT-nb, A.Cols())
+    case pTOP:
+        A0.SubMatrixOf(A, 0,     0, nT-nb, A.Cols())
+        A1.SubMatrixOf(A, nT-nb, 0, nb,    A.Cols())
+        A2.SubMatrixOf(A, nT,    0, A.Rows()-nT, A.Cols())
+    }
+}
+
+/*
+ Continue with 2 by 1 block from 3 by 1 block.
+ 
+           AT      A0            AT       A0
+ pBOTTOM: --  <--  A1   ; pTOP:   -- <--  --
+           AB      --            AB       A1
+                   A2                     A2
+
+ */
+func continue3x1to2x1(AT, AB, A0, A1, A *matrix.FloatMatrix, pdir int) {
+    n0 := A0.Rows()
+    n1 := A1.Rows()
+    switch (pdir) {
+    case pBOTTOM:
+        AT.SubMatrixOf(A, 0,     0, n0+n1, A.Cols())
+        AB.SubMatrixOf(A, n0+n1, 0, A.Rows()-n0-n1, A.Cols())
+    case pTOP:
+        AT.SubMatrixOf(A, 0,  0, n0, A.Cols())
+        AB.SubMatrixOf(A, n0, 0, A.Rows()-n0, A.Cols())
+    }
+}
+
+
 
 /*
  Partition A to 1 by 2 blocks.
@@ -33,16 +102,18 @@ const (
 
  Parameter nb is initial block size for AL (pLEFT) or AR (pRIGHT).  
  */
-func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, pdir int) {
-    switch (pdir) {
-    case pRIGHT:
+func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, side int) {
+    switch (side) {
+    case pLEFT:
         AL.SubMatrixOf(A, 0, 0, A.Rows(), nb)
         AR.SubMatrixOf(A, 0, nb, A.Rows(), A.Cols()-nb)
-    case pLEFT:
+    case pRIGHT:
         AL.SubMatrixOf(A, 0, nb, A.Rows(), A.Cols()-nb)
         AR.SubMatrixOf(A, 0, A.Cols()-1-nb, nb, A.Rows())
     }
 }
+
+
 
 /*
  Repartition 1 by 2 blocks to 1 by 3 blocks.
@@ -106,11 +177,15 @@ func continue1x3to1x2(AL, AR, A0, A1, A *matrix.FloatMatrix, pdir int) {
 
  Parameter nb is initial block size for ATL. 
  */
-func partition2x2(ATL, ATR, ABL, ABR, A *matrix.FloatMatrix, nb int) {
-    ATL.SubMatrixOf(A, 0, 0,  nb, nb)
-    ATR.SubMatrixOf(A, 0, nb, nb, A.Cols()-nb)
-    ABL.SubMatrixOf(A, nb, 0, A.Rows()-nb, nb)
-    ABR.SubMatrixOf(A, nb, nb)
+func partition2x2(ATL, ATR, ABL, ABR, A *matrix.FloatMatrix, nb int, side int) {
+    switch (side) {
+    case pTOPLEFT:
+        ATL.SubMatrixOf(A, 0, 0,  nb, nb)
+        ATR.SubMatrixOf(A, 0, nb, nb, A.Cols()-nb)
+        ABL.SubMatrixOf(A, nb, 0, A.Rows()-nb, nb)
+        ABR.SubMatrixOf(A, nb, nb)
+    case pBOTTOMRIGHT:
+    }
 }
 
 /*
@@ -125,23 +200,28 @@ func partition2x2(ATL, ATR, ABL, ABR, A *matrix.FloatMatrix, nb int) {
    ATR, ABL, ABR implicitely defined by ATL and A.
  */
 func repartition2x2to3x3(ATL, 
-    A00, A01, A02, A10, A11, A12, A20, A21, A22, A *matrix.FloatMatrix, nb int) {
+    A00, A01, A02, A10, A11, A12, A20, A21, A22, A *matrix.FloatMatrix, nb int, pdir int) {
 
     k := ATL.Rows()
     if k + nb > A.Cols() {
         nb = A.Cols() - k
     }
-    A00.SubMatrixOf(A, 0, 0,    k, k)
-    A01.SubMatrixOf(A, 0, k,    k, nb)
-    A02.SubMatrixOf(A, 0, k+nb, k, A.Cols()-k-nb)
+    switch (pdir) {
+    case pBOTTOMRIGHT:
+        A00.SubMatrixOf(A, 0, 0,    k, k)
+        A01.SubMatrixOf(A, 0, k,    k, nb)
+        A02.SubMatrixOf(A, 0, k+nb, k, A.Cols()-k-nb)
 
-    A10.SubMatrixOf(A, k, 0,    nb, k)
-    A11.SubMatrixOf(A, k, k,    nb, nb)
-    A12.SubMatrixOf(A, k, k+nb, nb, A.Cols()-k-nb)
+        A10.SubMatrixOf(A, k, 0,    nb, k)
+        A11.SubMatrixOf(A, k, k,    nb, nb)
+        A12.SubMatrixOf(A, k, k+nb, nb, A.Cols()-k-nb)
 
-    A20.SubMatrixOf(A, k+nb, 0,    A.Rows()-k-nb, k)
-    A21.SubMatrixOf(A, k+nb, k,    A.Rows()-k-nb, nb)
-    A22.SubMatrixOf(A, k+nb, k+nb)
+        A20.SubMatrixOf(A, k+nb, 0,    A.Rows()-k-nb, k)
+        A21.SubMatrixOf(A, k+nb, k,    A.Rows()-k-nb, nb)
+        A22.SubMatrixOf(A, k+nb, k+nb)
+    case pTOPLEFT:
+        // move towards top left corner
+    }
 }
 
 /*
@@ -157,15 +237,19 @@ func repartition2x2to3x3(ATL,
  */
 func continue3x3to2x2(
     ATL, ATR, ABL, ABR, 
-    A00, A11, A22, A *matrix.FloatMatrix) {
+    A00, A11, A22, A *matrix.FloatMatrix, pdir int) {
 
     k := A00.Rows()
     mb := A11.Cols()
-    ATL.SubMatrixOf(A, 0, 0,    k+mb, k+mb)
-    ATR.SubMatrixOf(A, 0, k+mb, k+mb, A.Cols()-k-mb)
+    switch (pdir) {
+    case pBOTTOMRIGHT:
+        ATL.SubMatrixOf(A, 0, 0,    k+mb, k+mb)
+        ATR.SubMatrixOf(A, 0, k+mb, k+mb, A.Cols()-k-mb)
 
-    ABL.SubMatrixOf(A, k+mb, 0, A.Rows()-k-mb, k+mb)
-    ABR.SubMatrixOf(A, k+mb, k+mb)
+        ABL.SubMatrixOf(A, k+mb, 0, A.Rows()-k-mb, k+mb)
+        ABR.SubMatrixOf(A, k+mb, k+mb)
+    case pTOPLEFT:
+    }
 }
 
 
@@ -181,18 +265,18 @@ type pPivots struct {
   p --> --
         pB
 
- Parameter nb is initial block size for pT (pBOTTOM) or pB (pTOP).  
+ Parameter nb is initial block size for pT (pTOP) or pB (pBOTTOM).  
  */
 func partitionPivot2x1(pT, pB, p *pPivots, nb, pdir int) {
     switch (pdir) {
-    case pBOTTOM:
+    case pTOP:
         if nb == 0 {
             pT.pivots = nil
         } else {
             pT.pivots = p.pivots[:nb]
         }
         pB.pivots = p.pivots[nb:]
-    case pTOP:
+    case pBOTTOM:
         if nb > 0 {
             pT.pivots = p.pivots[:-nb]
             pT.pivots = p.pivots[len(p.pivots)-nb:]
