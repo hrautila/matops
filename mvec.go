@@ -15,8 +15,11 @@ import (
     //"fmt"
 )
 
-// Compute Y = alpha*A*X + beta*Y;
-//    A is M*N generic matrix,
+// Compute
+//      Y = alpha*A*X + beta*Y
+//      Y = alpha*A.T*X + beta*Y  ; flags = TRANSA
+//
+//    A is M*N or N*M generic matrix,
 //    X is row or column vector of length N 
 //    Y is row or column vector of legth M.
 //
@@ -38,19 +41,17 @@ func MVMult(Y, A, X *matrix.FloatMatrix, alpha, beta float64, flags Flags) error
     ldA := A.LeadingIndex()
     Yr := Y.FloatArray()
     incY := 1
-    lenY := Y.Rows()
+    lenY := Y.NumElements()
     if Y.Rows() == 1 {
         // row vector
         incY = Y.LeadingIndex()
-        lenY = Y.Cols()
     }
     Xr := X.FloatArray()
     incX := 1
-    lenX := X.Rows()
+    lenX := X.NumElements()
     if X.Rows() == 1 {
         // row vector
         incX = X.LeadingIndex()
-        lenX = X.Cols()
     }
     // NOTE: This could diveded to parallel tasks by rows.
     calgo.DMultMV(Yr, Ar, Xr, alpha, beta, calgo.Flags(flags), incY, ldA, incX,
