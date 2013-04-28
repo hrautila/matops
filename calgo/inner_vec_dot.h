@@ -22,13 +22,14 @@ void _inner_vec_ddot(double *y0, int incY, const double *a0,
   ytmp = 0.0;
   for (i = 0; i < nC-3; i += 4) {
     ytmp += a0[0] * x0[0];
-    x0 += incX;
-    ytmp += a0[1] * x0[0];
-    x0 += incX;
-    ytmp += a0[2] * x0[0];
-    x0 += incX;
-    ytmp += a0[3] * x0[0];
-    x0 += incX;
+    //x0 += incX;
+    ytmp += a0[1] * x0[incX];
+    //x0 += incX;
+    ytmp += a0[2] * x0[2*incX];
+    //x0 += incX;
+    ytmp += a0[3] * x0[3*incX];
+    //x0 += incX;
+    x0 += incX << 2;
     a0 += 4;
   }
   if (i == nC) 
@@ -36,9 +37,10 @@ void _inner_vec_ddot(double *y0, int incY, const double *a0,
 
   if (i < nC-1) {
     ytmp += a0[0] * x0[0];
-    x0 += incX;
-    ytmp += a0[1] * x0[0];
-    x0 += incX;
+    //x0 += incX;
+    ytmp += a0[1] * x0[incX];
+    //x0 += incX;
+    x0 += incX << 1;
     a0 += 2;
     i += 2;
   }
@@ -64,16 +66,17 @@ void _inner_vec2_ddot(double *y0, int incY, const double *a0, const double *a1,
   for (i = 0; i < nC-3; i += 4) {
     ytmp0 += a0[0] * x0[0];
     ytmp1 += a1[0] * x0[0];
-    x0 += incX;
-    ytmp0 += a0[1] * x0[0];
-    ytmp1 += a1[1] * x0[0];
-    x0 += incX;
-    ytmp0 += a0[2] * x0[0];
-    ytmp1 += a1[2] * x0[0];
-    x0 += incX;
-    ytmp0 += a0[3] * x0[0];
-    ytmp1 += a1[3] * x0[0];
-    x0 += incX;
+    //x0 += incX;
+    ytmp0 += a0[1] * x0[incX];
+    ytmp1 += a1[1] * x0[incX];
+    //x0 += incX;
+    ytmp0 += a0[2] * x0[2*incX];
+    ytmp1 += a1[2] * x0[2*incX];
+    //x0 += incX;
+    ytmp0 += a0[3] * x0[3*incX];
+    ytmp1 += a1[3] * x0[3*incX];
+    //x0 += incX;
+    x0 += incX << 2;
     a0 += 4;
     a1 += 4;
   }
@@ -83,10 +86,11 @@ void _inner_vec2_ddot(double *y0, int incY, const double *a0, const double *a1,
   if (i < nC-1) {
     ytmp0 += a0[0] * x0[0];
     ytmp1 += a1[0] * x0[0];
-    x0 += incX;
-    ytmp0 += a0[1] * x0[0];
-    ytmp1 += a1[1] * x0[0];
-    x0 += incX;
+    //x0 += incX;
+    ytmp0 += a0[1] * x0[incX];
+    ytmp1 += a1[1] * x0[incX];
+    //x0 += incX;
+    x0 += incX << 1;
     a0 += 2;
     a1 += 2;
     i += 2;
@@ -230,8 +234,10 @@ void _inner_vec2_ddot_sse(double *y0, int incY, const double *a0, const double *
   }
  update:
   TMP1 = _mm_hadd_pd(Y0, Y1);
-  y0[0]    += TMP1[0] * alpha;
-  y0[incY] += TMP1[1] * alpha;
+  ytmp0 += TMP1[0];
+  ytmp1 += TMP1[1];
+  y0[0]    += ytmp0 * alpha;
+  y0[incY] += ytmp1 * alpha;
   
 }
 

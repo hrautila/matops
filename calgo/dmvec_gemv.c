@@ -376,6 +376,7 @@ void dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
     x_aligned = ((uintptr_t)X->md & 0xF);
 
     if (lda_even && Y->inc == 1 && a_aligned == x_aligned) {
+      //printf("transA aligned ...\n");
       for (i = S; i < L; i += MB) {
         nI = L - i < MB ? L - i : MB;
         if (beta != 1.0) {
@@ -384,6 +385,7 @@ void dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
         _dmvec_ddot_aligned(Y, A, X, alpha, beta, i, i+nI, R, E, vlen);
       }
     } else {
+      //printf("transA unaligned ...\n");
       for (i = S; i < L; i += MB) {
         nI = L - i < MB ? L - i : MB;
         if (beta != 1.0) {
@@ -403,6 +405,7 @@ void dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
     }
     y_aligned = ((uintptr_t)Y->md & 0xF);
     if (lda_even && Y->inc == 1 && a_aligned == y_aligned) {
+      //printf("NO trans, aligned ...\n");
       for (i = R; i < E; i += MB) {
         nI = E - i < MB ? E - i : MB;
         if (beta != 1.0) {
@@ -411,6 +414,7 @@ void dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
         _dmvec_daxpy_aligned(Y, A, X, alpha, beta, S, L, i, i+nI, vlen);
       }
     } else {
+      //printf("NO trans, unaligned ...\n");
       for (i = R; i < E; i += MB) {
         nI = E - i < MB ? E - i : MB;
         if (beta != 1.0) {
