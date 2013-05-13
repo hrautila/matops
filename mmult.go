@@ -150,9 +150,11 @@ func scheduleWork(colworks, rowworks, cols, rows int, worker task) {
 // C is M*N, A is M*P or P*M if flags&TRANSA. B is P*N or N*P if flags&TRANSB.
 //
 func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
-    if A.Cols() != B.Rows() {
-        return errors.New("A.cols != B.rows: size mismatch")
-    }
+    // error checking must take in account flag values!
+
+    //if A.Cols() != B.Rows() {
+    //return errors.New("A.cols != B.rows: size mismatch")
+    //}
     psize := int64(C.NumElements())*int64(A.Cols())
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
@@ -161,15 +163,21 @@ func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     Cr := C.FloatArray()
     ldC := C.LeadingIndex()
 
+    // matrix A, B common dimension
+    P := A.Cols()
+    if flags & TRANSA != 0 {
+        P = A.Rows()
+    }
+
     if nWorker <= 1 || psize <= limitOne {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, P,
             0, C.Cols(), 0, C.Rows(),
             vpLen, nB, mB)
         return nil
     } 
     // here we have more than one worker available
     worker := func(cstart, cend, rstart, rend int, ready chan int) {
-        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, B.Rows(),
+        calgo.DMult(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB, P,
             cstart, cend, rstart, rend, vpLen, nB, mB)
         ready <- 1
     }
@@ -337,6 +345,21 @@ func RankUpdate2Sym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flag
     return nil
 }
 
+// A = alpha*A + beta*B   
+// A = alpha*A + beta*B.T  if flags&TRANSB
+func ScalePlus(A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    S := 0
+    L := A.Cols()
+    R := 0
+    E := A.Rows()
+    calgo.DScalePlus(Ar, Br, alpha, beta, calgo.Flags(flags), ldA, ldB, S, L, R, E)
+    return nil
+}
 
 // Local Variables:
 // tab-width: 4
