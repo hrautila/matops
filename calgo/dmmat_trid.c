@@ -164,6 +164,7 @@ _dmmat_trid_unb_l_trans(double *Bc, const double *Ac, double alpha, int unit,
   register double *b0, *b1, *Bcr;
   double xtmp;
   register const double *Ar;
+
   Bcr = Bc;
   for (i = 0; i < nRE; i++) {
     Ar = Ac + i + unit;
@@ -171,7 +172,7 @@ _dmmat_trid_unb_l_trans(double *Bc, const double *Ac, double alpha, int unit,
     // update all current B-value with current A column and following b
     for (j = 0; j < nC; j++) {
       xtmp = unit ? alpha*b0[0] : 0.0;
-      _inner_ddot(&xtmp, Ar, b0, alpha, nRE-unit-i);
+      _inner_ddot(&xtmp, Ar, b0+unit, alpha, nRE-unit-i);
       b0[0] = xtmp;
       b0 += ldB;
     }
@@ -226,7 +227,19 @@ _dmmat_trid_unb_r_upper(double *Bc, const double *Ac, double alpha, int unit,
   }
 }
 
-// LOWER, RIGHT
+/* LOWER, RIGHT,
+  for B = B*A; A is [nC, nC], B is [nRE, nC], 
+  
+                 a00| 0 | 0
+    b00|b01|b02  a10|a11| 0
+                 a20|a21|a22
+
+    b00 = b00*a00 + b01*a10 + b02*a20
+    b01 = b01*a11 + a21*b02
+    b02 = b02*a22
+    
+    --> work it forward as b00 are not needed for b01, b02, ... with DOT
+*/
 static void
 _dmmat_trid_unb_r_lower(double *Bc, const double *Ac, double alpha, int unit,
                          int ldB, int ldA, int nRE, int nC)
@@ -236,6 +249,7 @@ _dmmat_trid_unb_r_lower(double *Bc, const double *Ac, double alpha, int unit,
   register double *b0, *Br, *Bcl;
   register const double *Ar, *Acl;
   double btmp;
+
 
   // columns of A
   Acl = Ac;
@@ -248,7 +262,7 @@ _dmmat_trid_unb_r_lower(double *Bc, const double *Ac, double alpha, int unit,
       Ar = Acl + nC - j;
       btmp = 0.0;
       // calculate dot-product following Ar column and Br row
-      _inner_ddot_trans(&btmp, Ar+unit, Br+unit, alpha, j-unit, ldB);
+      _inner_ddot_trans(&btmp, Ar+unit, Br+unit*ldB, alpha, j-unit, ldB);
       b0[0] = unit ? btmp + alpha*b0[0] : btmp;
       b0++;
       Br++;
@@ -325,6 +339,7 @@ _dmmat_trid_unb_rl_trans(double *Bc, const double *Ac, double alpha, int unit,
   register double *b0, *Br, *Bcl;
   register const double *Ar, *Acl;
 
+
   // columns of A
   Bcl = Bc + (nC-1)*ldB;
 
@@ -343,7 +358,7 @@ _dmmat_trid_unb_rl_trans(double *Bc, const double *Ac, double alpha, int unit,
       b0 -= ldB;        // previous element on B rows
       Acl -= ldA;       // previous column in A
     }
-    // next B column, next A column
+    // next B row
     Bcl++;
   }
 }
