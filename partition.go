@@ -197,7 +197,9 @@ func partition2x2(ATL, ATR, ABL, ABR, A *matrix.FloatMatrix, nb int, side int) {
    ABL | ABR          ---------------
                       A20 | A21 : A22
 
-   ATR, ABL, ABR implicitely defined by ATL and A.
+ ATR, ABL, ABR implicitely defined by ATL and A.
+ It is valid to have either the strictly upper or lower submatrices as nil values.
+ 
  */
 func repartition2x2to3x3(ATL, 
     A00, A01, A02, A10, A11, A12, A20, A21, A22, A *matrix.FloatMatrix, nb int, pdir int) {
@@ -209,15 +211,27 @@ func repartition2x2to3x3(ATL,
     switch (pdir) {
     case pBOTTOMRIGHT:
         A00.SubMatrixOf(A, 0, 0,    k, k)
-        A01.SubMatrixOf(A, 0, k,    k, nb)
-        A02.SubMatrixOf(A, 0, k+nb, k, A.Cols()-k-nb)
+        if A01 != nil {
+            A01.SubMatrixOf(A, 0, k,    k, nb)
+        }
+        if A02 != nil {
+            A02.SubMatrixOf(A, 0, k+nb, k, A.Cols()-k-nb)
+        }
 
-        A10.SubMatrixOf(A, k, 0,    nb, k)
+        if A10 != nil {
+            A10.SubMatrixOf(A, k, 0,    nb, k)
+        }
         A11.SubMatrixOf(A, k, k,    nb, nb)
-        A12.SubMatrixOf(A, k, k+nb, nb, A.Cols()-k-nb)
+        if A12 != nil {
+            A12.SubMatrixOf(A, k, k+nb, nb, A.Cols()-k-nb)
+        }
 
-        A20.SubMatrixOf(A, k+nb, 0,    A.Rows()-k-nb, k)
-        A21.SubMatrixOf(A, k+nb, k,    A.Rows()-k-nb, nb)
+        if A20 != nil {
+            A20.SubMatrixOf(A, k+nb, 0,    A.Rows()-k-nb, k)
+        }
+        if A21 != nil {
+            A21.SubMatrixOf(A, k+nb, k,    A.Rows()-k-nb, nb)
+        }
         A22.SubMatrixOf(A, k+nb, k+nb)
     case pTOPLEFT:
         // move towards top left corner
