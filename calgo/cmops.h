@@ -112,6 +112,10 @@ extern void dvec_invscal(mvec_t *X,  double alpha, int N);
 extern double dvec_diff_nrm2(const mvec_t *X,  const mvec_t *Y, int N);
 extern void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, double beta, int N);
 
+// matrix-matrix: A = alpha*A + beta*B
+extern void dmmat_scale_plus(mdata_t *A, const mdata_t *B,
+                             double alpha, double beta, int flags,
+                             int S, int L, int R, int E);
 
 extern void
 dmult_mm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,

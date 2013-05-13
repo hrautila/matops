@@ -32,6 +32,28 @@ const (
 
 // Matrix-Matrix operators
 
+// matrix-matrix: A = alpha*A + beta*B
+func DScalePlus(A, B []float64, alpha, beta float64, flags Flags, ldA, ldB, S, L, R, E int) {
+    var Am C.mdata_t
+    var Bm C.mdata_t
+
+    if B == nil || A == nil {
+        return
+    }
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmmat_scale_plus(
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta), C.int(flags),
+        C.int(S), C.int(L),
+        C.int(R), C.int(E))
+}
+
+
 // Generic matrix-matrix multiplication for block [R:E, S:L] with panel length P.
 //
 // if trans is NOTRANS then calculates
@@ -590,7 +612,6 @@ func DScal(X []float64, alpha float64, incX, N int) {
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         C.double(alpha), C.int(N))
 }
-
 
 
 // Local Variables:
