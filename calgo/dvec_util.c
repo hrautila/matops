@@ -13,6 +13,9 @@
 #include "inner_vec_dot.h"
 #include "inner_vec_axpy.h"
 
+/*
+ * Z[0] = alpha*(X*Y.T) + beta*Z[0]
+ */
 void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, double beta, int N)
 {
   register int i;
@@ -37,6 +40,9 @@ void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, doubl
   Z->md[0] += alpha * (c0 + c1);
 }
 
+/*
+ * return: alpha*(X*Y.T)
+ */
 double dvec_dot(const mvec_t *X,  const mvec_t *Y, double alpha, int N)
 {
   register int i;
@@ -60,6 +66,9 @@ double dvec_dot(const mvec_t *X,  const mvec_t *Y, double alpha, int N)
   return alpha * (c0 + c1);
 }
 
+/*
+ * Y = alpha*X + Y
+ */
 void dvec_axpy(mvec_t *Y,  const mvec_t *X, double alpha, int N)
 {
   register int i;
@@ -79,6 +88,9 @@ void dvec_axpy(mvec_t *Y,  const mvec_t *X, double alpha, int N)
   }
 }
 
+/*
+ * return ||X - Y||_2
+ */
 double dvec_diff_nrm2(const mvec_t *X,  const mvec_t *Y, int N)
 {
   register int i;
@@ -174,6 +186,9 @@ int dvec_iamax(const mvec_t *X,  int N)
   return ix;
 }
 
+/*
+ * X <--> Y
+ */
 void dvec_swap(mvec_t *X,  mvec_t *Y, int N)
 {
   register int i;
@@ -201,6 +216,9 @@ void dvec_swap(mvec_t *X,  mvec_t *Y, int N)
   }
 }
 
+/*
+ * X = X/alpha
+ */
 void dvec_invscal(mvec_t *X,  double alpha, int N)
 {
   register int i;
@@ -218,6 +236,9 @@ void dvec_invscal(mvec_t *X,  double alpha, int N)
   }
 }
 
+/*
+ * X = alpha*X
+ */
 void dvec_scal(mvec_t *X,  double alpha, int N)
 {
   register int i;
