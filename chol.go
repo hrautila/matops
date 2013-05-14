@@ -89,15 +89,35 @@ func blockedCHOL(A *matrix.FloatMatrix, flags Flags, nb int) error {
     return err
 }
 
-func DecomposeCHOL(A *matrix.FloatMatrix, flags Flags) (*matrix.FloatMatrix, error) {
+/*
+ * Compute the Cholesky factorization of a symmetric positive definite
+ * N-by-N matrix A.
+ *
+ * Arguments:
+ *  A     On entry, the symmetric matrix A. If flags&UPPER the upper triangular part
+ *        of A contains the upper triangular part of the matrix A, and strictly
+ *        lower part A is not referenced. If flags&LOWER the lower triangular part
+ *        of a contains the lower triangular part of the matrix A. Likewise, the
+ *        strictly upper part of A is not referenced. On exit, factor U or L from the
+ *        Cholesky factorization A = U.T*U or A = L*L.T
+ *      
+ *  flags The matrix structure indicator, UPPER for upper tridiagonal and LOWER for
+ *        lower tridiagonal matrix.
+ *
+ *  nb    The blocking factor for blocked invocations. If nb == 0 or N < nb unblocked
+ *        algorithm is used.
+ *
+ * Compatible with lapack.DPOTRF
+ */
+func DecomposeCHOL(A *matrix.FloatMatrix, flags Flags, nb int) (*matrix.FloatMatrix, error) {
     var err error
     if A.Cols() != A.Rows() {
         return A, errors.New("A not a square matrix")
     }
-    if A.Cols() < decompNB || decompNB == 0 {
+    if A.Cols() < nb || nb == 0 {
         err = unblockedCHOL(A, flags)
     } else {
-        err = blockedCHOL(A, flags, decompNB)
+        err = blockedCHOL(A, flags, nb)
     }
     return A, err
 }

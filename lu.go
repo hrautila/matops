@@ -98,17 +98,6 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     return
 }
 
-func DecomposeLUnoPiv(A *matrix.FloatMatrix) (*matrix.FloatMatrix, error) {
-    var err error
-    mlen := min(A.Rows(), A.Cols())
-    if mlen <= decompNB || decompNB == 0 {
-        err = unblockedLUnoPiv(A)
-    } else {
-        err = blockedLUnoPiv(A, decompNB)
-    }
-    return A, err
-}
-
 func swapRows(A *matrix.FloatMatrix, src, dst int) {
     var r0, r1 matrix.FloatMatrix
     if src == dst || A.Rows() == 0 {
@@ -137,17 +126,6 @@ func pivotIndex(A *matrix.FloatMatrix, p *pPivots) {
             max = v
         }
     }
-}
-
-func VDot(X, Y *matrix.FloatMatrix) float64 {
-    var rval float64 = 0.0
-    if ! (isVector(X) || isVector(Y)) {
-        return rval
-    }
-    for i := 0; i < X.NumElements(); i++ {
-        rval += X.GetAt(0, i)*Y.GetAt(i, 0)
-    }
-    return rval
 }
 
 // unblocked LU decomposition with pivots: FLAME LU variant 3
@@ -287,7 +265,26 @@ func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
     return err
 }
 
-func DecomposeLU(A *matrix.FloatMatrix, pivots []int) (*matrix.FloatMatrix, error) {
+/*
+ * Compute an LU factorization of a general M-by-N matrix using
+ * partial pivoting with row interchanges.
+ *
+ * Arguments:
+ *   A      On entry, the M-by-N matrix to be factored. On exit the factors
+ *          L and U from factorization A = P*L*U, the unit diagonal elements
+ *          of L are not stored.
+ *
+ *   pivots On exit the pivot indices. 
+ *
+ *   nb     Blocking factor for blocked invocations. If bn == 0 or
+ *          min(M,N) < nb unblocked algorithm is used.
+ *
+ * Returns:
+ *  LU factorization and error indicator.
+ *
+ * Compatible with lapack.DGETRF
+ */
+func DecomposeLU(A *matrix.FloatMatrix, pivots []int, nb int) (*matrix.FloatMatrix, error) {
     var err error
     mlen := min(A.Rows(), A.Cols())
     if len(pivots) < mlen {
@@ -297,13 +294,41 @@ func DecomposeLU(A *matrix.FloatMatrix, pivots []int) (*matrix.FloatMatrix, erro
     for k, _ := range pivots {
         pivots[k] = 0
     }
-    if mlen <= decompNB || decompNB == 0 {
+    if mlen <= nb || nb == 0 {
         err = unblockedLUpiv(A, &pPivots{pivots})
     } else {
-        err = blockedLUpiv(A, &pPivots{pivots}, decompNB)
+        err = blockedLUpiv(A, &pPivots{pivots}, nb)
     }
     return A, err
 }
+
+/*
+ * Compute an LU factorization of a general M-by-N matrix without pivoting.
+ *
+ * Arguments:
+ *   A   On entry, the M-by-N matrix to be factored. On exit the factors
+ *       L and U from factorization A = P*L*U, the unit diagonal elements
+ *       of L are not stored.
+ *
+ *   nb  Blocking factor for blocked invocations. If bn == 0 or
+ *       min(M,N) < nb unblocked algorithm is used.
+ *
+ * Returns:
+ *  LU factorization and error indicator.
+ *
+ * Compatible with lapack.DGETRF
+ */
+func DecomposeLUnoPiv(A *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error) {
+    var err error
+    mlen := min(A.Rows(), A.Cols())
+    if mlen <= nb || nb == 0 {
+        err = unblockedLUnoPiv(A)
+    } else {
+        err = blockedLUnoPiv(A, nb)
+    }
+    return A, err
+}
+
 
 // Local Variables:
 // tab-width: 4
