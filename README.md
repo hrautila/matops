@@ -16,7 +16,7 @@ Supported functionality is:
 
   Blas level 2
 
-    MVMult(X, A, Y, alpha, beta, flags)         General matrix-vector multiplcation (GEMV)
+    MVMult(X, A, Y, alpha, beta, flags)         General matrix-vector multiplication (GEMV)
     MVRankUpdate(A, X, Y, alpha, flags)         General matrix rank update (GER)
     MVRankUpdateSym(A, X, alpha, flags)         Symmetric matrix rank update (SYR)
     MVRankUpdate2Sym(A, X, Y, alpha, flags)     Symmetric matrix rank 2 update (SYR2)
@@ -31,11 +31,18 @@ Supported functionality is:
     InvScale(X, alpha)  Inverse scaling of X 
     Scale(X, alpha)     Scaling of X (SCAL)
 
+  Additional
+
+    ScalePlus(A, B, alpha, beta, flags)		Calculate A = alpha*A + beta*B
+
   Lapack
   
-    DecomposeLUnoPiv(A)       LU decomposition without pivoting
-    DecomposeLU(A, pivots)    LU decomposition with pivoting (GETRF)
-    DecomposeCHOL(A)          Cholesky decomposition (POTRF)
+    DecomposeLUnoPiv(A, nb)    LU factorization without pivoting
+    DecomposeLU(A, pivots, nb) LU factorization with pivoting (DGETRF)
+    DecomposeCHOL(A, nb)       Cholesky factorization (DPOTRF)
+    DecomposeQR(A, tau, nb)    QR factorization (DGEQRF)
+    DecomposeQRT(A, T, W, nb)  QR factorization with block reflectors
+    BuildT(T, A, tau)	       Build block reflector T from elementary reflectors (DLARFT)
 
   Support functions
 
