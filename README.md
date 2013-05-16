@@ -11,8 +11,8 @@ Supported functionality is:
     MultSymm(C, A, B, alpha, beta, flags)       Symmetric matrix-matrix multipication (SYMM)
     MultTrm(B, A, alpha, flags)                 Tridiagonal matrix-matrix multiplication (TRMM)  
     Solve(B, A, alpha, flags)                   Tridiagonal solve with multiple RHS (TRSM)
-    RankUpdateSym(C, A, alpha, beta,flags)      Symmetric matrix rank update (SYRK)
-    RankUpdate2Sym(C, A, B, alpha, beta, flags) Symmetric matrix rank 2 update (SYR2K)
+    RankUpdateSym(C, A, alpha, beta,flags)      Symmetric matrix rank-k update (SYRK)
+    RankUpdate2Sym(C, A, B, alpha, beta, flags) Symmetric matrix rank-2k update (SYR2K)
 
   Blas level 2
 
@@ -37,12 +37,14 @@ Supported functionality is:
 
   Lapack
   
-    DecomposeLUnoPiv(A, nb)    LU factorization without pivoting
-    DecomposeLU(A, pivots, nb) LU factorization with pivoting (DGETRF)
-    DecomposeCHOL(A, nb)       Cholesky factorization (DPOTRF)
-    DecomposeQR(A, tau, nb)    QR factorization (DGEQRF)
-    DecomposeQRT(A, T, W, nb)  QR factorization with block reflectors
-    BuildT(T, A, tau)	       Build block reflector T from elementary reflectors (DLARFT)
+    DecomposeLUnoPiv(A, nb)	LU factorization without pivoting
+    DecomposeLU(A, pivots, nb)	LU factorization with pivoting (DGETRF)
+    DecomposeCHOL(A, nb)	Cholesky factorization (DPOTRF)
+    DecomposeQR(A, tau, nb)	QR factorization (DGEQRF)
+    DecomposeQRT(A, T, W, nb)	QR factorization with block reflectors
+    BuildT(T, A, tau)		Build block reflector T from elementary reflectors (DLARFT)
+    SolveCHOL(B, A, flags)	Solve Cholesky factorized linear system (DPOTRS)
+    SolveLU(B, A, pivots,flgs)  Solve LU factorized linear system (DGETRS)
 
   Support functions
 
