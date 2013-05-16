@@ -429,7 +429,9 @@ func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, er
 }
 
 /*
- * Compute QR factorization of a M-by-N matrix A: A = Q * R.
+ * Compute QR factorization of a M-by-N matrix A using compact WY transformation: A = Q * R,
+ * where Q = I - Y*T*Y.T, T is block reflector and Y holds elementary reflectors as lower
+ * trapezoidal matrix saved below diagonal elements of the matrix A.
  *
  * Arguments:
  *  A   On entry, the M-by-N matrix A. On exit, the elements on and above
@@ -448,7 +450,7 @@ func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, er
  * Returns:
  *      Decomposed matrix A and error indicator.
  *
- * DecomposeQR is compatible with lapack.DGEQRF
+ * DecomposeQRT is compatible with lapack.DGEQR??
  */
 func DecomposeQRT(A, T, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error) {
     var err error = nil
@@ -469,8 +471,8 @@ func DecomposeQRT(A, T, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, err
 
 
 /*
- * Build block reflector T from HH reflector stored in TriLU(A) and scalar factors
- * in tau.
+ * Build block reflector T from HH elementary reflectors stored in TriLU(A) and
+ * scalar factors in tau.
  *
  * Q = I - Y*T*Y.T; Householder H = I - tau*v*v.T
  *
@@ -478,7 +480,6 @@ func DecomposeQRT(A, T, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, err
  *     | 0  c |   c = tau
  *
  * Compatible with lapack.DLAFRT
- *
  */
 func BuildT(T, A, tau *matrix.FloatMatrix) (*matrix.FloatMatrix, error) {
     var err error = nil
