@@ -313,9 +313,13 @@ func RankUpdateSym(C, A *matrix.FloatMatrix, alpha, beta float64, flags Flags) e
     ldC := C.LeadingIndex()
     S := 0
     E := C.Rows()
+    P := A.Cols()
+    if flags & TRANSA != 0 {
+        P = A.Rows()
+    }
     // if more workers available C can be divided to blocks [S:E, S:E] along diagonal
     // and updated in separate tasks. 
-    calgo.DSymmRankBlk(Cr, Ar, alpha, beta, calgo.Flags(flags), ldC, ldA, A.Cols(), S, E,
+    calgo.DSymmRankBlk(Cr, Ar, alpha, beta, calgo.Flags(flags), ldC, ldA, P, S, E,
         vpLen, nB)
     return nil
 }
@@ -338,10 +342,14 @@ func RankUpdate2Sym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flag
     ldC := C.LeadingIndex()
     S := 0
     E := C.Rows()
+    P := A.Cols()
+    if flags & TRANSA != 0 {
+        P = A.Rows()
+    }
     // if more workers available C can be divided to blocks [S:E, S:E] along diagonal
     // and updated in separate tasks. 
     calgo.DSymmRank2Blk(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
-        A.Cols(), S, E, vpLen, nB)
+        P, S, E, vpLen, nB)
     return nil
 }
 
