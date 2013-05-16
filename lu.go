@@ -150,11 +150,11 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
         repartition2x2to3x3(&ATL, 
             &A00, &a01, &A02,
             &a10, &a11, &a12,
-            &A20, &a21, &A22,   A, 1, pBOTTOMRIGHT)
-        repartition1x2to1x3(
-            &AL, /**/ &A0, &a1, &A2,   A, 1, pRIGHT)
-        repartPivot2x1to3x1(
-            &pT, /**/ &p0, &p1, &p2,   p, 1, pBOTTOM)
+            &A20, &a21, &A22,   /**/ A, 1, pBOTTOMRIGHT)
+        repartition1x2to1x3(&AL, 
+            &A0, &a1, &A2,   /**/ A, 1, pRIGHT)
+        repartPivot2x1to3x1(&pT, 
+            &p0, &p1, &p2,   /**/ p, 1, pBOTTOM)
 
         // apply previously computed pivots
         applyPivots(&a1, &p0)
@@ -174,7 +174,6 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
         applyPivots(&aB1, &p1)
         
         // a21 = a21 / a11
-        //a21.Scale(1.0/a11.Float())
         InvScale(&a21, a11.Float())
 
         // apply pivots to previous columns
@@ -222,10 +221,10 @@ func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
             &A00, &A01, &A02,
             &A10, &A11, &A12,
             &A20, &A21, &A22, A, nb, pBOTTOMRIGHT)
-        repartition1x2to1x3(
-            &AL,/**/ &A0, &A1, &A2, A, nb, pRIGHT)
-        repartPivot2x1to3x1(
-            &pT,/**/ &p0, &p1, &p2, p, nb, pBOTTOM)
+        repartition1x2to1x3(&AL,
+            &A0, &A1, &A2,  /**/ A, nb, pRIGHT)
+        repartPivot2x1to3x1(&pT,
+            &p0, &p1, &p2,  /**/ p, nb, pBOTTOM)
 
         // apply previously computed pivots
         applyPivots(&A1, &p0)
@@ -329,6 +328,39 @@ func DecomposeLUnoPiv(A *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error
     return A, err
 }
 
+/*
+ * Solve a system of linear equations A*X = B or A.T*X = B with general N-by-N
+ * matrix A using the LU factorizatoin computed by DecomposeLU().
+ *
+ * Arguments:
+ *  B   On entry, the right hand side matrix B. On exit, the solution matrix X.
+ *
+ *  A   The factor L and U from the factorization A = P*L*U as computed by
+ *      DecomposeLU()
+ *
+ *  pivots The pivot indices from DecomposeLU().
+ *
+ *  flags  The indicator of the form of the system of equations.
+ *         If flags&TRANSA then system is transposed. All other values
+ *         indicate non transposed system.
+ *
+ * Compatible with lapack.DGETRS.
+ */
+func SolveLU(B, A *matrix.FloatMatrix, pivots []int, flags Flags) error {
+    var err error = nil
+    applyPivots(B, &pPivots{pivots})
+    if flags&TRANSA != 0 {
+        // transposed X = A.-1*B == (L.T*U.T).-1*B == U.-T*(L.-T*B)
+        Solve(B, A, 1.0, LOWER|UNIT|TRANSA)
+        Solve(B, A, 1.0, UPPER|TRANSA)
+    } else {
+        // non-transposed X = A.-1*B == (L*U).-1*B == U.-1*(L.-1*B)
+        Solve(B, A, 1.0, LOWER|UNIT)
+        Solve(B, A, 1.0, UPPER)
+    }
+        
+    return err
+}
 
 // Local Variables:
 // tab-width: 4

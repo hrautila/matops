@@ -10,11 +10,11 @@ package matops
 import (
     "github.com/hrautila/matrix"
     "errors"
-    //"math"
-    //"fmt"
+    "math"
+    "fmt"
 )
 
-func unblockedCHOL(A *matrix.FloatMatrix, flags Flags) (err error) {
+func unblockedCHOL(A *matrix.FloatMatrix, flags Flags, nr int) (err error) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
     var A00, a01, A02, a10, a11, a12, A20, a21, A22 matrix.FloatMatrix
 
@@ -30,7 +30,11 @@ func unblockedCHOL(A *matrix.FloatMatrix, flags Flags) (err error) {
             &A20, &a21, &A22,   A, 1, pBOTTOMRIGHT)
 
         // a11 = sqrt(a11)
-        a11.Sqrt()
+        aval := math.Sqrt(a11.Float())
+        if math.IsNaN(aval) {
+            panic(fmt.Sprintf("illegal value at %d: %e", nr+ATL.Rows(), a11.Float()))
+        }
+        a11.SetAt(0, 0, aval)
 
         if flags & LOWER != 0 {
             // a21 = a21/a11
@@ -68,7 +72,7 @@ func blockedCHOL(A *matrix.FloatMatrix, flags Flags, nb int) error {
             &A20, &A21, &A22,   A, nb, pBOTTOMRIGHT)
 
         // A11 = chol(A11)
-        err = unblockedCHOL(&A11, flags)
+        err = unblockedCHOL(&A11, flags, ATL.Rows())
 
         if flags & LOWER != 0 {
             // A21 = A21 * tril(A11).-1
@@ -76,9 +80,9 @@ func blockedCHOL(A *matrix.FloatMatrix, flags Flags, nb int) error {
             // A22 = A22 - A21*A21.T
             RankUpdateSym(&A22, &A21, -1.0, 1.0, LOWER)
         } else {
-            // A12 = triu(A11).-1 * A21
-            Solve(&A12, &A11, 1.0, LEFT|UPPER|TRANSA)
-            // A22 = A22 - A12*A12.T
+            // A12 = triu(A11).-1 * A12
+            Solve(&A12, &A11, 1.0, UPPER|TRANSA)
+            // A22 = A22 - A12.T*A12
             RankUpdateSym(&A22, &A12, -1.0, 1.0, UPPER|TRANSA)
         }
 
@@ -115,11 +119,42 @@ func DecomposeCHOL(A *matrix.FloatMatrix, flags Flags, nb int) (*matrix.FloatMat
         return A, errors.New("A not a square matrix")
     }
     if A.Cols() < nb || nb == 0 {
-        err = unblockedCHOL(A, flags)
+        err = unblockedCHOL(A, flags, 0)
     } else {
         err = blockedCHOL(A, flags, nb)
     }
     return A, err
+}
+
+/*
+ * Solves a system system of linear equations A*X = B with symmetric positive
+ * definite matrix A using the Cholesky factorization A = U.T*U or A = L*L.T
+ * computed by DecomposeCHOL().
+ *
+ * Arguments:
+ *  B   On entry, the right hand side matrix B. On exit, the solution
+ *      matrix X.
+ *
+ *  A   The triangular factor U or L from Cholesky factorization as computed by
+ *      DecomposeCHOL().
+ *
+ *  flags Indicator of which factor is stored in A. If flags&UPPER then upper
+ *        triangle of A is stored. If flags&LOWER then lower triangle of A is
+ *        stored.
+ *
+ * Compatible with lapack.DPOTRS.
+ */
+func SolveCHOL(B, A *matrix.FloatMatrix, flags Flags) {
+    // A*X = B; X = A.-1*B == (LU).-1*B == U.-1*L.-1*B == U.-1*(L.-1*B)
+    if flags&UPPER != 0 {
+        // X = (U.T*U).-1*B => U.-1*(U.-T*B)
+        Solve(B, A, 1.0, UPPER|TRANSA)
+        Solve(B, A, 1.0, UPPER)
+    } else if flags&LOWER != 0 {
+        // X = (L*L.T).-1*B = L.-T*(L.1*B)
+        Solve(B, A, 1.0, LOWER)
+        Solve(B, A, 1.0, LOWER|TRANSA)
+    }
 }
 
 // Local Variables:
