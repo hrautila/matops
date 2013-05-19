@@ -15,6 +15,15 @@
 #include "inner_ddot.h"
 #include "inner_ddot_trans.h"
 
+static inline void _dmmat_scale(mdata_t *A, double f0, int M, int N) {
+  dscale_tile(A->md, A->step, f0, M, N);
+}
+
+/*
+ * Functions here solves the matrix equations
+ *
+ *   op(A)*X = alpha*B or X*op(A) = alpha*B
+ */
 /*
   A: N*N, UPPER            B: N*2
      a00 | a01 : a02       b00|b01
@@ -23,10 +32,13 @@
      ---------------      --------
       0  |  0  : a22       b20|b21
 
-    b20 = a22*b'20                       --> b'20 = b20/a22
-    b10 = a11*b'10 + a12*b'20            --> b'10 = (b10 - a12*b'20)/a11
-    b00 = a00*b'00 + a01*b'10 + a02*b'20 --> b'00 = (b00 - a01*b'10 - a12*b'20)/a00
+    c0*b20 = a22*b'20                       --> b'20 = c0*b20/a22
 
+    c0*b10 = a11*b'10 + a12*b'20            --> b'10 = (c0*b10 - a12*b'20)/a11
+                                                     = c0*(b10 - a12*b20/a22)/a11
+
+    c0*b00 = a00*b'00 + a01*b'10 + a02*b'20 --> b'00 = (c0*b00 - a01*b'10 - a12*b'20)/a00
+                                                     = c0*(b00 - a01*b10/a11 - a12*b20/a22)/a00
     Work it backwards from bottom to top.
 */
 static void
@@ -144,6 +156,7 @@ _dmmat_solve_unb_lower(double *Bc, const double *Ac, double alpha, int flags,
       b1[0] = unit ? b1[0] : b1[0]/a11[0];
       // update all b2-values with in current column
       _inner_daxpy(b2, a21, b1, -1.0, nRE-1-i);
+
       b1 += ldB;
     }
     // next B row, next column in A 
@@ -234,6 +247,7 @@ _dmmat_solve_unb_r_upper(double *Bc, const double *Ac, double alpha, int flags,
       _inner_ddot_trans(&btmp, Acl, b0, 1.0, j, ldB);
       // update current value with previous values.
       b1[0] = unit ? b1[0] - btmp : (b1[0] - btmp)/a11[0];
+
       b1 += ldB;
       Acl += ldA;
     }
@@ -382,7 +396,7 @@ _dmmat_solve_unb_rl_trans(double *Bc, const double *Ac, double alpha, int flags,
   }
 }
 
-// B = A.-1*B; unblocked
+// solve: op(A)*X = alpha*B or X*op(A) = alpha*B; unblocked version
 void dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int E)
 {
   double *Bc;
@@ -390,32 +404,40 @@ void dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int 
   if (flags & MTX_RIGHT) {
     // for B = alpha*B*op(A)
     Bc = &B->md[S]; 
+    if (alpha != 1.0) {
+      dscale_tile(Bc, B->step, alpha, E-S, N);
+      alpha = 1.0;
+    }
     if (flags & MTX_LOWER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_unb_rl_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_rl_trans(Bc, A->md, 1.0, flags, B->step, A->step, N, E-S);
       } else {
-        _dmmat_solve_unb_r_lower(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_r_lower(Bc, A->md, 1.0, flags, B->step, A->step, N, E-S);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_unb_ru_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_ru_trans(Bc, A->md, 1.0, flags, B->step, A->step, N, E-S);
       } else {
-        _dmmat_solve_unb_r_upper(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_r_upper(Bc, A->md, 1.0, flags, B->step, A->step, N, E-S);
       }
     }
   } else {
     Bc = &B->md[S*B->step];
+    if (alpha != 1.0) {
+      dscale_tile(Bc, B->step, alpha, N, E-S);
+      alpha = 1.0;
+    }
     if (flags & MTX_LOWER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_unb_l_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_l_trans(Bc, A->md, 1.0, flags, B->step, A->step, N, E-S);
       } else {
-        _dmmat_solve_unb_lower(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_lower(Bc, A->md, 1.0, flags, B->step, A->step, N, E-S);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_unb_u_trans(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_u_trans(Bc, A->md, 1.0, flags, B->step, A->step, N, E-S);
       } else {
-        _dmmat_solve_unb_upper(Bc, A->md, alpha, flags, B->step, A->step, N, E-S);
+        _dmmat_solve_unb_upper(Bc, A->md, 1.0, flags, B->step, A->step, N, E-S);
       }
     }
   }
@@ -432,6 +454,11 @@ void dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int 
     B0 = A00*B'0 + A01*B'1 + A02*B'2 --> B'0 = A00.-1*(B0 - A01*B'1 - A02*B'2)
     B1 = A11*B'1 + A12*B'2           --> B'1 = A11.-1*(B1           - A12*B'2)
     B2 = A22*B'2                     --> B'2 = A22.-1*B2
+
+    c0*B1 = A11*B'1 + A12*B'2 --> B'1 = A11.-1*(c0*B1 - A12*B'2) = A11.-1*(B1 - A12*(A22.-1*B2))*c0
+    c0*B2 = A22*B'2           --> B'2 = A22.-1*B2*c0
+
+    --> first solve with alpha' == 1.0 and then scale current block with alpha.
  */
 static void
 _dmmat_solve_blk_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
@@ -460,11 +487,15 @@ _dmmat_solve_blk_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
       B1.md = &B->md[cJ*B->step + cI];      // bottom B block
 
       // solve bottom block
-      dmmat_solve_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
+      dmmat_solve_unb(&B1, &A1, 1.0, flags, nI, 0, nJ);
       // update top with bottom solution
-      //_dblock_mult_panel(&B0, &A0, &B1, -1.0, 0, nI, nJ, i-nI, NB, Acpy, Bcpy);
       _dmult_mm_intern(&B0, &A0, &B1, -1.0, 0, nI, nJ, i-nI, NB, NB, NB, Acpy, Bcpy);
     }
+  }
+  if (alpha != 1.0) {
+    B0.md = &B->md[S*B->step];
+    B0.step = B->step;
+    _dmmat_scale(&B0, alpha, N, E-S);
   }
 }
 
@@ -508,11 +539,15 @@ _dmmat_solve_blk_u_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       B1.md = &B->md[cJ*B->step + cI];   // bottom B block
 
       // update bottom block with top block
-      //_dblock_mult_panel(&B1, &A0, &B0, -1.0, MTX_TRANSA, i, nJ, nI, NB, Acpy, Bcpy);
       _dmult_mm_intern(&B1, &A0, &B0, -1.0, MTX_TRANSA, i, nJ, nI, NB, NB, NB, Acpy, Bcpy);
       // solve bottom block
-      dmmat_solve_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
+      dmmat_solve_unb(&B1, &A1, 1.0, flags, nI, 0, nJ);
     }
+  }
+  if (alpha != 1.0) {
+    B0.md = &B->md[S*B->step];
+    B0.step = B->step;
+    _dmmat_scale(&B0, alpha, N, E-S);
   }
 }
 
@@ -524,9 +559,9 @@ _dmmat_solve_blk_u_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
    ----------------   --
     A20 | A21 | A22   B2
 
-    B0 = A00*B'0                     --> B'0 = A00.-1*B0
-    B1 = A10*B'0 + A11*B'1           --> B'1 = A11.-1*(B1 - A10*B'0)
-    B2 = A20*B'0 + A21*B'1 + A22*B'2 --> B'2 = A22.-1*(B2 - A20*B'0 - A21*B'1)
+    c0*B0 = A00*B'0                     --> B'0 = A00.-1*c0*B0
+    c0*B1 = A10*B'0 + A11*B'1           --> B'1 = A11.-1*(c0*B1 - A10*B'0)
+    c0*B2 = A20*B'0 + A21*B'1 + A22*B'2 --> B'2 = A22.-1*(c0*B2 - A20*B'0 - A21*B'1)
  */
 static void
 _dmmat_solve_blk_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
@@ -555,11 +590,15 @@ _dmmat_solve_blk_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
       B1.md = &B->md[cJ*B->step + cI+nI];   // bottom B block
 
       // solve top block
-      dmmat_solve_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
+      dmmat_solve_unb(&B0, &A0, 1.0, flags, nI, 0, nJ);
       // update bottom block with top block
-      //_dblock_mult_panel(&B1, &A1, &B0, -1.0, 0, nI, nJ, N-i-nI, NB, Acpy, Bcpy);
       _dmult_mm_intern(&B1, &A1, &B0, -1.0, 0, nI, nJ, N-i-nI, NB, NB, NB, Acpy, Bcpy);
     }
+  }
+  if (alpha != 1.0) {
+    B0.md = &B->md[S*B->step];
+    B0.step = B->step;
+    _dmmat_scale(&B0, alpha, N, E-S);
   }
 }
 
@@ -571,9 +610,9 @@ _dmmat_solve_blk_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
    ----------------   --
     A20 | A21 | A22   B2
 
-    B0 = A00*B'0 + A10*B'1 + A20*B'2 --> B'0 = A00.-1*(B0 - A10*B'1 - A20*B'2)
-    B1 = A11*B'1 + A21*B'2           --> B'1 = A11.-1*(B1           - A21*B'2)
-    B2 = A22*B'2                     --> B'2 = A22.-1*B2
+    c0*B0 = A00*B'0 + A10*B'1 + A20*B'2 --> B'0 = A00.-1*(c0*B0 - A10*B'1 - A20*B'2)
+    c0*B1 = A11*B'1 + A21*B'2           --> B'1 = A11.-1*(c0*B1           - A21*B'2)
+    c0*B2 = A22*B'2                     --> B'2 = A22.-1*c0*B2
  */
 static void
 _dmmat_solve_blk_l_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
@@ -602,11 +641,14 @@ _dmmat_solve_blk_l_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       B1.md = &B->md[cJ*B->step + i];       // bottom B block
 
       // update top with bottom solution
-      //_dblock_mult_panel(&B0, &A1, &B1, -1.0, MTX_TRANSA, N-i, nJ, nI, NB, Acpy, Bcpy);
       _dmult_mm_intern(&B0, &A1, &B1, -1.0, MTX_TRANSA, N-i, nJ, nI, NB, NB, NB, Acpy, Bcpy);
       // solve top block
-      dmmat_solve_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
+      dmmat_solve_unb(&B0, &A0, 1.0, flags, nI, 0, nJ);
     }
+  }
+  if (alpha != 1.0) {
+    B0.md = &B->md[S*B->step];
+    _dmmat_scale(&B0, alpha, N, E-S);
   }
 }
 
@@ -651,11 +693,14 @@ _dmmat_solve_blk_r_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Bl.md = &B->md[cJ];                   // left B block  [nJ*cI]
 
       // update right with left solution
-      //_dblock_mult_panel(&Br, &Bl, &At, -1.0, 0, cI, nI, nJ, NB, Acpy, Bcpy);
       _dmult_mm_intern(&Br, &Bl, &At, -1.0, 0, cI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
       // solve right block
-      dmmat_solve_unb(&Br, &Ab, alpha, flags, nI, 0, nJ);
+      dmmat_solve_unb(&Br, &Ab, 1.0, flags, nI, 0, nJ);
     }
+  }
+  if (alpha != 1.0) {
+    Br.md = &B->md[S];
+    _dmmat_scale(&Br, alpha, E-S, N);
   }
 }
 /*  UPPER, RIGHT, TRANSA
@@ -699,11 +744,14 @@ _dmmat_solve_blk_ru_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Br.md = &B->md[i*Br.step + cJ];       // right B block [nJ*N-i]
 
       // update left with right solution
-      //_dblock_mult_panel(&Bl, &Br, &Ar, -1.0, MTX_TRANSB, N-i, nI, nJ, NB, Acpy, Bcpy);
       _dmult_mm_intern(&Bl, &Br, &Ar, -1.0, MTX_TRANSB, N-i, nI, nJ, NB, NB, NB, Acpy, Bcpy);
       // solve right block
-      dmmat_solve_unb(&Bl, &Al, alpha, flags, nI, 0, nJ);
+      dmmat_solve_unb(&Bl, &Al, 1.0, flags, nI, 0, nJ);
     }
+  }
+  if (alpha != 1.0) {
+    Br.md = &B->md[S];
+    _dmmat_scale(&Br, alpha, E-S, N);
   }
 }
 
@@ -748,11 +796,14 @@ _dmmat_solve_blk_r_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Br.md = &B->md[i*Br.step + cJ];       // right B block [nJ*N-i]
 
       // update left with right solution
-      //_dblock_mult_panel(&Bl, &Br, &Ab, -1.0, 0, N-i, nI, nJ, NB, Acpy, Bcpy);
       _dmult_mm_intern(&Bl, &Br, &Ab, -1.0, 0, N-i, nI, nJ, NB, NB, NB, Acpy, Bcpy);
       // solve right block
-      dmmat_solve_unb(&Bl, &At, alpha, flags, nI, 0, nJ);
+      dmmat_solve_unb(&Bl, &At, 1.0, flags, nI, 0, nJ);
     }
+  }
+  if (alpha != 1.0) {
+    Br.md = &B->md[S];
+    _dmmat_scale(&Br, alpha, E-S, N);
   }
 }
 
@@ -798,11 +849,14 @@ _dmmat_solve_blk_rl_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Bl.md = &B->md[cJ];                   // left B block  [nJ*cI]
 
       // update right with left solution
-      //_dblock_mult_panel(&Br, &Bl, &Al, -1.0, MTX_TRANSB, cI, nI, nJ, NB, Acpy, Bcpy);
       _dmult_mm_intern(&Br, &Bl, &Al, -1.0, MTX_TRANSB, cI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
       // solve right block
-      dmmat_solve_unb(&Br, &Ar, alpha, flags, nI, 0, nJ);
+      dmmat_solve_unb(&Br, &Ar, 1.0, flags, nI, 0, nJ);
     }
+  }
+  if (alpha != 1.0) {
+    Br.md = &B->md[S];
+    _dmmat_scale(&Br, alpha, E-S, N);
   }
 }
 
