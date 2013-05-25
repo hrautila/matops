@@ -10,7 +10,7 @@ package matops
 import (
     "github.com/hrautila/matrix"
     "errors"
-    //"fmt"
+    "fmt"
 )
 
 /*
@@ -25,7 +25,7 @@ import (
  *     | 0  c |   c = tau
  *
  */
-func unblkQRBlockReflector(A, tau, T *matrix.FloatMatrix) {
+func unblkQRBlockReflector(T, A, tau *matrix.FloatMatrix) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
     var A00, a10, a11, A20, a21, A22 matrix.FloatMatrix
     var TTL, TTR, TBL, TBR matrix.FloatMatrix
@@ -35,10 +35,10 @@ func unblkQRBlockReflector(A, tau, T *matrix.FloatMatrix) {
 
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR, A, 0, pTOPLEFT)
+        &ABL, &ABR, A, 0, 0, pTOPLEFT)
     partition2x2(
         &TTL, &TTR,
-        &TBL, &TBR, T, 0, pTOPLEFT)
+        &TBL, &TBR, T, 0, 0, pTOPLEFT)
     partition2x1(
         &tT,
         &tB,  tau, 0, pTOP)
@@ -96,10 +96,10 @@ func unblockedQRT(A, T *matrix.FloatMatrix) {
     //As.SubMatrixOf(A, 0, 0, mlen, nb)
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR, A, 0, pTOPLEFT)
+        &ABL, &ABR, A, 0, 0, pTOPLEFT)
     partition2x2(
         &TTL, &TTR,
-        &TBL, &TBR, T, 0, pTOPLEFT)
+        &TBL, &TBR, T, 0, 0, pTOPLEFT)
 
     for ABR.Rows() > 0 && ABR.Cols() > 0 {
         repartition2x2to3x3(&ATL,
@@ -151,7 +151,7 @@ func unblockedQR(A, Tvec *matrix.FloatMatrix) {
     //As.SubMatrixOf(A, 0, 0, mlen, nb)
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR, A, 0, pTOPLEFT)
+        &ABL, &ABR, A, 0, 0, pTOPLEFT)
     partition2x1(
         &tT,
         &tB,  Tvec, 0, pTOP)
@@ -195,7 +195,7 @@ func blockedQR(A, Tvec, Twork, W *matrix.FloatMatrix, nb int) {
 
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR, A, 0, pTOPLEFT)
+        &ABL, &ABR, A, 0, 0, pTOPLEFT)
     partition2x1(
         &TT,
         &TB,  Tvec, 0, pTOP)
@@ -236,7 +236,7 @@ func blockedQR(A, Tvec, Twork, W *matrix.FloatMatrix, nb int) {
 
         // update A'tail i.e. A12 and A22 with (I - Y*T*Y.T).T * A'tail
         // compute: C - Y*(C.T*Y*T).T
-        updateTrailingQRT(&A11, &A21, &A12, &A22, Twork, &W2, cb)
+        updateWithQT(&A12, &A22, &A11, &A21, Twork, &W2, cb, true)
 
         // --------------------------------------------------------
         continue3x3to2x2(
@@ -251,16 +251,25 @@ func blockedQR(A, Tvec, Twork, W *matrix.FloatMatrix, nb int) {
     }
 }
 
-// compute:Q.T*C = (I -Y*T*Y.T).T*C ==  C - Y*(C.T*Y*T).T 
+// compute:
+//      Q.T*C = (I -Y*T*Y.T).T*C ==  C - Y*(C.T*Y*T).T 
+// or
+//      Q*C   = (I -Y*T*Y.T)*C   ==  C - Y*(C.T*Y*T.T).T 
+//
+//
 // where  C = /C1\   Y = /Y1\
 //            \C2/       \Y2/
 //
-// C1 is nb*K, C2 is K*K, Y1 is nb*nb trilu, Y2 is K*nb, T is nb*nb
+// C1 is nb*K, C2 is P*K, Y1 is nb*nb trilu, Y2 is P*nb, T is nb*nb
 // W = K*nb
-func updateTrailingQRT(Y1, Y2, C1, C2, T, W *matrix.FloatMatrix, nb int) {
-    if W.Rows() != C1.Cols() {
-        panic("W.Rows != C1.Cols")
+func updateWithQT(C1, C2, Y1, Y2, T, W *matrix.FloatMatrix, nb int, transpose bool) {
+
+    if transpose && W.Rows() != C1.Cols() {
+        panic(fmt.Sprintf("W.Rows [%d] != C1.Cols [%d]", W.Rows(), C1.Cols()))
+    } else if W.Rows() != C1.Rows() {
+        panic(fmt.Sprintf("W.Rows [%d] != C1.Rows [%d]", W.Rows(), C1.Rows()))
     }
+
     // W = C1.T
     ScalePlus(W, C1, 0.0, 1.0, TRANSB)
     // W = C1.T*Y1
@@ -269,10 +278,15 @@ func updateTrailingQRT(Y1, Y2, C1, C2, T, W *matrix.FloatMatrix, nb int) {
     Mult(W, C2, Y2, 1.0, 1.0, TRANSA)
 
     // --- here: W == C.T*Y ---
-    // W = W*T
-    MultTrm(W, T, 1.0, UPPER|RIGHT)
+    tflags := UPPER|RIGHT 
+    if ! transpose {
+        tflags |= TRANSA
+    }
+    // W = W*T or W*T.T
+    MultTrm(W, T, 1.0, Flags(tflags))
 
-    // --- here: W == C.T*Y*T ---
+    // --- here: W == C.T*Y*T or C.T*Y*T.T ---
+
     // C2 = C2 - Y2*W.T
     Mult(C2, Y2, W, -1.0, 1.0, TRANSB)
     //  W = Y1*W.T ==> W.T = W*Y1.T
@@ -295,10 +309,10 @@ func blockedQRT(A, T, W *matrix.FloatMatrix, nb int) {
 
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR, A, 0, pTOPLEFT)
+        &ABL, &ABR, A, 0, 0, pTOPLEFT)
     partition2x2(
         &TTL, &TTR,
-        &TBL, &TBR, T, 0, pTOPLEFT)
+        &TBL, &TBR, T, 0, 0, pTOPLEFT)
     partition2x1(
         &WT,
         &WB,  W, 0, pTOP)
@@ -332,8 +346,8 @@ func blockedQRT(A, T, W *matrix.FloatMatrix, nb int) {
         unblockedQRT(&AL, &T11)
 
         // update A'tail i.e. A12 and A22 with (I - Y*T*Y.T).T * A'tail
-        // compute: C - Y*(C.T*Y*T).T
-        updateTrailingQRT(&A11, &A21, &A12, &A22, &T11, &W2, cb)
+        // compute: Q*T.C == C - Y*(C.T*Y*T).T
+        updateWithQT(&A12, &A22, &A11, &A21, &T11, &W2, cb, true)
 
         // update T01: T01 = -T00*Y1.T*Y2*T11 
         //  Y1 = /A10\   Y2 = /A11\
@@ -488,10 +502,9 @@ func BuildT(T, A, tau *matrix.FloatMatrix) (*matrix.FloatMatrix, error) {
         return nil, errors.New("reflector matrix T too small")
     }
 
-    unblkQRBlockReflector(A, tau, T)
+    unblkQRBlockReflector(T, A, tau)
     return T, err
 }
-
 
 // Local Variables:
 // tab-width: 4
