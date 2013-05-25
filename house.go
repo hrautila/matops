@@ -4,6 +4,7 @@ package matops
 import (
     "github.com/hrautila/matrix"
     "math"
+    //"fmt"
 )
 
 func zeroDims(a *matrix.FloatMatrix) bool {
@@ -97,6 +98,7 @@ func computeHouseholder(a11, x, tau *matrix.FloatMatrix, flags Flags) {
  *             w1 := tau*(a1 + A2.T*v) if side == LEFT
  *                := tau*(a1 + A2*v)   if side == RIGHT
  *
+ * Allocates/frees intermediate work space matrix w1.
  */
 func applyHouseholder(tau, v, a1, A2 *matrix.FloatMatrix, flags Flags) {
 
@@ -123,19 +125,63 @@ func applyHouseholder(tau, v, a1, A2 *matrix.FloatMatrix, flags Flags) {
     MVRankUpdate(A2, v, w1, -1.0)
 }
 
-func applyHouseholder0(tau, v, A2 *matrix.FloatMatrix, flags Flags) {
+/* 
+ * Applies a real elementary reflector H to a real m by n matrix A,
+ * from either the left or the right. H is represented in the form
+ *
+ *       H = I - tau * ( 1 ) * ( 1 v.T )
+ *                     ( v )
+ *
+ * where tau is a real scalar and v is a real vector.
+ *
+ * If tau = 0, then H is taken to be the unit matrix.
+ *
+ * A is /a1\   a1 := a1 - w1
+ *      \A2/   A2 := A2 - v*w1
+ *             w1 := tau*(a1 + A2.T*v) if side == LEFT
+ *                := tau*(a1 + A2*v)   if side == RIGHT
+ *
+ * Intermediate work space w1 required as parameter, no allocation.
+ */
+ func applyHHTo2x1(tau, v, a1, A2, w1 *matrix.FloatMatrix, flags Flags) {
 
     tval := tau.GetAt(0, 0)
     if tval == 0.0 {
         return
     }
-    w1 := matrix.FloatZeros(A2.Cols(), 1)
+
+    // maybe with Scale(0.0), Axpy(w1, a1, 1.0)
+    a1.CopyTo(w1)
     if flags & LEFT != 0 {
-        // w1 = A2.T*v
+        // w1 = a1 + A2.T*v
         MVMult(w1, A2, v, 1.0, 1.0, TRANSA)
     } else {
-        // w1 = A2*v
+        // w1 = a1 + A2*v
         MVMult(w1, A2, v, 1.0, 1.0, NOTRANS)
+    }
+
+    // w1 = tau*w1
+    Scale(w1, tval)
+
+    // a1 = a1 - w1
+    a1.Minus(w1)
+
+    // A2 = A2 - v*w1
+    MVRankUpdate(A2, v, w1, -1.0)
+}
+
+func applyHHTo1x1(tau, v, A2, w1 *matrix.FloatMatrix, flags Flags) {
+
+    tval := tau.GetAt(0, 0)
+    if tval == 0.0 {
+        return
+    }
+    if flags & LEFT != 0 {
+        // w1 = A2.T*v
+        MVMult(w1, A2, v, 1.0, 0.0, TRANSA)
+    } else {
+        // w1 = A2*v
+        MVMult(w1, A2, v, 1.0, 0.0, NOTRANS)
     }
 
     // A2 = A2 - tau*v*w1
