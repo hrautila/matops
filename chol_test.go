@@ -15,9 +15,9 @@ import (
 
 
 func TestUpperCHOL(t *testing.T) {
-	N := 7
-    K := 6
-    nb := 4
+	N := 60
+    K := 30
+    nb := 16
     Z := matrix.FloatUniform(N, N)
 	A := matrix.Times(Z, Z.Transpose())
 	B := matrix.FloatUniform(N, K)
@@ -39,9 +39,9 @@ func TestUpperCHOL(t *testing.T) {
 
 
 func TestLowerCHOL(t *testing.T) {
-    N := 40
-	K := 18
-    nb := 8
+    N := 60
+	K := 30
+    nb := 16
     Z := matrix.FloatUniform(N, N)
 	A := matrix.Times(Z, Z.Transpose())
 	B := matrix.FloatUniform(N, K)

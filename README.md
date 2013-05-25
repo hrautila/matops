@@ -37,14 +37,17 @@ Supported functionality is:
 
   Lapack
   
-    DecomposeLUnoPiv(A, nb)	LU factorization without pivoting
-    DecomposeLU(A, pivots, nb)	LU factorization with pivoting (DGETRF)
-    DecomposeCHOL(A, nb)	Cholesky factorization (DPOTRF)
-    DecomposeQR(A, tau, nb)	QR factorization (DGEQRF)
-    DecomposeQRT(A, T, W, nb)	QR factorization with block reflectors
-    BuildT(T, A, tau)		Build block reflector T from elementary reflectors (DLARFT)
-    SolveCHOL(B, A, flags)	Solve Cholesky factorized linear system (DPOTRS)
-    SolveLU(B, A, pivots,flgs)  Solve LU factorized linear system (DGETRS)
+    DecomposeLUnoPiv(A, nb)       LU factorization without pivoting
+    DecomposeLU(A, pivots, nb)    LU factorization with pivoting (DGETRF)
+    DecomposeCHOL(A, nb)          Cholesky factorization (DPOTRF)
+    DecomposeQR(A, tau, nb)       QR factorization (DGEQRF)
+    DecomposeQRT(A, T, W, nb)     QR factorization with block reflectors, compact WY
+    MultQ(C, A, tau, W, flgs, nb) Multiply by Q  (DORMQR)
+    MultQT(C, A, T, W, flgs, nb)  Multiply by Q, compact WY version
+    BuildT(T, A, tau)             Build block reflector T from elementary reflectors (DLARFT)
+    SolveCHOL(B, A, flags)        Solve Cholesky factorized linear system (DPOTRS)
+    SolveLU(B, A, pivots,flags)   Solve LU factorized linear system (DGETRS)
+    InverseTrm(A, flags, nb)      Inverse tridiagonal matrix (DTRTRI)
 
   Support functions
 

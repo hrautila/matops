@@ -14,12 +14,11 @@ import (
 
 
 func TestLU(t *testing.T) {
-	M := 40
-	N := 40
-	K := 18
-	nb := 8
-	A := matrix.FloatUniform(M, N)
-	B := matrix.FloatUniform(M, K)
+	N := 60
+	K := 30
+	nb := 12
+	A := matrix.FloatUniform(N, N)
+	B := matrix.FloatUniform(N, K)
 	X := B.Copy()
 	piv := make([]int, N, N)
 
