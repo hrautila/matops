@@ -21,7 +21,7 @@ func unblockedCHOL(A *matrix.FloatMatrix, flags Flags, nr int) (err error) {
     err = nil
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR,   A, 0, pTOPLEFT)
+        &ABL, &ABR,   A, 0, 0, pTOPLEFT)
 
     for ATL.Rows() < A.Rows() {
         repartition2x2to3x3(&ATL,
@@ -63,7 +63,7 @@ func blockedCHOL(A *matrix.FloatMatrix, flags Flags, nb int) error {
     err = nil
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR,   A, 0, pTOPLEFT)
+        &ABL, &ABR,   A, 0, 0, pTOPLEFT)
 
     for ATL.Rows() < A.Rows() && ATL.Cols() < A.Cols() {
         repartition2x2to3x3(&ATL,

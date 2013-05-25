@@ -34,7 +34,10 @@ const (
 
  Parameter nb is initial block size for AT (pTOP) or AB (pBOTTOM).  
  */
-func partition2x1(AT, AB, A *matrix.FloatMatrix, nb, side int) {
+func partition2x1(AT, AB, A *matrix.FloatMatrix, nb int, side pDirection) {
+    if nb > A.Rows() {
+        nb = A.Rows()
+    }
     switch (side) {
     case pTOP:
         AT.SubMatrixOf(A, 0, 0, nb, A.Cols())
@@ -54,17 +57,20 @@ func partition2x1(AT, AB, A *matrix.FloatMatrix, nb, side int) {
                    A2                     A2
 
  */
-func repartition2x1to3x1(AT, A0, A1, A2, A *matrix.FloatMatrix, nb, pdir int) {
+func repartition2x1to3x1(AT, A0, A1, A2, A *matrix.FloatMatrix, nb int, pdir pDirection) {
     nT := AT.Rows()
-    if nT + nb > A.Rows() {
-        nb = A.Rows() - nT
-    }
     switch (pdir) {
     case pBOTTOM:
+        if nT + nb > A.Rows() {
+            nb = A.Rows() - nT
+        }
         A0.SubMatrixOf(A, 0,     0, nT, A.Cols())
         A1.SubMatrixOf(A, nT,    0, nb, A.Cols())
         A2.SubMatrixOf(A, nT+nb, 0, A.Rows()-nT-nb, A.Cols())
     case pTOP:
+        if nT < nb {
+            nb = nT
+        }
         A0.SubMatrixOf(A, 0,     0, nT-nb, A.Cols())
         A1.SubMatrixOf(A, nT-nb, 0, nb,    A.Cols())
         A2.SubMatrixOf(A, nT,    0, A.Rows()-nT, A.Cols())
@@ -80,7 +86,7 @@ func repartition2x1to3x1(AT, A0, A1, A2, A *matrix.FloatMatrix, nb, pdir int) {
                    A2                     A2
 
  */
-func continue3x1to2x1(AT, AB, A0, A1, A *matrix.FloatMatrix, pdir int) {
+func continue3x1to2x1(AT, AB, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
     n0 := A0.Rows()
     n1 := A1.Rows()
     switch (pdir) {
@@ -102,7 +108,10 @@ func continue3x1to2x1(AT, AB, A0, A1, A *matrix.FloatMatrix, pdir int) {
 
  Parameter nb is initial block size for AL (pLEFT) or AR (pRIGHT).  
  */
-func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, side int) {
+func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, side pDirection) {
+    if nb > A.Cols() {
+        nb = A.Cols()
+    }
     switch (side) {
     case pLEFT:
         AL.SubMatrixOf(A, 0, 0, A.Rows(), nb)
@@ -123,7 +132,7 @@ func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, side int) {
 
  Parameter As is left or right block of original 1x2 block.
  */
-func repartition1x2to1x3(AL, A0, A1, A2, A *matrix.FloatMatrix, nb int, pdir int) {
+func repartition1x2to1x3(AL, A0, A1, A2, A *matrix.FloatMatrix, nb int, pdir pDirection) {
     k := AL.Cols()
     if k + nb > A.Cols() {
         nb = A.Cols() - k
@@ -149,7 +158,7 @@ func repartition1x2to1x3(AL, A0, A1, A2, A *matrix.FloatMatrix, nb int, pdir int
  pLEFT:  AL | AR  <--  A0 | A1 A2 
 
  */
-func continue1x3to1x2(AL, AR, A0, A1, A *matrix.FloatMatrix, pdir int) {
+func continue1x3to1x2(AL, AR, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
 
     k := A0.Cols()
     nb := A1.Cols()
@@ -175,16 +184,20 @@ func continue1x3to1x2(AL, AR, A0, A1, A *matrix.FloatMatrix, pdir int) {
   A  -->   =========
            ABL | ABR
 
- Parameter nb is initial block size for ATL. 
+ Parameter nb is initial block size for ATL in column direction and mb in row direction. 
  */
-func partition2x2(ATL, ATR, ABL, ABR, A *matrix.FloatMatrix, nb int, side int) {
+func partition2x2(ATL, ATR, ABL, ABR, A *matrix.FloatMatrix, mb, nb int, side pDirection) {
     switch (side) {
     case pTOPLEFT:
-        ATL.SubMatrixOf(A, 0, 0,  nb, nb)
-        ATR.SubMatrixOf(A, 0, nb, nb, A.Cols()-nb)
-        ABL.SubMatrixOf(A, nb, 0, A.Rows()-nb, nb)
-        ABR.SubMatrixOf(A, nb, nb)
+        ATL.SubMatrixOf(A, 0, 0,  mb, nb)
+        ATR.SubMatrixOf(A, 0, nb, mb, A.Cols()-nb)
+        ABL.SubMatrixOf(A, mb, 0, A.Rows()-mb, nb)
+        ABR.SubMatrixOf(A, mb, nb)
     case pBOTTOMRIGHT:
+        ATL.SubMatrixOf(A, 0, 0,  A.Rows()-mb, A.Cols()-nb)
+        ATR.SubMatrixOf(A, 0, A.Cols()-nb, A.Rows()-mb, nb)
+        ABL.SubMatrixOf(A, A.Rows()-mb, 0, mb, nb)
+        ABR.SubMatrixOf(A, A.Rows()-mb, A.Cols()-nb)
     }
 }
 
@@ -202,14 +215,14 @@ func partition2x2(ATL, ATR, ABL, ABR, A *matrix.FloatMatrix, nb int, side int) {
  
  */
 func repartition2x2to3x3(ATL, 
-    A00, A01, A02, A10, A11, A12, A20, A21, A22, A *matrix.FloatMatrix, nb int, pdir int) {
+    A00, A01, A02, A10, A11, A12, A20, A21, A22, A *matrix.FloatMatrix, nb int, pdir pDirection) {
 
     k := ATL.Rows()
-    if k + nb > A.Cols() {
-        nb = A.Cols() - k
-    }
     switch (pdir) {
     case pBOTTOMRIGHT:
+        if k + nb > A.Cols() {
+            nb = A.Cols() - k
+        }
         A00.SubMatrixOf(A, 0, 0,    k, k)
         if A01 != nil {
             A01.SubMatrixOf(A, 0, k,    k, nb)
@@ -234,7 +247,33 @@ func repartition2x2to3x3(ATL,
         }
         A22.SubMatrixOf(A, k+nb, k+nb)
     case pTOPLEFT:
+        if nb > k {
+            nb = k
+        }
         // move towards top left corner
+        A00.SubMatrixOf(A, 0, 0,    k-nb, k-nb)
+        if A01 != nil {
+            A01.SubMatrixOf(A, 0, k-nb, k-nb, nb)
+        }
+        if A02 != nil {
+            A02.SubMatrixOf(A, 0, k, k-nb, A.Cols()-k)
+        }
+
+        if A10 != nil {
+            A10.SubMatrixOf(A, k-nb, 0, nb, k-nb)
+        }
+        A11.SubMatrixOf(A, k-nb, k-nb,  nb, nb)
+        if A12 != nil {
+            A12.SubMatrixOf(A, k-nb, k, nb, A.Cols()-k)
+        }
+
+        if A20 != nil {
+            A20.SubMatrixOf(A, k, 0,    A.Rows()-k, k-nb)
+        }
+        if A21 != nil {
+            A21.SubMatrixOf(A, k, k-nb, A.Rows()-k, nb)
+        }
+        A22.SubMatrixOf(A, k, k)
     }
 }
 
@@ -251,7 +290,7 @@ func repartition2x2to3x3(ATL,
  */
 func continue3x3to2x2(
     ATL, ATR, ABL, ABR, 
-    A00, A11, A22, A *matrix.FloatMatrix, pdir int) {
+    A00, A11, A22, A *matrix.FloatMatrix, pdir pDirection) {
 
     k := A00.Rows()
     mb := A11.Cols()
@@ -263,6 +302,11 @@ func continue3x3to2x2(
         ABL.SubMatrixOf(A, k+mb, 0, A.Rows()-k-mb, k+mb)
         ABR.SubMatrixOf(A, k+mb, k+mb)
     case pTOPLEFT:
+        ATL.SubMatrixOf(A, 0, 0,    k, k)
+        ATR.SubMatrixOf(A, 0, k, k, A.Cols()-k)
+
+        ABL.SubMatrixOf(A, k, 0, A.Rows()-k, A.Cols()-k)
+        ABR.SubMatrixOf(A, k, k)
     }
 }
 
@@ -281,7 +325,7 @@ type pPivots struct {
 
  Parameter nb is initial block size for pT (pTOP) or pB (pBOTTOM).  
  */
-func partitionPivot2x1(pT, pB, p *pPivots, nb, pdir int) {
+func partitionPivot2x1(pT, pB, p *pPivots, nb int, pdir pDirection) {
     switch (pdir) {
     case pTOP:
         if nb == 0 {
@@ -310,7 +354,7 @@ func partitionPivot2x1(pT, pB, p *pPivots, nb, pdir int) {
                    p2                     p2
 
  */
-func repartPivot2x1to3x1(pT, p0, p1, p2, p *pPivots, nb, pdir int) {
+func repartPivot2x1to3x1(pT, p0, p1, p2, p *pPivots, nb int, pdir pDirection) {
     nT := len(pT.pivots)
     if nT + nb > len(p.pivots) {
         nb = len(p.pivots) - nT
@@ -336,7 +380,7 @@ func repartPivot2x1to3x1(pT, p0, p1, p2, p *pPivots, nb, pdir int) {
                    p2                     p2
 
  */
-func contPivot3x1to2x1(pT, pB, p0, p1, p *pPivots, pdir int) {
+func contPivot3x1to2x1(pT, pB, p0, p1, p *pPivots, pdir pDirection) {
     var n0, n1 int
     n0 = len(p0.pivots)
     n1 = len(p1.pivots)

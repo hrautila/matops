@@ -44,7 +44,7 @@ func unblockedLUnoPiv(A *matrix.FloatMatrix) (err error) {
     err = nil
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR,   A, 0, pTOPLEFT)
+        &ABL, &ABR,   A, 0, 0, pTOPLEFT)
 
     for ATL.Rows() < A.Rows() {
         repartition2x2to3x3(&ATL,
@@ -74,7 +74,7 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     err = nil
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR,   A, 0, pTOPLEFT)
+        &ABL, &ABR,   A, 0, 0, pTOPLEFT)
 
     for ATL.Rows() < A.Rows() {
         repartition2x2to3x3(&ATL,
@@ -139,7 +139,7 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
     err = nil
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR, A, 0, pTOPLEFT)
+        &ABL, &ABR, A, 0, 0, pTOPLEFT)
     partition1x2(
         &AL, &AR, A, 0, pLEFT)
     partitionPivot2x1(
@@ -209,12 +209,12 @@ func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
     err = nil
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR, A, 0, pTOPLEFT)
+        &ABL, &ABR,    A, 0, 0, pTOPLEFT)
     partition1x2(
-        &AL, &AR, A, 0, pLEFT)
+        &AL, &AR,      A, 0, pLEFT)
     partitionPivot2x1(
         &pT,
-        &pB, p, 0, pTOP)
+        &pB,     p, 0, pTOP)
 
     for ATL.Rows() < A.Rows() && ATL.Cols() < A.Cols() {
         repartition2x2to3x3(&ATL,
