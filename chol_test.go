@@ -32,9 +32,9 @@ func TestUpperCHOL(t *testing.T) {
 	// B = B - A*X
 	Mult(B, A, X, -1.0, 1.0, NONE)
 
-	// ||B - A*X||_2
-	nrm := Norm2(matrix.FloatVector(B.FloatArray()))
-	t.Logf("||B - A*X||_2: %e\n", nrm)
+	// ||B - A*X||_1
+	nrm := NormP(B, NORM_ONE)
+	t.Logf("||B - A*X||_1: %e\n", nrm)
 }
 
 
@@ -56,9 +56,8 @@ func TestLowerCHOL(t *testing.T) {
 	// B = B - A*X
 	Mult(B, A, X, -1.0, 1.0, NONE)
 
-	// ||B - A*X||_2
-	nrm := Norm2(matrix.FloatVector(B.FloatArray()))
-	t.Logf("||B - A*X||_2: %e\n", nrm)
+	nrm := NormP(B, NORM_ONE)
+	t.Logf("||B - A*X||_1: %e\n", nrm)
 }
 
 
