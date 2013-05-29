@@ -167,7 +167,11 @@ func applyHouseholder(tau, v, a1, A2 *matrix.FloatMatrix, flags Flags) {
     a1.Minus(w1)
 
     // A2 = A2 - v*w1
-    MVRankUpdate(A2, v, w1, -1.0)
+    if flags & LEFT != 0 {
+        MVRankUpdate(A2, v, w1, -1.0)
+    } else {
+        MVRankUpdate(A2, w1, v, -1.0)
+    }
 }
 
 func applyHHTo1x1(tau, v, A2, w1 *matrix.FloatMatrix, flags Flags) {
