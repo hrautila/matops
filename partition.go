@@ -99,7 +99,17 @@ func continue3x1to2x1(AT, AB, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
     }
 }
 
+/*
+ Merge 1 by 1 block from 2 by 1 block.
+ 
+          AT  
+ Abkl <-- --  
+          AB  
 
+ */
+func merge2x1(ABLK, AT, AB *matrix.FloatMatrix) {
+    ABLK.SubMatrixOf(AT, 0, 0, AT.Rows()+AB.Rows(), AT.Cols())
+}
 
 /*
  Partition A to 1 by 2 blocks.
@@ -114,11 +124,11 @@ func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, side pDirection) {
     }
     switch (side) {
     case pLEFT:
-        AL.SubMatrixOf(A, 0, 0, A.Rows(), nb)
+        AL.SubMatrixOf(A, 0, 0,  A.Rows(), nb)
         AR.SubMatrixOf(A, 0, nb, A.Rows(), A.Cols()-nb)
     case pRIGHT:
-        AL.SubMatrixOf(A, 0, nb, A.Rows(), A.Cols()-nb)
-        AR.SubMatrixOf(A, 0, A.Cols()-1-nb, nb, A.Rows())
+        AL.SubMatrixOf(A, 0, 0,           A.Rows(), A.Cols()-nb)
+        AR.SubMatrixOf(A, 0, A.Cols()-nb, A.Rows(), nb)
     }
 }
 
@@ -134,20 +144,23 @@ func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, side pDirection) {
  */
 func repartition1x2to1x3(AL, A0, A1, A2, A *matrix.FloatMatrix, nb int, pdir pDirection) {
     k := AL.Cols()
-    if k + nb > A.Cols() {
-        nb = A.Cols() - k
-    }
     switch (pdir) {
     case pRIGHT:
+        if k + nb > A.Cols() {
+            nb = A.Cols() - k
+        }
         // A0 is AL; [A1; A2] is AR
         A0.SubMatrixOf(A, 0, 0,    A.Rows(), k)
         A1.SubMatrixOf(A, 0, k,    A.Rows(), nb)
         A2.SubMatrixOf(A, 0, k+nb, A.Rows(), A.Cols()-nb-k)
     case pLEFT:
+        if nb > k {
+            nb = k
+        }
         // A2 is AR; [A0; A1] is AL
-        A0.SubMatrixOf(A, 0, 0, A.Rows(), k-nb)
-        A1.SubMatrixOf(A, 0, A.Cols()-k-nb, A.Rows(), nb)
-        A2.SubMatrixOf(A, 0, A.Cols()-k,    A.Rows(), A.Cols()-k)
+        A0.SubMatrixOf(A, 0, 0,    A.Rows(), k-nb)
+        A1.SubMatrixOf(A, 0, k-nb, A.Rows(), nb)
+        A2.SubMatrixOf(A, 0, k,    A.Rows(), A.Cols()-k)
     }
 }
 
@@ -165,15 +178,12 @@ func continue1x3to1x2(AL, AR, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
     switch (pdir) {
     case pRIGHT:
         // AL is [A0; A1], AR is A2
-        AL.SubMatrixOf(A, 0, 0, A.Rows(), k+nb)
+        AL.SubMatrixOf(A, 0, 0,         A.Rows(), k+nb)
         AR.SubMatrixOf(A, 0, AL.Cols(), A.Rows(), A.Cols()-AL.Cols())
     case pLEFT:
         // AL is A0; AR is [A1; A2]
-        if k - nb < 0 {
-            nb = k
-        }
         AL.SubMatrixOf(A, 0, 0, A.Rows(), k)
-        AR.SubMatrixOf(A, 0, AL.Cols()-1, A.Rows(), A.Cols()-AL.Cols())
+        AR.SubMatrixOf(A, 0, k, A.Rows(), A.Cols()-k)
     }
 }
 
