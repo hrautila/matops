@@ -164,7 +164,7 @@ func MVRankUpdate2Sym(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) e
 //   UPPER  A is upper tridiagonal
 //   UNIT   A diagonal is unit
 //   TRANSA A is transpose
-func MVSolve(X, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
+func MVSolveTrm(X, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
     if A.Rows() == 0 || A.Cols() == 0 {
         return nil
@@ -310,6 +310,41 @@ func Norm2(X *matrix.FloatMatrix) float64 {
         incX = X.LeadingIndex()
     }
     return calgo.DNorm2(Xr, incX, X.NumElements())
+}
+
+// sum(|x|)
+func ASum(X *matrix.FloatMatrix) float64 {
+    if X == nil {
+        return math.NaN()
+    }
+    if !isVector(X)  {
+        return math.NaN()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    return calgo.DAsum(Xr, incX, X.NumElements())
+}
+
+// max |x|
+func AMax(X *matrix.FloatMatrix) float64 {
+    if X == nil {
+        return math.NaN()
+    }
+    if !isVector(X)  {
+        return math.NaN()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    ix := calgo.DIAMax(Xr, incX, X.NumElements())
+    return X.GetIndex(ix)
 }
 
 // Inverse scaling of vector. X = X / alpha.
