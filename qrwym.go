@@ -31,25 +31,28 @@ func unblockedMultQLeft(C, A, tau, w *matrix.FloatMatrix, flags Flags) {
     var CT, CB, C0, c1t, C2 matrix.FloatMatrix
     var tT, tB matrix.FloatMatrix
     var t0, tau1, t2  matrix.FloatMatrix
+
     var Aref *matrix.FloatMatrix
     var pAdir, pAstart, pDir, pStart pDirection
     var mb int
 
     // partitioning start and direction
     if flags & TRANS != 0 {
+        // from top-left to bottom-right to produce transposed sequence (Q.T*C)
         pAstart = pTOPLEFT
         pAdir   = pBOTTOMRIGHT
         pStart  = pTOP
         pDir    = pBOTTOM
-        mb = 0
-        Aref = &ABR
+        mb      = 0
+        Aref    = &ABR
     } else {
+        // from bottom-right to top-left to produce normal sequence (Q*C)
         pAstart = pBOTTOMRIGHT
         pAdir   = pTOPLEFT
         pStart  = pBOTTOM
         pDir    = pTOP
-        mb    = C.Rows() - C.Cols()
-        Aref = &ATL
+        mb      = A.Rows() - A.Cols()
+        Aref    = &ATL
     }
 
     partition2x2(
@@ -60,7 +63,7 @@ func unblockedMultQLeft(C, A, tau, w *matrix.FloatMatrix, flags Flags) {
         &CB,    C, mb, pStart)
     partition2x1(
         &tT,
-        &tB,  tau, 0, pStart)
+        &tB,    tau, 0, pStart)
 
     for Aref.Rows() > 0 && Aref.Cols() > 0 {
         repartition2x2to3x3(&ATL,
@@ -70,7 +73,7 @@ func unblockedMultQLeft(C, A, tau, w *matrix.FloatMatrix, flags Flags) {
         repartition2x1to3x1(&CT,
             &C0,
             &c1t,
-            &C2,     C, 1, pDir)
+            &C2,     C,   1, pDir)
         repartition2x1to3x1(&tT,
             &t0,
             &tau1,
@@ -86,25 +89,53 @@ func unblockedMultQLeft(C, A, tau, w *matrix.FloatMatrix, flags Flags) {
             &ABL, &ABR,   &A00, &a11, &A22,   A, pAdir)
         continue3x1to2x1(
             &CT,
-            &CB,   &C0, &c1t,   C, pDir)
+            &CB,    &C0, &c1t,    C, pDir)
         continue3x1to2x1(
             &tT,
-            &tB,   &t0, &tau1,   tau, pDir)
+            &tB,    &t0, &tau1,   tau, pDir)
     }
 }
 
+/*
+ * Unblocked algorith for computing C = C*Q.T and C = C*Q.
+ *
+ * Q = H(1)H(2)...H(k) where elementary reflectors H(i) are stored on i'th column
+ * below diagonal in A.
+ *
+ *     Q.T = (H1(1)*H(2)*...*H(k)).T
+ *         = H(k).T*...*H(2).T*H(1).T
+ *         = H(k)...H(2)H(1)
+ *
+ * Progressing A from top-left to bottom-right i.e from smaller column numbers
+ * to larger, produces C*H(1)H(2)...H(k) == C*Q.
+ *
+ * Progressing from bottom-right to top-left produces C*H(k)...H(2)H(1) == C*Q.T.
+ */
 func unblockedMultQRight(C, A, tau, w *matrix.FloatMatrix, flags Flags) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
     var A00, a10, a11, A20, a21, A22 matrix.FloatMatrix
     var CL, CR, C0, c1, C2 matrix.FloatMatrix
     var tT, tB matrix.FloatMatrix
     var t0, tau1, t2  matrix.FloatMatrix
+
     var Aref *matrix.FloatMatrix
     var pAdir, pAstart, pDir, pStart, pCstart, pCdir pDirection
-    var mb int
+    var cb, mb int
 
     // partitioning start and direction
     if flags & TRANS != 0 {
+        // from bottom-right to top-left to produce transpose sequence (C*Q.T)
+        pAstart = pBOTTOMRIGHT
+        pAdir   = pTOPLEFT
+        pStart  = pBOTTOM
+        pDir    = pTOP
+        pCstart = pRIGHT
+        pCdir   = pLEFT
+        mb      = A.Rows() - A.Cols()
+        cb      = C.Cols() - A.Cols()
+        Aref = &ATL
+    } else {
+        // from top-left to bottom-right to produce normal sequence (C*Q)
         pAstart = pTOPLEFT
         pAdir   = pBOTTOMRIGHT
         pStart  = pTOP
@@ -112,23 +143,15 @@ func unblockedMultQRight(C, A, tau, w *matrix.FloatMatrix, flags Flags) {
         pCstart = pLEFT
         pCdir   = pRIGHT
         mb = 0
+        cb = 0
         Aref = &ABR
-    } else {
-        pAstart = pBOTTOMRIGHT
-        pAdir   = pTOPLEFT
-        pStart  = pBOTTOM
-        pDir    = pTOP
-        pCstart = pRIGHT
-        pCdir   = pLEFT
-        mb    = C.Rows() - C.Cols()
-        Aref = &ATL
     }
 
     partition2x2(
         &ATL, &ATR,
         &ABL, &ABR,  A, mb, 0, pAstart)
     partition1x2(
-        &CL, &CR,    C, 0, pCstart)
+        &CL, &CR,    C, cb, pCstart)
     partition2x1(
         &tT,
         &tB,  tau, 0, pStart)
@@ -153,11 +176,11 @@ func unblockedMultQRight(C, A, tau, w *matrix.FloatMatrix, flags Flags) {
         continue3x3to2x2(
             &ATL, &ATR,
             &ABL, &ABR,   &A00, &a11, &A22,   A, pAdir)
-        continue3x1to2x1(
-            &CL, &CR,   &C0, &c1,   C, pCdir)
+        continue1x3to1x2(
+            &CL, &CR,     &C0, &c1,           C, pCdir)
         continue3x1to2x1(
             &tT,
-            &tB,   &t0, &tau1,   tau, pDir)
+            &tB,          &t0, &tau1,         tau, pDir)
     }
 }
 
@@ -170,64 +193,184 @@ func unblockedMultQRight(C, A, tau, w *matrix.FloatMatrix, flags Flags) {
  * Matrix C is updated by applying block reflector T using compact WY algorithm.
  */
 func blockedMultQLeft(C, A, tau, W *matrix.FloatMatrix, nb int, flags Flags) {
-    var ATL, ATR, ABL, ABR, AL, AR matrix.FloatMatrix
+    var ATL, ATR, ABL, ABR, AL matrix.FloatMatrix
     var A00, A10, A11, A20, A21, A22 matrix.FloatMatrix
     var CT, CB, C0, C1, C2 matrix.FloatMatrix
     var tT, tB matrix.FloatMatrix
     var t0, tau1, t2  matrix.FloatMatrix
-    var Wrk matrix.FloatMatrix
+    var Wrk, Tw matrix.FloatMatrix
+
+    var Aref *matrix.FloatMatrix
+    var pAdir, pAstart, pDir, pStart pDirection
+    var bsz, mb int
+
+    // partitioning start and direction
+    if flags & TRANS != 0 || nb == A.Cols() {
+        // from top-left to bottom-right to produce transposed sequence (Q.T*C)
+        pAstart = pTOPLEFT
+        pAdir   = pBOTTOMRIGHT
+        pStart  = pTOP
+        pDir    = pBOTTOM
+        mb      = 0
+        Aref    = &ABR
+    } else {
+        // from bottom-right to top-left to produce normal sequence (Q*C)
+        pAstart = pBOTTOMRIGHT
+        pAdir   = pTOPLEFT
+        pStart  = pBOTTOM
+        pDir    = pTOP
+        mb      = A.Rows() - A.Cols()
+        Aref    = &ATL
+    }
 
     Twork := matrix.FloatZeros(nb, nb)
 
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR, A, 0, 0, pTOPLEFT)
+        &ABL, &ABR, A, mb, 0, pAstart)
     partition2x1(
         &CT,
-        &CB,  C, 0, pTOP)
+        &CB,    C, mb, pStart)
     partition2x1(
         &tT,
-        &tB,  tau, 0, pTOP)
+        &tB,    tau, 0, pStart)
 
     transpose := flags & TRANS != 0
 
-    for ABR.Rows() > 0 && ABR.Cols() > 0 {
+    for Aref.Rows() > 0 && Aref.Cols() > 0 {
         repartition2x2to3x3(&ATL,
             &A00, nil,  nil,
             &A10, &A11, nil,
-            &A20, &A21, &A22,   A, nb, pBOTTOMRIGHT)
-        repartition2x1to3x1(&CT,
-            &C0,
-            &C1,
-            &C2,     C, nb, pBOTTOM)
+            &A20, &A21, &A22,   A, nb, pAdir)
         repartition2x1to3x1(&tT,
             &t0,
             &tau1,
-            &t2,     tau, nb, pBOTTOM)
+            &t2,     tau, nb, pDir)
+        bsz = A11.Cols()
+        repartition2x1to3x1(&CT,
+            &C0,
+            &C1,
+            &C2,     C, bsz, pDir)
 
         // --------------------------------------------------------
-        // divide bottom right block to left and right
-        partition1x2(
-            &AL, &AR, &ABR, nb, pLEFT)
 
-        // build block reflector from left block
-        unblkQRBlockReflector(Twork, &AL, &tau1)
-
+        // build block reflector from current block
+        merge2x1(&AL, &A11, &A21)
+        Tw.SubMatrixOf(Twork, 0, 0, bsz, bsz)
+        unblkQRBlockReflector(&Tw, &AL, &tau1)
+                                                         
         // compute: Q*T.C == C - Y*(C.T*Y*T).T  transpose == true
         //          Q*C   == C - C*Y*T*Y.T      transpose == false
-        Wrk.SubMatrixOf(W, 0, 0, C1.Cols(), nb)
-        updateWithQT(&C1, &C2, &A11, &A21, Twork, &Wrk, nb, transpose)
+        Wrk.SubMatrixOf(W, 0, 0, C1.Cols(), bsz)
+        updateWithQT(&C1, &C2, &A11, &A21, &Tw, &Wrk, nb, transpose)
 
         // --------------------------------------------------------
         continue3x3to2x2(
             &ATL, &ATR,
-            &ABL, &ABR,   &A00, &A11, &A22,   A, pBOTTOMRIGHT)
+            &ABL, &ABR,   &A00, &A11, &A22,   A, pAdir)
         continue3x1to2x1(
             &CT,
-            &CB,   &C0, &C1,   C, pBOTTOM)
+            &CB,     &C0, &C1,     C, pDir)
         continue3x1to2x1(
             &tT,
-            &tB,   &t0, &tau1,   tau, pBOTTOM)
+            &tB,     &t0, &tau1,   tau, pDir)
+    }
+
+}
+
+/*
+ * Blocked version for computing C = C*Q and C = C*Q.T from elementary reflectors
+ * and scalar coefficients.
+ *
+ * Elementary reflectors and scalar coefficients are used to build block reflector T.
+ * Matrix C is updated by applying block reflector T using compact WY algorithm.
+ */
+func blockedMultQRight(C, A, tau, W *matrix.FloatMatrix, nb int, flags Flags) {
+    var ATL, ATR, ABL, ABR, AL matrix.FloatMatrix
+    var A00, A10, A11, A20, A21, A22 matrix.FloatMatrix
+    var CL, CR, C0, C1, C2 matrix.FloatMatrix
+    var tT, tB matrix.FloatMatrix
+    var t0, tau1, t2  matrix.FloatMatrix
+    var Wrk, Tw matrix.FloatMatrix
+
+    var Aref *matrix.FloatMatrix
+    var pAdir, pAstart, pDir, pStart, pCstart, pCdir pDirection
+    var bsz, cb, mb int
+
+    // partitioning start and direction
+    if flags & TRANS != 0 {
+        // from bottom-right to top-left to produce transpose sequence (C*Q.T)
+        pAstart = pBOTTOMRIGHT
+        pAdir   = pTOPLEFT
+        pStart  = pBOTTOM
+        pDir    = pTOP
+        pCstart = pRIGHT
+        pCdir   = pLEFT
+        mb      = A.Rows() - A.Cols()
+        cb      = C.Cols() - A.Cols()
+        Aref = &ATL
+    } else {
+        // from top-left to bottom-right to produce normal sequence (C*Q)
+        pAstart = pTOPLEFT
+        pAdir   = pBOTTOMRIGHT
+        pStart  = pTOP
+        pDir    = pBOTTOM
+        pCstart = pLEFT
+        pCdir   = pRIGHT
+        mb = 0
+        cb = 0
+        Aref = &ABR
+    }
+
+    Twork := matrix.FloatZeros(nb, nb)
+
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR, A, mb, 0, pAstart)
+    partition1x2(
+        &CL, &CR,   C, cb, pCstart)
+    partition2x1(
+        &tT,
+        &tB,        tau, 0, pStart)
+
+    transpose := flags & TRANS != 0
+
+    for Aref.Rows() > 0 && Aref.Cols() > 0 {
+        repartition2x2to3x3(&ATL,
+            &A00, nil,  nil,
+            &A10, &A11, nil,
+            &A20, &A21, &A22,   A, nb, pAdir)
+        repartition2x1to3x1(&tT,
+            &t0,
+            &tau1,
+            &t2,     tau, nb, pDir)
+
+        bsz = A11.Cols()        // C1 block size must match A11 
+        repartition1x2to1x3(&CL,
+            &C0, &C1, &C2 ,     C, bsz, pCdir)
+
+        // --------------------------------------------------------
+
+
+        // build block reflector from current block
+        merge2x1(&AL, &A11, &A21)
+        Tw.SubMatrixOf(Twork, 0, 0, bsz, bsz)
+        unblkQRBlockReflector(&Tw, &AL, &tau1)
+
+        // compute: C*Q.T == C - C*(Y*T*Y.T).T = C - C*Y*T.T*Y.T
+        //          C*Q   == C - C*Y*T*Y.T
+        Wrk.SubMatrixOf(W, 0, 0, C1.Rows(), bsz)
+        updateWithQTRight(&C1, &C2, &A11, &A21, &Tw, &Wrk, nb, transpose)
+
+        // --------------------------------------------------------
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR,   &A00, &A11, &A22,   A, pAdir)
+        continue1x3to1x2(
+            &CL,   &CR,   &C0, &C1,    C, pCdir)
+        continue3x1to2x1(
+            &tT,
+            &tB,   &t0, &tau1,   tau, pDir)
     }
 
 }
@@ -243,51 +386,162 @@ func blockedMultQTLeft(C, A, T, W *matrix.FloatMatrix, nb int, flags Flags) {
     var TTL, TTR, TBL, TBR matrix.FloatMatrix
     var T00, T01, T02, T11, T12, T22 matrix.FloatMatrix
 
+    var Aref *matrix.FloatMatrix
+    var pAdir, pAstart, pCdir, pCstart pDirection
+    var bsz, mb int
+
+    // partitioning start and direction
+    if flags & TRANS != 0 {
+        // from top-left to bottom-right to produce transposed sequence (Q.T*C)
+        pAstart = pTOPLEFT
+        pAdir   = pBOTTOMRIGHT
+        pCstart = pTOP
+        pCdir   = pBOTTOM
+        mb      = 0
+        Aref    = &ABR
+    } else {
+        // from bottom-right to top-left to produce normal sequence (Q*C)
+        pAstart = pBOTTOMRIGHT
+        pAdir   = pTOPLEFT
+        pCstart = pBOTTOM
+        pCdir   = pTOP
+        mb      = A.Rows() - A.Cols()
+        Aref    = &ATL
+    }
+
+
     partition2x2(
         &ATL, &ATR,
-        &ABL, &ABR,   A, 0, 0, pTOPLEFT)
+        &ABL, &ABR,   A, mb, 0, pAstart)
     partition2x2(
         &TTL, &TTR,
-        &TBL, &TBR,   T, 0, 0, pTOPLEFT)
+        &TBL, &TBR,   T, 0, 0, pAstart)
     partition2x1(
         &CT,
-        &CB,  C, 0, pTOP)
+        &CB,    C, mb, pCstart)
 
     transpose := flags & TRANS != 0
 
-    for ABR.Rows() > 0 && ABR.Cols() > 0 {
+    for Aref.Rows() > 0 && Aref.Cols() > 0 {
         repartition2x2to3x3(&ATL,
             &A00, nil,  nil,
             &A10, &A11, nil,
-            &A20, &A21, &A22,   A, nb, pBOTTOMRIGHT)
+            &A20, &A21, &A22,   A, nb, pAdir)
         repartition2x2to3x3(&TTL,
             &T00, &T01, &T02,
             nil,  &T11, &T12,
-            nil,  nil,  &T22,   T, nb, pBOTTOMRIGHT)
+            nil,  nil,  &T22,   T, nb, pAdir)
+
+        bsz = A11.Cols()        // must match A11 block size
         repartition2x1to3x1(&CT,
             &C0,
             &C1,
-            &C2,     C, nb, pBOTTOM)
+            &C2,     C, bsz, pCdir)
 
         // --------------------------------------------------------
 
-        // compute: Q*T.C == C - Y*(C.T*Y*T).T  transpose == true
+        // compute: Q.T*C == C - Y*(C.T*Y*T).T  transpose == true
         //          Q*C   == C - C*Y*T*Y.T      transpose == false
 
         var Wrk matrix.FloatMatrix
-        Wrk.SubMatrixOf(W, 0, 0, C1.Cols(), T11.Cols())
+        Wrk.SubMatrixOf(W, 0, 0, C1.Cols(), bsz)
         updateWithQT(&C1, &C2, &A11, &A21, &T11, &Wrk, nb, transpose)
 
         // --------------------------------------------------------
         continue3x3to2x2(
             &ATL, &ATR,
-            &ABL, &ABR,   &A00, &A11, &A22,   A, pBOTTOMRIGHT)
+            &ABL, &ABR,   &A00, &A11, &A22,   A, pAdir)
         continue3x3to2x2(
             &TTL, &TTR,
-            &TBL, &TBR,   &T00, &T11, &T22,   T, pBOTTOMRIGHT)
+            &TBL, &TBR,   &T00, &T11, &T22,   T, pAdir)
         continue3x1to2x1(
             &CT,
-            &CB,   &C0, &C1,   C, pBOTTOM)
+            &CB,   &C0, &C1,   C, pCdir)
+    }
+
+}
+
+
+/*
+ * Blocked version for computing C = C*Q and C = C*Q.T with block reflector.
+ *
+ */
+func blockedMultQTRight(C, A, T, W *matrix.FloatMatrix, nb int, flags Flags) {
+    var ATL, ATR, ABL, ABR matrix.FloatMatrix
+    var A00, A10, A11, A20, A21, A22 matrix.FloatMatrix
+    var CL, CR, C0, C1, C2 matrix.FloatMatrix
+    var TTL, TTR, TBL, TBR matrix.FloatMatrix
+    var T00, T01, T02, T11, T12, T22 matrix.FloatMatrix
+
+    var Aref *matrix.FloatMatrix
+    var pAdir, pAstart, pCstart, pCdir pDirection
+    var bsz, cb, mb int
+
+    // partitioning start and direction
+    if flags & TRANS != 0 {
+        // from bottom-right to top-left to produce transpose sequence (C*Q.T)
+        pAstart = pBOTTOMRIGHT
+        pAdir   = pTOPLEFT
+        pCstart = pRIGHT
+        pCdir   = pLEFT
+        mb      = A.Rows() - A.Cols()
+        cb      = C.Cols() - A.Cols()
+        Aref = &ATL
+    } else {
+        // from top-left to bottom-right to produce normal sequence (C*Q)
+        pAstart = pTOPLEFT
+        pAdir   = pBOTTOMRIGHT
+        pCstart = pLEFT
+        pCdir   = pRIGHT
+        mb = 0
+        cb = 0
+        Aref = &ABR
+    }
+
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR,   A, mb, 0, pAstart)
+    partition2x2(
+        &TTL, &TTR,
+        &TBL, &TBR,   T, 0, 0, pAstart)
+    partition1x2(
+        &CL, &CR,     C, cb, pCstart)
+
+    transpose := flags & TRANS != 0
+
+    //for ABR.Rows() > 0 && ABR.Cols() > 0 {
+    for Aref.Rows() > 0 && Aref.Cols() > 0 {
+        repartition2x2to3x3(&ATL,
+            &A00, nil,  nil,
+            &A10, &A11, nil,
+            &A20, &A21, &A22,   A, nb, pAdir)
+        repartition2x2to3x3(&TTL,
+            &T00, &T01, &T02,
+            nil,  &T11, &T12,
+            nil,  nil,  &T22,   T, nb, pAdir)
+
+        bsz = A11.Cols()
+        repartition1x2to1x3(&CL,
+            &C0,  &C1,  &C2,    C, bsz, pCdir)
+
+        // --------------------------------------------------------
+
+        // compute: C*Q.T == C - C*Y*T.T*Y.T   transpose == true
+        //          C*Q   == C - C*Y*T*Y.T     transpose == false
+
+        var Wrk matrix.FloatMatrix
+        Wrk.SubMatrixOf(W, 0, 0, C1.Rows(), bsz)
+        updateWithQTRight(&C1, &C2, &A11, &A21, &T11, &Wrk, nb, transpose)
+
+        // --------------------------------------------------------
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR,   &A00, &A11, &A22,   A, pAdir)
+        continue3x3to2x2(
+            &TTL, &TTR,
+            &TBL, &TBR,   &T00, &T11, &T22,   T, pAdir)
+        continue1x3to1x2(
+            &CL,  &CR,    &C0, &C1,           C, pCdir)
     }
 
 }
@@ -319,28 +573,42 @@ func blockedMultQTLeft(C, A, T, W *matrix.FloatMatrix, nb int, flags Flags) {
  */
 func MultQ(C, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
     var err error = nil
+    if nb != 0 && W == nil {
+        return errors.New("workspace not defined")
+    }
     if flags & RIGHT != 0 {
         if C.Cols() != A.Rows() {
             return errors.New("C*Q: C.Cols != A.Rows")
+        }
+        if nb != 0 && (W.Cols() < nb || W.Rows() < C.Rows()) {
+            return errors.New("workspace too small")
         }
     } else {
         // default is from LEFT
         if C.Rows() != A.Rows() {
             return errors.New("Q*C: C.Rows != A.Rows")
         }
-    }
-    if nb == 0 || C.Cols() < nb {
-        w := matrix.FloatZeros(1, C.Cols())
-        unblockedMultQLeft(C, A, tau, w, flags)
-    } else {
-        if W == nil {
-            return errors.New("workspace not defined")
-        } else if W.Cols() < nb || W.Rows() < C.Cols() {
+        if nb != 0 && (W.Cols() < nb || W.Rows() < C.Cols()) {
             return errors.New("workspace too small")
         }
+    }
+    if nb == 0 {
+        if flags & RIGHT != 0 {
+            w := matrix.FloatZeros(C.Rows(), 1)
+            unblockedMultQRight(C, A, tau, w, flags)
+        } else {
+            w := matrix.FloatZeros(1, C.Cols())
+            unblockedMultQLeft(C, A, tau, w, flags)
+        }
+    } else {
         var Wrk matrix.FloatMatrix
-        Wrk.SubMatrixOf(W, 0, 0, C.Cols(), nb)
-        blockedMultQLeft(C, A, tau, &Wrk, nb, flags)
+        if flags & RIGHT != 0 {
+            Wrk.SubMatrixOf(W, 0, 0, C.Rows(), nb)
+            blockedMultQRight(C, A, tau, &Wrk, nb, flags)
+        } else {
+            Wrk.SubMatrixOf(W, 0, 0, C.Cols(), nb)
+            blockedMultQLeft(C, A, tau, &Wrk, nb, flags)
+        }
     }
     return err
 }
@@ -362,7 +630,7 @@ func MultQ(C, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
  *
  *  T     The block reflector computed from elementary reflectors as returned by
  *        DecomposeQRT() or computed from elementary reflectors and scalar coefficients
- *        BuildT()
+ *        by BuildT()
  *
  *  W     Workspace, size C.Cols()-by-nb or C.Rows()-by-nb
  *
@@ -375,31 +643,40 @@ func MultQ(C, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
  */
 func MultQT(C, A, T, W *matrix.FloatMatrix, flags Flags, nb int) error {
     var err error = nil
+    if nb == 0  {
+        nb = T.Cols()
+    }
+    if W == nil {
+        return errors.New("workspace not defined")
+    }
     if flags & RIGHT != 0 {
         if C.Cols() != A.Rows() {
             return errors.New("C*Q: C.Cols != A.Rows")
+        }
+        if W.Cols() < nb || W.Rows() < C.Rows() {
+            return errors.New("workspace too small")
         }
     } else {
         // default is from LEFT
         if C.Rows() != A.Rows() {
             return errors.New("Q*C: C.Rows != A.Rows")
         }
-    }
-    if nb == 0  {
-        nb = T.Cols()
-    }
-    if W == nil {
-        return errors.New("workspace not defined")
-    } else if W.Cols() < nb || W.Rows() < C.Cols() {
-        return errors.New("workspace too small")
+        if W.Cols() < nb || W.Rows() < C.Cols() {
+            return errors.New("workspace too small")
+        }
     }
 
     var Wrk matrix.FloatMatrix
-    Wrk.SubMatrixOf(W, 0, 0, C.Cols(), nb)
-    blockedMultQTLeft(C, A, T, &Wrk, nb, flags)
-
+    if flags & RIGHT != 0 {
+        Wrk.SubMatrixOf(W, 0, 0, C.Rows(), nb)
+        blockedMultQTRight(C, A, T, &Wrk, nb, flags)
+    } else {
+        Wrk.SubMatrixOf(W, 0, 0, C.Cols(), nb)
+        blockedMultQTLeft(C, A, T, &Wrk, nb, flags)
+    }
     return err
 }
+
 
 // Local Variables:
 // tab-width: 4

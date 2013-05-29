@@ -10,7 +10,7 @@ package matops
 import (
     "github.com/hrautila/matrix"
     "errors"
-    "fmt"
+    //"fmt"
 )
 
 /*
@@ -264,11 +264,13 @@ func blockedQR(A, Tvec, Twork, W *matrix.FloatMatrix, nb int) {
 // W = K*nb
 func updateWithQT(C1, C2, Y1, Y2, T, W *matrix.FloatMatrix, nb int, transpose bool) {
 
+    /*
     if transpose && W.Rows() != C1.Cols() {
         panic(fmt.Sprintf("W.Rows [%d] != C1.Cols [%d]", W.Rows(), C1.Cols()))
     } else if W.Rows() != C1.Rows() {
         panic(fmt.Sprintf("W.Rows [%d] != C1.Rows [%d]", W.Rows(), C1.Rows()))
     }
+     */
 
     // W = C1.T
     ScalePlus(W, C1, 0.0, 1.0, TRANSB)
@@ -294,6 +296,51 @@ func updateWithQT(C1, C2, Y1, Y2, T, W *matrix.FloatMatrix, nb int, transpose bo
     
     // C1 = C1 - W.T
     ScalePlus(C1, W, 1.0, -1.0, TRANSB)
+
+    // --- here: C = (I - Y*T*Y.T).T * C ---
+}
+
+// compute:
+//      C*Q.T = C*(I -Y*T*Y.T).T ==  C - C*Y*T.T*Y.T
+// or
+//      C*Q   = (I -Y*T*Y.T)*C   ==  C - C*Y*T*Y.T
+//
+//
+// where  C = ( C1 C2 )   Y = ( Y1 )
+//                            ( Y2 )
+//
+// C1 is K*nb, C2 is K*P, Y1 is nb*nb trilu, Y2 is P*nb, T is nb*nb
+// W = K*nb
+func updateWithQTRight(C1, C2, Y1, Y2, T, W *matrix.FloatMatrix, nb int, transpose bool) {
+
+    // -- compute: W = C*Y = C1*Y1 + C2*Y2
+
+    // W = C1
+    ScalePlus(W, C1, 0.0, 1.0, NOTRANS)
+    // W = C1*Y1
+    MultTrm(W, Y1, 1.0, LOWER|UNIT|RIGHT)
+    // W = W + C2*Y2
+    Mult(W, C2, Y2, 1.0, 1.0, NOTRANS)
+
+    // --- here: W == C*Y ---
+
+    tflags := UPPER|RIGHT 
+    if transpose {
+        tflags |= TRANSA
+    }
+    // W = W*T or W*T.T
+    MultTrm(W, T, 1.0, Flags(tflags))
+
+    // --- here: W == C*Y*T or C*Y*T.T ---
+
+    // C2 = C2 - W*Y2.T
+    Mult(C2, W, Y2, -1.0, 1.0, TRANSB)
+    // C1 = C1 - W*Y1.T
+    //  W = W*Y1 
+    MultTrm(W, Y1, 1.0, LOWER|UNIT|RIGHT|TRANSA)
+    
+    // C1 = C1 - W
+    ScalePlus(C1, W, 1.0, -1.0, NOTRANS)
 
     // --- here: C = (I - Y*T*Y.T).T * C ---
 }
@@ -421,7 +468,7 @@ func updateQRTReflector(T, Y10, Y20, Y11, Y21, T1, T2 *matrix.FloatMatrix) {
  * Returns:
  *      Decomposed matrix A and error indicator.
  *
- * DecomposeQR is compatible with lapack.DGEQRF
+ * DecomposeQR is compatible with lapack.DGERQF
  */
 func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error) {
     var err error = nil
@@ -432,7 +479,7 @@ func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, er
         Twork := matrix.FloatZeros(nb, nb)
         if W == nil {
             W = matrix.FloatZeros(A.Cols(), nb)
-        } else if W.Cols() < decompNB || W.Rows() < A.Cols() {
+        } else if W.Cols() < nb || W.Rows() < A.Cols() {
             return nil, errors.New("work space too small")
         }
         var Wrk matrix.FloatMatrix
@@ -450,7 +497,7 @@ func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, er
  * Arguments:
  *  A   On entry, the M-by-N matrix A. On exit, the elements on and above
  *      the diagonal contain the min(M,N)-by-N upper trapezoidal matrix R.
- *      The elements below the diagonal with the column vector 'tau', represent
+ *      The elements below the diagonal with the matrix 'T', represent
  *      the ortogonal matrix Q as product of elementary reflectors.
  *
  * T    On exit, the block reflector which, together with trilu(A) represent
@@ -464,7 +511,7 @@ func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, er
  * Returns:
  *      Decomposed matrix A and error indicator.
  *
- * DecomposeQRT is compatible with lapack.DGEQR??
+ * DecomposeQRT is compatible with lapack.DGERQF
  */
 func DecomposeQRT(A, T, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error) {
     var err error = nil
