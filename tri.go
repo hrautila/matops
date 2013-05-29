@@ -16,13 +16,13 @@ import (
 func TriU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
     var k int
-    mlen := min(A.Rows(), A.Cols())
-    for k = 0; k < mlen-1; k++ {
+    mlen := imin(A.Rows(), A.Cols())
+    for k = 0; k < mlen; k++ {
         Ac.SubMatrixOf(A, k+1, k, A.Rows()-k-1, 1)
         Ac.SetIndexes(0.0)
     }
     if A.Cols() < A.Rows() {
-        Ac.SubMatrixOf(A, 0, A.Cols())
+        Ac.SubMatrixOf(A, A.Cols(), 0)
         Ac.SetIndexes(0.0)
     }
     return A
@@ -33,8 +33,8 @@ func TriU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
 func TriUU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
     var k int
-    mlen := min(A.Rows(), A.Cols())
-    for k = 0; k < mlen-1; k++ {
+    mlen := imin(A.Rows(), A.Cols())
+    for k = 0; k < mlen; k++ {
         Ac.SubMatrixOf(A, k+1, k, A.Rows()-k-1, 1)
         Ac.SetIndexes(0.0)
         A.SetAt(k, k, 1.0)
@@ -42,7 +42,7 @@ func TriUU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     // last element on diagonal
     A.SetAt(k, k, 1.0)
     if A.Cols() < A.Rows() {
-        Ac.SubMatrixOf(A, 0, A.Cols())
+        Ac.SubMatrixOf(A, A.Cols(), 0)
         Ac.SetIndexes(0.0)
     }
     return A
@@ -52,7 +52,7 @@ func TriUU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
 // of the matrix and setting diagonal elements to one.
 func TriLU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
-    mlen := min(A.Rows(), A.Cols())
+    mlen := imin(A.Rows(), A.Cols())
     A.SetAt(0, 0, 1.0)
     for k := 1; k < mlen; k++ {
         A.SetAt(k, k, 1.0)
@@ -70,7 +70,7 @@ func TriLU(A *matrix.FloatMatrix) *matrix.FloatMatrix {
 // of the matrix.
 func TriL(A *matrix.FloatMatrix) *matrix.FloatMatrix {
     var Ac matrix.FloatMatrix
-    mlen := min(A.Rows(), A.Cols())
+    mlen := imin(A.Rows(), A.Cols())
     for k := 1; k < mlen; k++ {
         Ac.SubMatrixOf(A, 0, k, k, 1)
         Ac.SetIndexes(0.0)
