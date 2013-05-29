@@ -161,11 +161,11 @@ func blockedInverseLower(A *matrix.FloatMatrix, flags Flags, nb int) (err error)
         // libflame, variant 3
 
         // A21 = -A21 * triu(A11).-1
-        Solve(&A21, &A11, -1.0, flags|RIGHT)
+        SolveTrm(&A21, &A11, -1.0, flags|RIGHT)
         // A210 = A20 + A21*A10
         Mult(&A20, &A21, &A10, 1.0, 1.0, NONE)
         // A10 = tri(A11).-1*A10
-        Solve(&A10, &A11, 1.0, flags)
+        SolveTrm(&A10, &A11, 1.0, flags)
         // A11 = inv(A11)
         if flags & UNIT != 0 {
             unblockedInverseUnitLower(&A11)
@@ -200,7 +200,7 @@ func blockedInverseUpper(A *matrix.FloatMatrix, flags Flags, nb int) (err error)
         // A01 = A00*A01
         MultTrm(&A01, &A00, 1.0, flags)
         // A01 = -A01 / triu(A11)
-        Solve(&A01, &A11, -1.0, flags|RIGHT)
+        SolveTrm(&A01, &A11, -1.0, flags|RIGHT)
         // A11 = inv(A11)
         if flags & UNIT != 0 {
             unblockedInverseUnitUpper(&A11)
