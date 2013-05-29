@@ -10,7 +10,7 @@ Supported functionality is:
     Mult(C, A, B, alpha, beta, flags)           General matrix-matrix multiplication  (GEMM)
     MultSymm(C, A, B, alpha, beta, flags)       Symmetric matrix-matrix multipication (SYMM)
     MultTrm(B, A, alpha, flags)                 Tridiagonal matrix-matrix multiplication (TRMM)  
-    Solve(B, A, alpha, flags)                   Tridiagonal solve with multiple RHS (TRSM)
+    SolveTrm(B, A, alpha, flags)                Tridiagonal solve with multiple RHS (TRSM)
     RankUpdateSym(C, A, alpha, beta,flags)      Symmetric matrix rank-k update (SYRK)
     RankUpdate2Sym(C, A, B, alpha, beta, flags) Symmetric matrix rank-2k update (SYR2K)
 
@@ -20,7 +20,7 @@ Supported functionality is:
     MVRankUpdate(A, X, Y, alpha, flags)         General matrix rank update (GER)
     MVRankUpdateSym(A, X, alpha, flags)         Symmetric matrix rank update (SYR)
     MVRankUpdate2Sym(A, X, Y, alpha, flags)     Symmetric matrix rank 2 update (SYR2)
-    MVSolve(X, A, alpha, flags)                 Tridiagonal solve (TRSV)
+    MVSolveTrm(X, A, alpha, flags)              Tridiagonal solve (TRSV)
     MVMultTrm(X, A, flags)                      Tridiagonal matrix-vector multiplication (TRMV)
 
   Blas level 1
