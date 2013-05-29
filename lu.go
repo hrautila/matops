@@ -14,7 +14,7 @@ import (
     //"fmt"
 )
 
-func min(a, b int) int {
+func imin(a, b int) int {
     if a < b {
         return a
     }
@@ -85,9 +85,9 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
         // A00 = LU(A00)
         unblockedLUnoPiv(&A11)
         // A12 = trilu(A00)*A12.-1  (TRSM)
-        Solve(&A12, &A11, 1.0, LEFT|LOWER|UNIT)
+        SolveTrm(&A12, &A11, 1.0, LEFT|LOWER|UNIT)
         // A21 = A21.-1*triu(A00) (TRSM)
-        Solve(&A21, &A11, 1.0, RIGHT|UPPER)
+        SolveTrm(&A21, &A11, 1.0, RIGHT|UPPER)
         // A22 = A22 - A21*A12
         Mult(&A22, &A21, &A12, -1.0, 1.0, NOTRANS)
 
@@ -160,7 +160,7 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
         applyPivots(&a1, &p0)
 
         // a01 = trilu(A00) \ a01 (TRSV)
-        MVSolve(&a01, &A00, 1.0, LOWER|UNIT)
+        MVSolveTrm(&a01, &A00, 1.0, LOWER|UNIT)
         // a11 = a11 - a10 *a01 
         a11.Add(Dot(&a10, &a01, -1.0))
         // a21 = a21 -A20*a01
@@ -193,7 +193,7 @@ func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
     }
     if ATL.Cols() < A.Cols() {
         applyPivots(&ATR, p)
-        Solve(&ATR, &ATL, 1.0, LEFT|UNIT|LOWER)
+        SolveTrm(&ATR, &ATL, 1.0, LEFT|UNIT|LOWER)
     }
     return err
 }
@@ -230,7 +230,7 @@ func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
         applyPivots(&A1, &p0)
 
         // a01 = trilu(A00) \ a01 (TRSV)
-        Solve(&A01, &A00, 1.0, LOWER|UNIT)
+        SolveTrm(&A01, &A00, 1.0, LOWER|UNIT)
         // A11 = A11 - A10*A01
         Mult(&A11, &A10, &A01, -1.0, 1.0, NOTRANS)
         // A21 = A21 - A20*A01
@@ -259,7 +259,7 @@ func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
     }
     if ATL.Cols() < A.Cols() {
         applyPivots(&ATR, p)
-        Solve(&ATR, &ATL, 1.0, LEFT|UNIT|LOWER)
+        SolveTrm(&ATR, &ATL, 1.0, LEFT|UNIT|LOWER)
     }
     return err
 }
@@ -285,7 +285,7 @@ func blockedLUpiv(A *matrix.FloatMatrix, p *pPivots, nb int) error {
  */
 func DecomposeLU(A *matrix.FloatMatrix, pivots []int, nb int) (*matrix.FloatMatrix, error) {
     var err error
-    mlen := min(A.Rows(), A.Cols())
+    mlen := imin(A.Rows(), A.Cols())
     if len(pivots) < mlen {
         return A, errors.New("pivot array < min(A.Rows(),A.Cols())")
     }
@@ -319,7 +319,7 @@ func DecomposeLU(A *matrix.FloatMatrix, pivots []int, nb int) (*matrix.FloatMatr
  */
 func DecomposeLUnoPiv(A *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error) {
     var err error
-    mlen := min(A.Rows(), A.Cols())
+    mlen := imin(A.Rows(), A.Cols())
     if mlen <= nb || nb == 0 {
         err = unblockedLUnoPiv(A)
     } else {
@@ -329,14 +329,14 @@ func DecomposeLUnoPiv(A *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error
 }
 
 /*
- * Solve a system of linear equations A*X = B or A.T*X = B with general N-by-N
+ * Solve a system of linear equations A*X = B or A.T*X = B with general M-by-N
  * matrix A using the LU factorizatoin computed by DecomposeLU().
  *
  * Arguments:
- *  B   On entry, the right hand side matrix B. On exit, the solution matrix X.
+ *  B      On entry, the right hand side matrix B. On exit, the solution matrix X.
  *
- *  A   The factor L and U from the factorization A = P*L*U as computed by
- *      DecomposeLU()
+ *  A      The factor L and U from the factorization A = P*L*U as computed by
+ *         DecomposeLU()
  *
  *  pivots The pivot indices from DecomposeLU().
  *
@@ -351,12 +351,12 @@ func SolveLU(B, A *matrix.FloatMatrix, pivots []int, flags Flags) error {
     applyPivots(B, &pPivots{pivots})
     if flags&TRANSA != 0 {
         // transposed X = A.-1*B == (L.T*U.T).-1*B == U.-T*(L.-T*B)
-        Solve(B, A, 1.0, LOWER|UNIT|TRANSA)
-        Solve(B, A, 1.0, UPPER|TRANSA)
+        SolveTrm(B, A, 1.0, LOWER|UNIT|TRANSA)
+        SolveTrm(B, A, 1.0, UPPER|TRANSA)
     } else {
         // non-transposed X = A.-1*B == (L*U).-1*B == U.-1*(L.-1*B)
-        Solve(B, A, 1.0, LOWER|UNIT)
-        Solve(B, A, 1.0, UPPER)
+        SolveTrm(B, A, 1.0, LOWER|UNIT)
+        SolveTrm(B, A, 1.0, UPPER)
     }
         
     return err

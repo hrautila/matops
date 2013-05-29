@@ -76,12 +76,12 @@ func blockedCHOL(A *matrix.FloatMatrix, flags Flags, nb int) error {
 
         if flags & LOWER != 0 {
             // A21 = A21 * tril(A11).-1
-            Solve(&A21, &A11, 1.0, RIGHT|LOWER|TRANSA)
+            SolveTrm(&A21, &A11, 1.0, RIGHT|LOWER|TRANSA)
             // A22 = A22 - A21*A21.T
             RankUpdateSym(&A22, &A21, -1.0, 1.0, LOWER)
         } else {
             // A12 = triu(A11).-1 * A12
-            Solve(&A12, &A11, 1.0, UPPER|TRANSA)
+            SolveTrm(&A12, &A11, 1.0, UPPER|TRANSA)
             // A22 = A22 - A12.T*A12
             RankUpdateSym(&A22, &A12, -1.0, 1.0, UPPER|TRANSA)
         }
@@ -148,12 +148,12 @@ func SolveCHOL(B, A *matrix.FloatMatrix, flags Flags) {
     // A*X = B; X = A.-1*B == (LU).-1*B == U.-1*L.-1*B == U.-1*(L.-1*B)
     if flags&UPPER != 0 {
         // X = (U.T*U).-1*B => U.-1*(U.-T*B)
-        Solve(B, A, 1.0, UPPER|TRANSA)
-        Solve(B, A, 1.0, UPPER)
+        SolveTrm(B, A, 1.0, UPPER|TRANSA)
+        SolveTrm(B, A, 1.0, UPPER)
     } else if flags&LOWER != 0 {
         // X = (L*L.T).-1*B = L.-T*(L.1*B)
-        Solve(B, A, 1.0, LOWER)
-        Solve(B, A, 1.0, LOWER|TRANSA)
+        SolveTrm(B, A, 1.0, LOWER)
+        SolveTrm(B, A, 1.0, LOWER|TRANSA)
     }
 }
 

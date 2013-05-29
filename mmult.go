@@ -278,7 +278,7 @@ func MultTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
 //
 // Matrix B is N*P if flags&LEFT or P*N if flags&RIGHT.
 //
-func Solve(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
+func SolveTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
     if flags&LEFT != 0 && B.Rows() != A.Cols() {
         return errors.New("A.cols != B.rows: size mismatch")
