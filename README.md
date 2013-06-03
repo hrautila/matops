@@ -34,20 +34,25 @@ Supported functionality is:
   Additional
 
     ScalePlus(A, B, alpha, beta, flags)		Calculate A = alpha*A + beta*B
+    NormP(X, norm)                              Matrix or vector norm
 
   Lapack
   
-    DecomposeLUnoPiv(A, nb)       LU factorization without pivoting
-    DecomposeLU(A, pivots, nb)    LU factorization with pivoting (DGETRF)
-    DecomposeCHOL(A, nb)          Cholesky factorization (DPOTRF)
-    DecomposeQR(A, tau, nb)       QR factorization (DGEQRF)
-    DecomposeQRT(A, T, W, nb)     QR factorization with block reflectors, compact WY
-    MultQ(C, A, tau, W, flgs, nb) Multiply by Q  (DORMQR)
-    MultQT(C, A, T, W, flgs, nb)  Multiply by Q, compact WY version
-    BuildT(T, A, tau)             Build block reflector T from elementary reflectors (DLARFT)
-    SolveCHOL(B, A, flags)        Solve Cholesky factorized linear system (DPOTRS)
-    SolveLU(B, A, pivots,flags)   Solve LU factorized linear system (DGETRS)
-    InverseTrm(A, flags, nb)      Inverse tridiagonal matrix (DTRTRI)
+    DecomposeLUnoPiv(A, nb)         LU factorization without pivoting
+    DecomposeLU(A, pivots, nb)      LU factorization with pivoting (DGETRF)
+    DecomposeCHOL(A, nb)            Cholesky factorization (DPOTRF)
+    DecomposeQR(A, tau, nb)         QR factorization (DGEQRF)
+    DecomposeQRT(A, T, W, nb)       QR factorization, compact WY version (DGEQRT)
+    MultQ(C, A, tau, W, flgs, nb)   Multiply by Q  (DORMQR)
+    MultQT(C, A, T, W, flgs, nb)    Multiply by Q, compact WY version (DGEMQRT)
+    BuildQ(A, tau, W, nb)           Build matrix Q with ortonormal columns (DORGQR)
+    BuildQT(A, T, W, nb)            Build matrix Q with ortonormal columns 
+    BuildT(T, A, tau)               Build block reflector T from elementary reflectors (DLARFT)
+    SolveCHOL(B, A, flags)          Solve Cholesky factorized linear system (DPOTRS)
+    SolveLU(B, A, pivots,flags)     Solve LU factorized linear system (DGETRS)
+    SolveQRT(B, A, T, W, flgs, nb)  Solve least square problem when m >= n, compact WY (DGELS)
+    SolveQR(B, A, tau, W, flgs, nb) Solve least square problem when m >= n (DGELS)
+    InverseTrm(A, flags, nb)        Inverse tridiagonal matrix (DTRTRI)
 
   Support functions
 
