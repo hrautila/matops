@@ -45,6 +45,17 @@ func mNormInf(A *matrix.FloatMatrix) float64 {
 }
 
 
+/*
+ * Compute matrix and vector norms.
+ *
+ * Arguments
+ *  X    A real valued matrix or vector
+ *
+ *  norm Norm to compute
+ *         NORM_ONE, NORM_TWO, NORM_INF
+ *
+ * Note: matrix NORM_TWO not yet implemented.
+ */
 func NormP(X *matrix.FloatMatrix, norm Norms) float64 {
     if isVector(X) {
         switch norm {
