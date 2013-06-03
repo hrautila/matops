@@ -24,6 +24,7 @@ import (
  * T = | T  z |   z = -tau*T*Y.T*v
  *     | 0  c |   c = tau
  *
+ * Q = H(1)H(2)...H(k) building forward here.
  */
 func unblkQRBlockReflector(T, A, tau *matrix.FloatMatrix) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
@@ -468,7 +469,7 @@ func updateQRTReflector(T, Y10, Y20, Y11, Y21, T1, T2 *matrix.FloatMatrix) {
  * Returns:
  *      Decomposed matrix A and error indicator.
  *
- * DecomposeQR is compatible with lapack.DGERQF
+ * DecomposeQR is compatible with lapack.DGEQRF
  */
 func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error) {
     var err error = nil
@@ -511,7 +512,7 @@ func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, er
  * Returns:
  *      Decomposed matrix A and error indicator.
  *
- * DecomposeQRT is compatible with lapack.DGERQF
+ * DecomposeQRT is compatible with lapack.DGEQRT
  */
 func DecomposeQRT(A, T, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, error) {
     var err error = nil
