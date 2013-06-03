@@ -569,7 +569,7 @@ func blockedMultQTRight(C, A, T, W *matrix.FloatMatrix, nb int, flags Flags) {
  *
  *  flags Indicators. Valid indicators LEFT, RIGHT, TRANS, NOTRANS
  *       
- * Compatible with lapack.DORMRQ
+ * Compatible with lapack.DORMQR
  */
 func MultQ(C, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
     var err error = nil
@@ -639,7 +639,7 @@ func MultQ(C, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
  *
  *  flags Indicators. Valid indicators LEFT, RIGHT, TRANS, NOTRANS
  *       
- * Compatible with lapack.DORMRQ
+ * Compatible with lapack.DGEMQRT
  */
 func MultQT(C, A, T, W *matrix.FloatMatrix, flags Flags, nb int) error {
     var err error = nil
@@ -676,6 +676,140 @@ func MultQT(C, A, T, W *matrix.FloatMatrix, flags Flags, nb int) error {
     }
     return err
 }
+
+/*
+ * Solve a system of linear equations A*X = B with general M-by-N
+ * matrix A using the QR factorization computed by DecomposeQR().
+ *
+ * If flags&TRANS != 0:
+ *   find the minimum norm solution of an overdetermined system A.T * X = B.
+ *   i.e min ||X|| s.t A.T*X = B
+ *
+ * Otherwise:
+ *   find the least squares solution of an overdetermined system, i.e.,
+ *   solve the least squares problem: min || B - A*X ||.
+ *
+ * Arguments:
+ *  B    On entry, the right hand side N-by-P matrix B. On exit, the solution matrix X.
+ *
+ *  A    The elements on and above the diagonal contain the min(M,N)-by-N upper
+ *       trapezoidal matrix R. The elements below the diagonal with the vector 'tau', 
+ *       represent the ortogonal matrix Q as product of elementary reflectors.
+ *       Matrix A and T are as returned by DecomposeQR()
+ *
+ *  tau  The vector of N scalar coefficients that together with trilu(A) define
+ *       the ortogonal matrix Q as Q = H(1)H(2)...H(N)
+ *
+ *  W    Workspace, P-by-nb matrix used for work space in blocked invocations. 
+ *
+ *  flags Indicator flag
+ *
+ *  nb   The block size used in blocked invocations. If nb is zero or P < nb
+ *       unblocked algorithm is used.
+ *
+ * Compatible with lapack.GELS (the m >= n part)
+ */
+func SolveQR(B, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
+    var err error = nil
+    var R, BT matrix.FloatMatrix
+    if flags & TRANS != 0 {
+        // Solve overdetermined system A.T*X = B
+
+        // B' = R.-1*B
+        A.SubMatrix(&R, 0, 0, A.Cols(), A.Cols())
+        B.SubMatrix(&BT, 0, 0, A.Cols(), B.Cols())
+        err = SolveTrm(&BT, &R, 1.0, LEFT|UPPER|TRANSA)
+        
+        // Clear bottom part of B
+        B.SubMatrixOf(&BT, A.Cols(), 0)
+        BT.SetIndexes(0.0)
+        
+        // X = Q*B'
+        err = MultQ(B, A, tau, W, LEFT, nb)
+    } else {
+        // solve least square problem min ||A*X - B||
+
+        // B' = Q.T*B
+        err = MultQ(B, A, tau, W, LEFT|TRANS, nb)
+        if err != nil {
+            return err
+        }
+
+        // X = R.-1*B'
+        A.SubMatrix(&R, 0, 0, A.Cols(), A.Cols())
+        B.SubMatrix(&BT, 0, 0, A.Cols(), B.Cols())
+        err = SolveTrm(&BT, &R, 1.0, LEFT|UPPER)
+
+    }
+    return err
+}
+
+/*
+ * Solve a system of linear equations A*X = B with general M-by-N
+ * matrix A using the QR factorization computed by DecomposeQRT().
+ *
+ * If flags&TRANS != 0:
+ *   find the minimum norm solution of an overdetermined system A.T * X = B.
+ *   i.e min ||X|| s.t A.T*X = B
+ *
+ * Otherwise:
+ *   find the least squares solution of an overdetermined system, i.e.,
+ *   solve the least squares problem: min || B - A*X ||.
+ *
+ * Arguments:
+ *  B     On entry, the right hand side N-by-P matrix B. On exit, the solution matrix X.
+ *
+ *  A     The elements on and above the diagonal contain the min(M,N)-by-N upper
+ *        trapezoidal matrix R. The elements below the diagonal with the matrix 'T', 
+ *        represent the ortogonal matrix Q as product of elementary reflectors.
+ *        Matrix A and T are as returned by DecomposeQRT()
+ *
+ *  T     The N-by-N block reflector which, together with trilu(A) represent
+ *        the ortogonal matrix Q as Q = I - Y*T*Y.T where Y = trilu(A).
+ *
+ *  W     Workspace, P-by-nb matrix used for work space in blocked invocations. 
+ *
+ *  flags Indicator flag
+ *
+ *  nb    The block size used in blocked invocations. If nb is zero default
+ *        value N is used.
+ *
+ * Compatible with lapack.GELS (the m >= n part)
+ */
+func SolveQRT(B, A, T, W *matrix.FloatMatrix, flags Flags, nb int) error {
+    var err error = nil
+    var R, BT matrix.FloatMatrix
+    if flags & TRANS != 0 {
+        // Solve overdetermined system A.T*X = B
+
+        // B' = R.-1*B
+        A.SubMatrix(&R, 0, 0, A.Cols(), A.Cols())
+        B.SubMatrix(&BT, 0, 0, A.Cols(), B.Cols())
+        err = SolveTrm(&BT, &R, 1.0, LEFT|UPPER|TRANSA)
+        
+        // Clear bottom part of B
+        B.SubMatrix(&BT, A.Cols(), 0)
+        BT.SetIndexes(0.0)
+        
+        // X = Q*B'
+        err = MultQT(B, A, T, W, LEFT, nb)
+    } else {
+        // solve least square problem min ||A*X - B||
+
+        // B' = Q.T*B
+        err = MultQT(B, A, T, W, LEFT|TRANS, nb)
+        if err != nil {
+            return err
+        }
+
+        // X = R.-1*B'
+        A.SubMatrix(&R, 0, 0, A.Cols(), A.Cols())
+        B.SubMatrix(&BT, 0, 0, A.Cols(), B.Cols())
+        err = SolveTrm(&BT, &R, 1.0, LEFT|UPPER)
+    }
+    return err
+}
+
 
 
 // Local Variables:
