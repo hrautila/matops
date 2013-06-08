@@ -150,11 +150,26 @@ func scheduleWork(colworks, rowworks, cols, rows int, worker task) {
 // C is M*N, A is M*P or P*M if flags&TRANSA. B is P*N or N*P if flags&TRANSB.
 //
 func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+    var ok bool
     // error checking must take in account flag values!
 
-    //if A.Cols() != B.Rows() {
-    //return errors.New("A.cols != B.rows: size mismatch")
-    //}
+    ar, ac := A.Size()
+    br, bc := B.Size()
+    cr, cc := C.Size()
+    switch flags & (TRANSA|TRANSB) {
+    case TRANSA|TRANSB:
+        ok = cr == ac && cc == br && ar == bc
+    case TRANSA:
+        ok = cr == ac && cc == bc && ar == br
+    case TRANSB:
+        ok = cr == ar && cc == br && ac == bc 
+    default:
+        ok = cr == ar && cc == bc && ac == br
+    }
+    if ! ok {
+        return errors.New("Mult: size mismatch")
+    }
+
     psize := int64(C.NumElements())*int64(A.Cols())
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
@@ -195,13 +210,32 @@ func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
 // C is N*P, A is N*N symmetric matrix. B is N*P or P*N if flags&TRANSB.
 //
 func MultSym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+    var ok bool
 
+    ar, ac := A.Size()
+    br, bc := B.Size()
+    cr, cc := C.Size()
+    switch flags & (TRANSA|TRANSB) {
+    case TRANSA|TRANSB:
+        ok = ar == ac && cr == ac && cc == br && ar == bc
+    case TRANSA:
+        ok = ar == ac && cr == ac && cc == bc && ar == br
+    case TRANSB:
+        ok = ar == ac && cr == ar && cc == br && ac == bc 
+    default:
+        ok = ar == ac && cr == ar && cc == bc && ac == br
+    }
+    if ! ok {
+        return errors.New("MultSym: size mismatch")
+    }
+    /*
     if A.Rows() != A.Cols() {
         return errors.New("A matrix not square matrix.");
     }
     if A.Cols() != B.Rows() {
         return errors.New("A.cols != B.rows: size mismatch")
     }
+     */
     psize := int64(C.NumElements())*int64(A.Cols())
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
