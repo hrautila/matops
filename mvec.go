@@ -331,11 +331,20 @@ func ASum(X *matrix.FloatMatrix) float64 {
 
 // max |x|
 func AMax(X *matrix.FloatMatrix) float64 {
-    if X == nil {
+    ix := IAMax(X)
+    if ix == -1 {
         return math.NaN()
     }
+    return X.GetIndex(ix)
+}
+
+// index of max |x|
+func IAMax(X *matrix.FloatMatrix) int {
+    if X == nil {
+        return -1
+    }
     if !isVector(X)  {
-        return math.NaN()
+        return -1
     }
     Xr := X.FloatArray()
     incX := 1
@@ -343,8 +352,7 @@ func AMax(X *matrix.FloatMatrix) float64 {
         // Row vector
         incX = X.LeadingIndex()
     }
-    ix := calgo.DIAMax(Xr, incX, X.NumElements())
-    return X.GetIndex(ix)
+    return calgo.DIAMax(Xr, incX, X.NumElements())
 }
 
 // Inverse scaling of vector. X = X / alpha.

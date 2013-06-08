@@ -163,7 +163,7 @@ double dvec_asum(const mvec_t *X,  int N)
 // return index of max absolute value
 int dvec_iamax(const mvec_t *X,  int N)
 {
-  register int i, ix;
+  register int i, ix, n;
   register double max, c0, c1;
   register const double *Xc;
 
@@ -175,15 +175,22 @@ int dvec_iamax(const mvec_t *X,  int N)
   for (i = 0; i < N-1; i += 2) {
     c0 = fabs(Xc[0]);
     c1 = fabs(Xc[X->inc]);
-    ix = c0 > max ? i : ix;
-    ix = c1 > max ? i+1 : ix;
+    if (c1 > c0) {
+      n = 1;
+      c0 = c1;
+    }
+    if (c0 > max) {
+      ix = i+n;
+      max = c0;
+    }
     Xc += (X->inc << 1);
+    n = 0;
   }    
   if (i < N) {
     c0 = fabs(Xc[0]);
     ix = c0 > max ? i+1 : ix;
   }
-  return ix;
+  return ix + 1;
 }
 
 /*
