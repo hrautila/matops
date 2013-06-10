@@ -9,8 +9,8 @@ Supported functionality is:
 
     Mult(C, A, B, alpha, beta, flags)           General matrix-matrix multiplication  (GEMM)
     MultSymm(C, A, B, alpha, beta, flags)       Symmetric matrix-matrix multipication (SYMM)
-    MultTrm(B, A, alpha, flags)                 Tridiagonal matrix-matrix multiplication (TRMM)  
-    SolveTrm(B, A, alpha, flags)                Tridiagonal solve with multiple RHS (TRSM)
+    MultTrm(B, A, alpha, flags)                 Triangular matrix-matrix multiplication (TRMM)  
+    SolveTrm(B, A, alpha, flags)                Triangular solve with multiple RHS (TRSM)
     RankUpdateSym(C, A, alpha, beta,flags)      Symmetric matrix rank-k update (SYRK)
     RankUpdate2Sym(C, A, B, alpha, beta, flags) Symmetric matrix rank-2k update (SYR2K)
 
@@ -20,8 +20,8 @@ Supported functionality is:
     MVRankUpdate(A, X, Y, alpha, flags)         General matrix rank update (GER)
     MVRankUpdateSym(A, X, alpha, flags)         Symmetric matrix rank update (SYR)
     MVRankUpdate2Sym(A, X, Y, alpha, flags)     Symmetric matrix rank 2 update (SYR2)
-    MVSolveTrm(X, A, alpha, flags)              Tridiagonal solve (TRSV)
-    MVMultTrm(X, A, flags)                      Tridiagonal matrix-vector multiplication (TRMV)
+    MVSolveTrm(X, A, alpha, flags)              Triangular solve (TRSV)
+    MVMultTrm(X, A, flags)                      Triangular matrix-vector multiplication (TRMV)
 
   Blas level 1
 
@@ -35,6 +35,8 @@ Supported functionality is:
 
     ScalePlus(A, B, alpha, beta, flags)		Calculate A = alpha*A + beta*B
     NormP(X, norm)                              Matrix or vector norm
+    UpdateTrm(C, A, B, alpha, beta, flags)      Triangular matrix update
+    UpdateTrmMV(C, X, Y, alpha, flags)          Triangular matrix update with vectors.
 
   Lapack
   
@@ -52,14 +54,14 @@ Supported functionality is:
     SolveLU(B, A, pivots,flags)     Solve LU factorized linear system (DGETRS)
     SolveQRT(B, A, T, W, flgs, nb)  Solve least square problem when m >= n, compact WY (DGELS)
     SolveQR(B, A, tau, W, flgs, nb) Solve least square problem when m >= n (DGELS)
-    InverseTrm(A, flags, nb)        Inverse tridiagonal matrix (DTRTRI)
+    InverseTrm(A, flags, nb)        Inverse triangular matrix (DTRTRI)
 
   Support functions
 
-    TriL(A)                   Make A tridiagonal, lower 
-    TriLU(A)                  Make A tridiagonal, lower, unit-diagonal 
-    TriU(A)                   Make A tridiagonal, upper 
-    TriUU(A)                  Make A tridiagonal, upper, unit-diagonal 
+    TriL(A)                   Make A triangular, lower 
+    TriLU(A)                  Make A triangular, lower, unit-diagonal 
+    TriU(A)                   Make A triangular, upper 
+    TriUU(A)                  Make A triangular, upper, unit-diagonal 
 
   Parameter functions
 
