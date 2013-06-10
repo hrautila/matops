@@ -167,6 +167,8 @@ int dvec_iamax(const mvec_t *X,  int N)
   register double max, c0, c1;
   register const double *Xc;
 
+  if (N <= 1)
+    return 0;
   Xc = X->md;
   max = fabs(Xc[0]);
   ix = 0;
