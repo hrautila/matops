@@ -175,6 +175,11 @@ dmvec_symv_rank2(mdata_t *A, const mvec_t *X,  const mvec_t *Y,
                  double alpha, int flags, int S, int L, int NB);
 
 
+// generic triangular matrix update: A = A + alpha*X*Y
+extern void
+dmvec_trmv_upd(mdata_t *A, const mvec_t *X,  const mvec_t *Y, double alpha, int flags,
+               int S, int L, int NB);
+
 // for TRSV
 extern void
 dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N);
@@ -212,6 +217,12 @@ extern void
 dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
                 double alpha, double beta, int flags,
                 int P, int S, int E,  int vlen, int NB);
+
+// Generic triangular matrix update
+extern void
+dmmat_trmupd_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                 double alpha, double beta,
+                 int flags,  int P, int S, int E, int vlen, int NB);
 
 #endif
 

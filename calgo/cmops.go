@@ -126,6 +126,9 @@ func DTrmmUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, N
     if B == nil || A == nil {
         return
     }
+    if N == 0 || E - S <= 0 {
+        return
+    }
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -145,6 +148,9 @@ func DTrmmBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB 
     var Am C.mdata_t
 
     if B == nil || A == nil {
+        return
+    }
+    if N == 0 || E - S <= 0 {
         return
     }
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
@@ -169,6 +175,9 @@ func DSolveUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E i
     if B == nil || A == nil {
         return
     }
+    if N == 0 || E - S <= 0 {
+        return
+    }
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -188,6 +197,9 @@ func DSolveBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB
     var Am C.mdata_t
 
     if B == nil || A == nil {
+        return
+    }
+    if N == 0 || E - S <= 0 {
         return
     }
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
@@ -211,6 +223,9 @@ func DSymmRankBlk(C, A []float64, alpha, beta float64, flags Flags, ldC, ldA, N,
     if C == nil || A == nil {
         return
     }
+    if N == 0 || E - S <= 0 {
+        return
+    }
     Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
     Cm.step = C.int(ldC)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
@@ -231,7 +246,10 @@ func DSymmRank2Blk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA
     var Am C.mdata_t
     var Bm C.mdata_t
 
-    if C == nil || A == nil {
+    if C == nil || A == nil || B == nil {
+        return
+    }
+    if N == 0 || E - S <= 0 {
         return
     }
     Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
@@ -242,6 +260,35 @@ func DSymmRank2Blk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA
     Bm.step = C.int(ldB)
 
     C.dmmat_rank2_blk(
+        (*C.mdata_t)(unsafe.Pointer(&Cm)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mdata_t)(unsafe.Pointer(&Bm)),
+        C.double(alpha), C.double(beta),
+        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(H), C.int(NB))
+
+}
+
+// Generic triangular matrix update; blocked
+// S is the start column and row in C; E is the end column and row in C
+func DTrmUpdBlk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, N, S, E, H, NB int) {
+    var Cm C.mdata_t
+    var Am C.mdata_t
+    var Bm C.mdata_t
+
+    if C == nil || A == nil || B == nil {
+        return
+    }
+    if N == 0 || E - S <= 0 {
+        return
+    }
+    Cm.md =  (*C.double)(unsafe.Pointer(&C[0]))
+    Cm.step = C.int(ldC)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+    Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
+    Bm.step = C.int(ldB)
+
+    C.dmmat_trmupd_blk(
         (*C.mdata_t)(unsafe.Pointer(&Cm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
@@ -349,6 +396,30 @@ func DSymmRank2MV(A, X, Y []float64, alpha float64, flags Flags, ldA, incX, incY
     Am.step = C.int(ldA)
 
     C.dmvec_symv_rank2(
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        C.double(alpha), C.int(flags),
+    C.int(S), C.int(L), C.int(NB))
+}
+
+// generic triangular matrix rank update; A = A + alpha*X*Y.T
+func DTrmUpdMV(A, X, Y []float64, alpha float64, flags Flags, ldA, incX, incY, S, L, NB int) {
+    var Xv C.mvec_t;
+    var Yv C.mvec_t;
+    var Am C.mdata_t;
+
+    if A == nil || X == nil || Y == nil {
+        return
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incX)
+    Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
+    Am.step = C.int(ldA)
+
+    C.dmvec_trmv_upd(
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         (*C.mvec_t)(unsafe.Pointer(&Yv)),

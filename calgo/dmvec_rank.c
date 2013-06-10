@@ -260,6 +260,30 @@ void dmvec_symv_rank(mdata_t *A, const mvec_t *X,  double alpha, int flags,
   }
 }
 
+void dmvec_trmv_upd(mdata_t *A, const mvec_t *X,  const mvec_t *Y, double alpha, int flags,
+                    int S, int L, int NB)
+{
+  int i, j, nI, nJ, sR, sE;
+
+  if (L-S <= 0) {
+    return;
+  }
+  if (NB <= 0) {
+    NB = L - S;
+  }
+  if (flags & MTX_UPPER) {
+    for (j = S; j < L; j += NB) {
+      nJ = L - j < NB ? L - j : NB;
+      _dmvec_vpur_syr_upper(A, X, Y, alpha, j, j+nJ, 0, j+nJ);
+    }
+  } else {
+    for (j = S; j < L; j += NB) {
+      nJ = L - j < NB ? L - j : NB;
+      _dmvec_vpur_syr_lower(A, X, Y, alpha, j, j+nJ, j, L);
+    }
+  }
+}
+
 static void
 _dmvec_vpur_syr2(mdata_t *A, const mvec_t *X, const mvec_t *Y,  double alpha, 
                  int flags, int S, int L, int R, int E)
