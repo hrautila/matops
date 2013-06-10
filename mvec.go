@@ -155,6 +155,42 @@ func MVRankUpdate2Sym(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) e
     return nil
 }
 
+// Matrix-vector triangular update A = A + alpha*X*Y.T 
+//   A is N*N matrix,
+//   X is row or column vector of length N
+//   Y is row or column vector of legth N.
+//   flags is UPPER or LOWER
+func MVUpdateTrm(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) error {
+
+    if A.Rows() == 0 || A.Cols() == 0 {
+        return nil
+    }
+    if Y.Rows() != 1 && Y.Cols() != 1 {
+        return errors.New("Y not a vector.");
+    }
+    if X.Rows() != 1 && X.Cols() != 1 {
+        return errors.New("X not a vector.");
+    }
+
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Rows() == 1 {
+        // row vector
+        incY = Y.LeadingIndex()
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Rows() == 1 {
+        // row vector
+        incX = X.LeadingIndex()
+    }
+    // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
+    calgo.DTrmUpdMV(Ar, Xr, Yr, alpha, calgo.Flags(flags), ldA, incY, incX, 0, A.Cols(), nB)
+    return nil
+}
+
 
 // Matrix-vector solve X = A.-1*X or X = A.-T*X
 //   A is N*N tridiagonal lower or upper,

@@ -403,6 +403,38 @@ func ScalePlus(A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error
     return nil
 }
 
+// Generic update for triangular lower or upper matrix.
+//      C = beta*C + alpha*A*B          flags has NOTRANS
+//      C = beta*C + alpha*A*B.T        flags has TRANSB
+//      C = beta*C + alpha*A.T*B        flags has TRANSA
+//      C = beta*C + alpha*A.T*B.T      flags has TRANSA|TRANSB
+//
+// update of matrix C 
+//   lower triangular if flags has set LOWER 
+//   upper triangular if flags has set UPPER
+func UpdateTrm(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
+    if C.Rows() != C.Cols() {
+        return errors.New("C not a square matrix")
+    }
+    Ar := A.FloatArray()
+    ldA := A.LeadingIndex()
+    Br := B.FloatArray()
+    ldB := B.LeadingIndex()
+    Cr := C.FloatArray()
+    ldC := C.LeadingIndex()
+    S := 0
+    E := C.Rows()
+    P := A.Cols()
+    if flags & TRANSA != 0 {
+        P = A.Rows()
+    }
+    // if more workers available C can be divided to blocks [S:E, S:E] along diagonal
+    // and updated in separate tasks. 
+    calgo.DTrmUpdBlk(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
+        P, S, E, vpLen, nB)
+    return nil
+}
+
 // Local Variables:
 // tab-width: 4
 // indent-tabs-mode: nil
