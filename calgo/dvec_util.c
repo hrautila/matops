@@ -170,10 +170,9 @@ int dvec_iamax(const mvec_t *X,  int N)
   if (N <= 1)
     return 0;
   Xc = X->md;
-  max = fabs(Xc[0]);
+  max = 0.0;
   ix = 0;
-  Xc += X->inc;
-  N--;
+  //N--;
   for (i = 0; i < N-1; i += 2) {
     c0 = fabs(Xc[0]);
     c1 = fabs(Xc[X->inc]);
@@ -190,9 +189,9 @@ int dvec_iamax(const mvec_t *X,  int N)
   }    
   if (i < N) {
     c0 = fabs(Xc[0]);
-    ix = c0 > max ? i+1 : ix;
+    ix = c0 > max ? N-1 : ix;
   }
-  return ix + 1;
+  return ix;
 }
 
 /*
