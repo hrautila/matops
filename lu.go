@@ -10,7 +10,7 @@ package matops
 import (
     "github.com/hrautila/matrix"
     "errors"
-    "math"
+    //"math"
     //"fmt"
 )
 
@@ -98,35 +98,6 @@ func blockedLUnoPiv(A *matrix.FloatMatrix, nb int) (err error) {
     return
 }
 
-func swapRows(A *matrix.FloatMatrix, src, dst int) {
-    var r0, r1 matrix.FloatMatrix
-    if src == dst || A.Rows() == 0 {
-        return
-    }
-    r0.SubMatrixOf(A, src, 0, 1, A.Cols())
-    r1.SubMatrixOf(A, dst, 0, 1, A.Cols())
-    Swap(&r0, &r1)
-}
-
-func applyPivots(A *matrix.FloatMatrix, p *pPivots) {
-    for k, n := range p.pivots {
-        if n > 0 {
-            swapRows(A, n, k)
-        }
-    }
-}
-
-func pivotIndex(A *matrix.FloatMatrix, p *pPivots) {
-    max := math.Abs(A.GetAt(0, 0))
-    for k := 1; k < A.Rows(); k++ {
-        v := math.Abs(A.GetAt(k, 0))
-        //if v != 0 && (v > max || max == 0.0) {
-        if v > max {
-            p.pivots[0] = k
-            max = v
-        }
-    }
-}
 
 // unblocked LU decomposition with pivots: FLAME LU variant 3
 func unblockedLUpiv(A *matrix.FloatMatrix, p *pPivots) error {
