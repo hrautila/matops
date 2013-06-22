@@ -100,15 +100,25 @@ func continue3x1to2x1(AT, AB, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
 }
 
 /*
- Merge 1 by 1 block from 2 by 1 block.
- 
-          AT  
- Abkl <-- --  
-          AB  
-
+ * Merge 1 by 1 block from 2 by 1 block.
+ * 
+ *          AT  
+ * Abkl <-- --  
+ *          AB  
+ *
  */
 func merge2x1(ABLK, AT, AB *matrix.FloatMatrix) {
     ABLK.SubMatrixOf(AT, 0, 0, AT.Rows()+AB.Rows(), AT.Cols())
+}
+
+/*
+ * Merge 1 by 1 block from 1 by 2 block. 
+ * 
+ * ABLK <--  AL | AR  
+ *
+ */
+func merge1x2(ABLK, AL, AR *matrix.FloatMatrix) {
+    AL.SubMatrix(ABLK, 0, 0, AL.Rows(), AL.Cols()+AR.Cols())
 }
 
 /*
@@ -322,18 +332,14 @@ func continue3x3to2x2(
 
 
 
-type pPivots struct {
-    pivots []int
-}
-
 /*
- Partition p to 2 by 1 blocks.
-
-        pT
-  p --> --
-        pB
-
- Parameter nb is initial block size for pT (pTOP) or pB (pBOTTOM).  
+ * Partition p to 2 by 1 blocks.
+ *
+ *        pT
+ *  p --> --
+ *        pB
+ *
+ * Parameter nb is initial block size for pT (pTOP) or pB (pBOTTOM).  
  */
 func partitionPivot2x1(pT, pB, p *pPivots, nb int, pdir pDirection) {
     switch (pdir) {
@@ -356,25 +362,28 @@ func partitionPivot2x1(pT, pB, p *pPivots, nb int, pdir pDirection) {
 }
 
 /*
- Repartition 2 by 1 block to 3 by 1 block.
- 
-           pT      p0            pT       p0
- pBOTTOM: --  --> --   ; pTOP:   --  -->  p1
-           pB      p1            pB       --
-                   p2                     p2
-
+ * Repartition 2 by 1 block to 3 by 1 block.
+ * 
+ *           pT      p0            pT       p0
+ * pBOTTOM: --  --> --   ; pTOP:   --  -->  p1
+ *           pB      p1            pB       --
+ *                   p2                     p2
+ *
  */
 func repartPivot2x1to3x1(pT, p0, p1, p2, p *pPivots, nb int, pdir pDirection) {
     nT := len(pT.pivots)
-    if nT + nb > len(p.pivots) {
-        nb = len(p.pivots) - nT
-    }
     switch (pdir) {
     case pBOTTOM:
+        if nT + nb > len(p.pivots) {
+            nb = len(p.pivots) - nT
+        }
         p0.pivots = pT.pivots
         p1.pivots = p.pivots[nT:nT+nb]
         p2.pivots = p.pivots[nT+nb:]
     case pTOP:
+        if nb > nT {
+            nb = nT
+        }
         p0.pivots = p.pivots[:nT-nb]
         p1.pivots = p.pivots[nT-nb:nT]
         p2.pivots = p.pivots[nT:]
@@ -382,13 +391,13 @@ func repartPivot2x1to3x1(pT, p0, p1, p2, p *pPivots, nb int, pdir pDirection) {
 }
 
 /*
- Continue with 2 by 1 block from 3 by 1 block.
- 
-           pT      p0            pT       p0
- pBOTTOM: --  <--  p1   ; pTOP:   -- <--  --
-           pB      --            pB       p1
-                   p2                     p2
-
+ * Continue with 2 by 1 block from 3 by 1 block.
+ * 
+ *           pT      p0            pT       p0
+ * pBOTTOM: --  <--  p1   ; pTOP:   -- <--  --
+ *           pB      --            pB       p1
+ *                   p2                     p2
+ *
  */
 func contPivot3x1to2x1(pT, pB, p0, p1, p *pPivots, pdir pDirection) {
     var n0, n1 int
