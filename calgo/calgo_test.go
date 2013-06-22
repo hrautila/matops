@@ -129,6 +129,23 @@ func TestVectors(t *testing.T) {
     t.Logf("a*b = %.1f\n", v)
     v = DDot(cr, br, 1.0, 1, b.LeadingIndex(), c.NumElements())
     t.Logf("c*b = %.1f\n", v)
+    v = DNorm2(br, 1, b.NumElements())
+    t.Logf("norm2(b) = %.1f\n", v)
+
+    b0 := matrix.FloatNew(1, 5, []float64{-1.0, 0.0, 2.0, -3.0, 5.0})
+    br = b0.FloatArray()
+    ix := DIAMax(br, 1, b0.NumElements())
+    t.Logf("iamax = %d: %.1f %v\n", ix, b0.GetIndex(ix), b0)
+
+    b0 = matrix.FloatNew(1, 5, []float64{-8.0, 0.0, 2.0, -3.0, 5.0})
+    br = b0.FloatArray()
+    ix = DIAMax(br, 1, b0.NumElements())
+    t.Logf("iamax = %d: %.1f %v\n", ix, b0.GetIndex(ix), b0)
+
+    b0 = matrix.FloatNew(1, 5, []float64{-8.0, 0.0, 2.0, -9.0, 5.0})
+    br = b0.FloatArray()
+    ix = DIAMax(br, 1, b0.NumElements())
+    t.Logf("iamax = %d: %.1f %v\n", ix, b0.GetIndex(ix), b0)
 }
 
 // Local Variables:
