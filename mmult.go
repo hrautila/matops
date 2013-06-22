@@ -40,6 +40,22 @@ var nWorker int = 1
 // problems small than this do not benefit from parallelism
 var limitOne int64 = 200*200*200
 
+// flag indicating what to do on error
+var panicOnError bool = false
+
+func onError(msg string) error {
+    if panicOnError {
+        panic(msg)
+    }
+    return errors.New(msg)
+}
+
+// Set panic-on-error flag to newval. If set to true errors cause call
+// to panic(). If set to false errors are propagated to caller.
+func SetPanicOnError(newval bool) {
+    panicOnError = newval
+}
+
 // Set blocking parameters for blocked algorithms. Hard limits are set
 // by actual C-implementation in matops.calgo package.
 // Parameter nb defines column direction block size, mb defines row direction
