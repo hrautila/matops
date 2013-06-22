@@ -45,17 +45,20 @@ func unblkLowerLDL(A *matrix.FloatMatrix, p *pPivots) (err error) {
 
         // --------------------------------------------------------
 
-        merge2x1(&acol, &a11, &a21)
+        ABR.Diag(&acol)
+        //merge2x1(&acol, &a11, &a21)
         imax := IAMax(&acol)
         if imax > 0 {
-            // pivot diagonal in symmetric matrix; will swap [0,0] and [imax,imax]
-            // We loose if these is zero on diagonal!! 
+            // pivot diagonal in symmetric matrix; will swap a11 and [imax,imax]
             applyPivotSym(&ABL, &ABR, imax, LOWER)
             p1.pivots[0] = imax + ATL.Rows() + 1
         } else {
             p1.pivots[0] = 0
         }
-        // d11 = a11; no-op
+        if a11.Float() == 0.0 {
+            err = onError("zero value on diagonal")
+            return
+        }
 
         // A22 = A22 - l21*d11*l21.T = A22 - a21*a21.T/a11; triangular update
         err = MVUpdateTrm(&A22, &a21, &a21, -1.0/a11.Float(), LOWER)
@@ -108,7 +111,10 @@ func blkLowerLDL(A, W *matrix.FloatMatrix, p *pPivots, nb int) (err error) {
         // --------------------------------------------------------
 
         // A11 = LDL(A11)
-        unblkLowerLDL(&A11, &p1)
+        err = unblkLowerLDL(&A11, &p1)
+        if err != nil {
+            return
+        }
         applyRowPivots(&A10, &p1, 0, FORWARD)
         applyColPivots(&A21, &p1, 0, FORWARD)
         scalePivots(&p1, ATL.Rows())
@@ -170,19 +176,24 @@ func unblkUpperLDL(A *matrix.FloatMatrix, p *pPivots) (err error) {
             &p0, &p1, &p2,   /**/ p, 1, pTOP)
 
         // --------------------------------------------------------
-        merge2x1(&acol, &a01, &a11)
+        // search diagonal; diag(A00;a11)
+        ATL.Diag(&acol)
+        //merge2x1(&acol, &a01, &a11)
         imax := IAMax(&acol)
-        if imax < acol.NumElements()-1 {
+        if imax < ATL.Rows()-1 {
             merge1x2(&AL, &ATL, &ATR)
             merge1x2(&AR, &a11, &a12)
-            // pivot diagonal in symmetric matrix; will swap [0,0] and [imax,imax]
-            // We loose if there is zero on diagonal!! 
+            // pivot diagonal in symmetric matrix; will swap a11 and [imax,imax]
             applyPivotSym(&AL, &AR, imax, UPPER)
             p1.pivots[0] = imax + 1
         } else {
             p1.pivots[0] = 0
         }
 
+        if a11.Float() == 0.0 {
+            err = onError("zero on diagonal.")
+            return
+        }
         // A00 = A00 - u01*d11*u01.T = A00 - a01*a01.T/a11; triangular update
         err = MVUpdateTrm(&A00, &a01, &a01, -1.0/a11.Float(), UPPER)
 
@@ -226,7 +237,10 @@ func blkUpperLDL(A, W *matrix.FloatMatrix, p *pPivots, nb int) (err error) {
         // --------------------------------------------------------
 
         // A11 = LDL(A11)
-        unblkUpperLDL(&A11, &p1)
+        err = unblkUpperLDL(&A11, &p1)
+        if err != nil {
+            return
+        }
         applyColPivots(&A01, &p1, 0, BACKWARD)
         applyRowPivots(&A12, &p1, 0, BACKWARD)
         scalePivots(&p1, ATL.Rows()-A11.Rows())
@@ -311,25 +325,34 @@ func DecomposeLDL(A, W *matrix.FloatMatrix, ipiv []int, flags Flags, nb int) (*m
  * computed by DecomposeLDL().
  *
  * Arguments:
- *  B      On entry, the right hand side matrix B. On exit, the solution
- *         matrix X.
+ *  B      On entry, the unpermuted right hand side matrix B.
+ *         On exit, the solution matrix X.
  *
  *  A      The triangular factor U or L from LDL factorization as computed by
  *         DecomposeLDL().
  *
- *  ipiv   Pivot indeces, for each non-zero element ipiv[k] the k'th row is exchanged with
- *         ipiv[k]-1'th row.
+ *  ipiv   Pivot indeces, for each non-zero element ipiv[k] the k'th row is
+ *         exchanged with ipiv[k]-1'th row.
  *
  *  flags  Indicator of which factor is stored in A. If flags&UPPER then upper
  *         triangle of A is stored. If flags&LOWER then lower triangle of A is
  *         stored.
+ *
+ * Notes:
+ *  On entry matrix B is permuted according ipiv vector and on exit
+ *  rearraged to original row order.
  */
 func SolveLDL(B, A *matrix.FloatMatrix, ipiv []int, flags Flags)  {
     if flags & UPPER != 0 {
         // X = (U*D*U.T).-1*B => U.-T*(D.-1*(U.-1*B))
+        // arrange to match factorization
+        applyRowPivots(B, &pPivots{ipiv}, 0, BACKWARD)
+        // solve
         SolveTrm(B, A, 1.0, UPPER|UNIT)
         SolveDiag(B, A, LEFT)
         SolveTrm(B, A, 1.0, UPPER|UNIT|TRANSA)
+        // rearrange to original
+        applyRowPivots(B, &pPivots{ipiv}, 0, FORWARD)
 
     } else if flags & LOWER != 0 {
         // X = (L*D*L.T).-1*B = L.-T*(D*-1(L.-1*B))
@@ -340,7 +363,7 @@ func SolveLDL(B, A *matrix.FloatMatrix, ipiv []int, flags Flags)  {
         SolveDiag(B, A, LEFT)
         SolveTrm(B, A, 1.0, LOWER|UNIT|TRANSA)
         // rearrange to original
-        applyRowPivots(B, &pPivots{ipiv}, 0, FORWARD)
+        applyRowPivots(B, &pPivots{ipiv}, 0, BACKWARD)
     }
 }
 

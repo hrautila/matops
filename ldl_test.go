@@ -55,8 +55,9 @@ func TestLDLlower(t *testing.T) {
     MultDiag(B, L, LEFT)
     MultTrm(B, L, 1.0, LOWER|UNIT)
     ApplyRowPivots(B0, ipiv, FORWARD)
-    t.Logf("unblk: L*D*L.T %d pivots: ||A*B - L*D*L.T*B||_1: %e\n",
+    t.Logf(" unblk: L*D*L.T %d pivots: ||A*B - L*D*L.T*B||_1: %e\n",
         NumPivots(ipiv), NormP(B.Minus(B0), NORM_ONE))
+    t.Logf("pivots: %v\n", ipiv)
 
     nb = 4
     w := matrix.FloatWithValue(A.Rows(), nb, 1.0)
@@ -70,9 +71,9 @@ func TestLDLlower(t *testing.T) {
     MultDiag(B1, L, LEFT)
     MultTrm(B1, L, 1.0, LOWER|UNIT)
     ApplyRowPivots(B2, ipiv, FORWARD)
-    t.Logf("  blk: L*D*L.T %d pivots: ||A*B - L*D*L.T*B||_1: %e\n",
+    t.Logf("   blk: L*D*L.T %d pivots: ||A*B - L*D*L.T*B||_1: %e\n",
         NumPivots(ipiv), NormP(B2.Minus(B1), NORM_ONE))
-
+    t.Logf("pivots: %v\n", ipiv)
 }
 
 func TestLDLupper(t *testing.T) {
@@ -93,12 +94,12 @@ func TestLDLupper(t *testing.T) {
     MultDiag(B, U, LEFT)
     MultTrm(B, U, 1.0, UPPER|UNIT)
     ApplyRowPivots(B0, ipiv, BACKWARD)
-    t.Logf("unblk: U*D*U.T %d pivots: ||A*B - U*D*U.T*B||_1: %e\n",
+    t.Logf(" unblk: U*D*U.T %d pivots: ||A*B - U*D*U.T*B||_1: %e\n",
         NumPivots(ipiv), NormP(B.Minus(B0), NORM_ONE))
     t.Logf("pivots: %v\n", ipiv)
 
     nb = 4
-    w := matrix.FloatWithValue(A.Rows(), nb, 1.0)
+    w := matrix.FloatZeros(A.Rows(), nb)
     U, _ = DecomposeLDL(A.Copy(), w, ipiv, UPPER, nb)
     // B2 = A*B1 == A*B
     B2 := B1.Copy()
@@ -109,9 +110,35 @@ func TestLDLupper(t *testing.T) {
     MultDiag(B1, U, LEFT)
     MultTrm(B1, U, 1.0, UPPER|UNIT)
     ApplyRowPivots(B2, ipiv, BACKWARD)
-    t.Logf("  blk: U*D*U.T %d pivots: ||A*B - U*D*U.T*B||_1: %e\n",
+    t.Logf("   blk: U*D*U.T %d pivots: ||A*B - U*D*U.T*B||_1: %e\n",
         NumPivots(ipiv), NormP(B2.Minus(B1), NORM_ONE))
     t.Logf("pivots: %v\n", ipiv)
+}
+
+func TestLDLSolve(t *testing.T) {
+    N := 40
+    nb := 8
+    K := 6
+	A := matrix.FloatUniformSymmetric(N)
+    X0 := matrix.FloatNormal(A.Rows(), K)
+    B0 := matrix.FloatZeros(X0.Size())
+    Mult(B0, A, X0, 1.0, 0.0, NOTRANS)
+    B := B0.Copy()
+
+    w := matrix.FloatZeros(A.Rows(), nb)
+    ipiv := make([]int, N, N)
+    L, _ := DecomposeLDL(A.Copy(), w, ipiv, LOWER, nb)
+    // B = A*X0; solve and B should be X0
+    SolveLDL(B, L, ipiv, LOWER)
+    B.Minus(X0)
+    t.Logf("L*D*L.T: ||A*X - B||_1: %e\n", NormP(B, NORM_ONE))
+
+    B = B0.Copy()
+    U, _ := DecomposeLDL(A.Copy(), w, ipiv, UPPER, nb)
+    // B = A*X0; solve and B should be X0
+    SolveLDL(B, U, ipiv, UPPER)
+    B.Minus(X0)
+    t.Logf("U*D*U.T: ||A*X - B||_1: %e\n", NormP(B, NORM_ONE))
 }
 
 // Local Variables:
