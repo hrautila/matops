@@ -509,7 +509,6 @@ func blockedMultQTRight(C, A, T, W *matrix.FloatMatrix, nb int, flags Flags) {
 
     transpose := flags & TRANS != 0
 
-    //for ABR.Rows() > 0 && ABR.Cols() > 0 {
     for Aref.Rows() > 0 && Aref.Cols() > 0 {
         repartition2x2to3x3(&ATL,
             &A00, nil,  nil,
@@ -577,6 +576,7 @@ func MultQ(C, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
         return errors.New("workspace not defined")
     }
     if flags & RIGHT != 0 {
+        // from right; C*A or C*A.T
         if C.Cols() != A.Rows() {
             return errors.New("C*Q: C.Cols != A.Rows")
         }
@@ -584,10 +584,12 @@ func MultQ(C, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
             return errors.New("workspace too small")
         }
     } else {
-        // default is from LEFT
+        // default is from LEFT; A*C or A.T*C
+        /*
         if C.Rows() != A.Rows() {
             return errors.New("Q*C: C.Rows != A.Rows")
         }
+         */
         if nb != 0 && (W.Cols() < nb || W.Rows() < C.Cols()) {
             return errors.New("workspace too small")
         }
@@ -625,7 +627,7 @@ func MultQ(C, A, tau, W *matrix.FloatMatrix, flags Flags, nb int) error {
  * Arguments:
  *  C     On entry, the M-by-N matrix C. On exit C is overwritten by Q*C or Q.T*C.
  *
- *  A     QR factorization as returne by DecomposeQRT() where the lower trapezoidal
+ *  A     QR factorization as returned by DecomposeQRT() where the lower trapezoidal
  *        part holds the elementary reflectors.
  *
  *  T     The block reflector computed from elementary reflectors as returned by
@@ -650,6 +652,7 @@ func MultQT(C, A, T, W *matrix.FloatMatrix, flags Flags, nb int) error {
         return errors.New("workspace not defined")
     }
     if flags & RIGHT != 0 {
+        // from right; C*A or C*A.T
         if C.Cols() != A.Rows() {
             return errors.New("C*Q: C.Cols != A.Rows")
         }
@@ -657,10 +660,12 @@ func MultQT(C, A, T, W *matrix.FloatMatrix, flags Flags, nb int) error {
             return errors.New("workspace too small")
         }
     } else {
-        // default is from LEFT
+        // default is from LEFT; A*C or A.T*C
+        /*
         if C.Rows() != A.Rows() {
             return errors.New("Q*C: C.Rows != A.Rows")
         }
+         */
         if W.Cols() < nb || W.Rows() < C.Cols() {
             return errors.New("workspace too small")
         }
