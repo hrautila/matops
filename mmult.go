@@ -72,6 +72,36 @@ func NumWorkers(newWorkers int) int {
     return oldWorkers
 }
 
+func row(A *matrix.FloatMatrix, inds ...int) *matrix.FloatMatrix {
+    var r matrix.FloatMatrix
+    switch len(inds) {
+    case 0:
+        A.SubMatrix(&r, 0, 0, 1, A.Cols())
+    case 1:
+        A.SubMatrix(&r, inds[0], 0, 1, A.Cols())
+    case 2:
+        A.SubMatrix(&r, inds[0], 0, 1, inds[1])
+    default:
+        A.SubMatrix(&r, inds[0], inds[1], 1, inds[2])
+    } 
+    return &r
+}
+
+func col(A *matrix.FloatMatrix, inds ...int) *matrix.FloatMatrix {
+    var c matrix.FloatMatrix
+    switch len(inds) {
+    case 0:
+        A.SubMatrix(&c, 0, 0, A.Rows(), 1)
+    case 1:
+        A.SubMatrix(&c, inds[0], 0, A.Rows(), 1)
+    case 2:
+        A.SubMatrix(&c, inds[0], 0, inds[1], 1)
+    default:
+        A.SubMatrix(&c, inds[0], inds[1], inds[2], 1)
+    } 
+    return &c
+}
+
 func blockIndex4(i, r, sz int) int {
     if (i == r) {
         return sz;
@@ -166,7 +196,7 @@ func scheduleWork(colworks, rowworks, cols, rows int, worker task) {
 // C is M*N, A is M*P or P*M if flags&TRANSA. B is P*N or N*P if flags&TRANSB.
 //
 func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
-    var ok bool
+    var ok, empty bool
     // error checking must take in account flag values!
 
     ar, ac := A.Size()
@@ -174,13 +204,21 @@ func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     cr, cc := C.Size()
     switch flags & (TRANSA|TRANSB) {
     case TRANSA|TRANSB:
+        empty = ac == 0 || br == 0 
         ok = cr == ac && cc == br && ar == bc
     case TRANSA:
-        ok = cr == ac && cc == bc && ar == br
+        empty = ac == 0 || bc == 0 
+        ok    = cr == ac && cc == bc && ar == br
     case TRANSB:
+        empty = ar == 0 || br == 0 
         ok = cr == ar && cc == br && ac == bc 
     default:
-        ok = cr == ar && cc == bc && ac == br
+        empty = ar == 0 || bc == 0
+        ok    = cr == ar && cc == bc && ac == br
+            
+    }
+    if empty {
+        return nil
     }
     if ! ok {
         return errors.New("Mult: size mismatch")
@@ -226,20 +264,27 @@ func Mult(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
 // C is N*P, A is N*N symmetric matrix. B is N*P or P*N if flags&TRANSB.
 //
 func MultSym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
-    var ok bool
+    var ok, empty bool
 
     ar, ac := A.Size()
     br, bc := B.Size()
     cr, cc := C.Size()
     switch flags & (TRANSA|TRANSB) {
     case TRANSA|TRANSB:
+        empty = ac == 0 || br == 0
         ok = ar == ac && cr == ac && cc == br && ar == bc
     case TRANSA:
+        empty = ac == 0 || bc == 0
         ok = ar == ac && cr == ac && cc == bc && ar == br
     case TRANSB:
+        empty = ar == 0 || br == 0
         ok = ar == ac && cr == ar && cc == br && ac == bc 
     default:
-        ok = ar == ac && cr == ar && cc == bc && ac == br
+        empty = ar == 0 || bc == 0
+        ok    = ar == ac && cr == ar && cc == bc && ac == br
+    }
+    if empty {
+        return nil
     }
     if ! ok {
         return errors.New("MultSym: size mismatch")
@@ -292,24 +337,36 @@ func MultSym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) erro
 //
 func MultTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
-    if flags&LEFT != 0 && B.Rows() != A.Cols() {
-        return errors.New("A.cols != B.rows: size mismatch")
-    } else if flags&RIGHT != 0 && B.Cols() != A.Rows() {
-        return errors.New("A.cols != B.rows: size mismatch")
+    ok := true
+    empty := false
+    br, bc := B.Size()
+    ar, ac := A.Size()
+    switch flags & (LEFT|RIGHT) {
+    case LEFT:
+        empty = br == 0 || bc == 0
+        ok    = br == ac && ac == ar
+    case RIGHT:
+        empty = bc == 0 || br == 0
+        ok    = bc == ar && ac == ar
     }
-
+    if empty {
+        return nil
+    }
+    if ! ok {
+        return onError("A, B size mismatch")
+    }
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
     Br := B.FloatArray()
     ldB := B.LeadingIndex()
     
-    E := B.Cols()
+    E := bc
     if flags & RIGHT != 0 {
-        E = B.Rows()
+        E = br
     }
     // if more workers available can divide to tasks by B columns if flags&LEFT or by
     // B rows if flags&RIGHT.
-    calgo.DTrmmBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, A.Cols(), 0, E, nB)
+    calgo.DTrmmBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, ac, 0, E, nB)
     return nil
 }
 
@@ -330,10 +387,23 @@ func MultTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
 //
 func SolveTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
 
-    if flags&LEFT != 0 && B.Rows() != A.Cols() {
-        return errors.New("A.cols != B.rows: size mismatch")
-    } else if flags&RIGHT != 0 && B.Cols() != A.Rows() {
-        return errors.New("A.cols != B.rows: size mismatch")
+    ok := true
+    empty := false
+    br, bc := B.Size()
+    ar, ac := A.Size()
+    switch flags & (LEFT|RIGHT) {
+    case LEFT:
+        empty = br == 0
+        ok    = br == ac && ac == ar
+    case RIGHT:
+        empty = bc == 0
+        ok    = bc == ar && ac == ar
+    }
+    if empty {
+        return nil
+    }
+    if ! ok {
+        return onError("A, B size mismatch")
     }
 
     Ar := A.FloatArray()
@@ -341,13 +411,13 @@ func SolveTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
     Br := B.FloatArray()
     ldB := B.LeadingIndex()
     
-    E := B.Cols()
+    E := bc
     if flags & RIGHT != 0 {
-        E = B.Rows()
+        E = br
     }
     // if more workers available can divide to tasks by B columns if flags&LEFT or by
     // B rows if flags&RIGHT.
-    calgo.DSolveBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, A.Cols(), 0, E, nB)
+    calgo.DSolveBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, ac, 0, E, nB)
     return nil
 }
 
@@ -355,7 +425,7 @@ func SolveTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
 //      C = beta*C + alpha*A*A.T + alpha*A.T*A
 func RankUpdateSym(C, A *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     if C.Rows() != C.Cols() {
-        return errors.New("C not a square matrix")
+        return onError("C not a square matrix")
     }
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
@@ -382,7 +452,7 @@ func RankUpdateSym(C, A *matrix.FloatMatrix, alpha, beta float64, flags Flags) e
 //   upper triangular if flags&UPPER
 func RankUpdate2Sym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     if C.Rows() != C.Cols() {
-        return errors.New("C not a square matrix")
+        return onError("C not a square matrix")
     }
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
@@ -430,7 +500,7 @@ func ScalePlus(A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error
 //   upper triangular if flags has set UPPER
 func UpdateTrm(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) error {
     if C.Rows() != C.Cols() {
-        return errors.New("C not a square matrix")
+        return onError("C not a square matrix")
     }
     Ar := A.FloatArray()
     ldA := A.LeadingIndex()
@@ -450,6 +520,8 @@ func UpdateTrm(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) er
         P, S, E, vpLen, nB)
     return nil
 }
+
+
 
 // Local Variables:
 // tab-width: 4
