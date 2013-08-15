@@ -13,11 +13,14 @@ import (
 )
 
 
-func TestLDLnoPiv(t *testing.T) {
+func _TestLDLnoPiv(t *testing.T) {
 	N := 42
     nb := 8
 
-	A := matrix.FloatUniformSymmetric(N)
+	A0 := matrix.FloatUniform(N, N)
+    A := matrix.FloatZeros(N, N)
+    Mult(A, A0, A0, 1.0, 1.0, TRANSB)
+
     B := matrix.FloatNormal(A.Rows(), 2)
     w := matrix.FloatWithValue(A.Rows(), 2, 1.0)
 
@@ -38,17 +41,35 @@ func TestLDLnoPiv(t *testing.T) {
 }
 
 func TestLDLlower(t *testing.T) {
-	N := 8
+    /*
+    Ldata := [][]float64{
+     []float64{7.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{7.0, 6.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{7.0, 6.0, 5.0, 0.0, 0.0, 0.0, 0.0},
+     []float64{7.0, 6.0, 5.0, 4.0, 0.0, 0.0, 0.0},
+     []float64{7.0, 6.0, 5.0, 4.0, 6.0, 0.0, 0.0},
+     []float64{7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 0.0},
+     []float64{7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0}}
+    A := matrix.FloatMatrixFromTable(Ldata, matrix.RowOrder)
+    N := A.Rows()
+     */
+	N := 7
     nb := 0
 
-	A := matrix.FloatUniformSymmetric(N)
+	A0 := matrix.FloatUniform(N, N)
+    A := matrix.FloatZeros(N, N)
+    Mult(A, A0, A0, 1.0, 1.0, TRANSB)
+
     B := matrix.FloatNormal(A.Rows(), 2)
     B0 := B.Copy()
     B1 := B.Copy()
     Mult(B0, A, B, 1.0, 0.0, NOTRANS)
+    _, _, _ = B0, B1, A0
 
     ipiv := make([]int, N, N)
     L, _ := DecomposeLDL(A.Copy(), nil, ipiv, LOWER, 0)
+    //t.Logf("unblk: ipiv = %v\n", ipiv)
+    //t.Logf("unblk: L\n%v\n", L)
 
     ApplyRowPivots(B, ipiv, FORWARD)
     MultTrm(B, L, 1.0, LOWER|UNIT|TRANSA)
@@ -62,6 +83,9 @@ func TestLDLlower(t *testing.T) {
     nb = 4
     w := matrix.FloatWithValue(A.Rows(), nb, 1.0)
     L, _ = DecomposeLDL(A.Copy(), w, ipiv, LOWER, nb)
+    //t.Logf("blk: ipiv = %v\n", ipiv)
+    //t.Logf("blk: L\n%v\n", L)
+
     // B2 = A*B1 == A*B
     B2 := B1.Copy()
     Mult(B2, A, B1, 1.0, 0.0, NOTRANS)
@@ -76,11 +100,14 @@ func TestLDLlower(t *testing.T) {
     t.Logf("pivots: %v\n", ipiv)
 }
 
-func TestLDLupper(t *testing.T) {
+func _TestLDLupper(t *testing.T) {
 	N := 8
     nb := 0
 
-	A := matrix.FloatUniformSymmetric(N)
+	A0 := matrix.FloatUniform(N, N)
+    A := matrix.FloatZeros(N, N)
+    Mult(A, A0, A0, 1.0, 1.0, TRANSB)
+
     B := matrix.FloatNormal(A.Rows(), 2)
     B0 := B.Copy()
     B1 := B.Copy()
@@ -116,29 +143,48 @@ func TestLDLupper(t *testing.T) {
 }
 
 func TestLDLSolve(t *testing.T) {
-    N := 40
-    nb := 8
+    N := 7
+    nb := 4
     K := 6
-	A := matrix.FloatUniformSymmetric(N)
+	A0 := matrix.FloatUniform(N, N)
+    A := matrix.FloatZeros(N, N)
+    Mult(A, A0, A0, 1.0, 1.0, TRANSB)
+
     X0 := matrix.FloatNormal(A.Rows(), K)
     B0 := matrix.FloatZeros(X0.Size())
     Mult(B0, A, X0, 1.0, 0.0, NOTRANS)
     B := B0.Copy()
+    _ = B
 
     w := matrix.FloatZeros(A.Rows(), nb)
     ipiv := make([]int, N, N)
     L, _ := DecomposeLDL(A.Copy(), w, ipiv, LOWER, nb)
+
+    ipiv0 := make([]int, N, N)
+    L0, _ := DecomposeLDL(A.Copy(), w, ipiv0, LOWER, 0)
+
+    t.Logf("L:\n%v\n", L)
+    t.Logf("ipiv: %v\n", ipiv)
+    t.Logf("L0:\n%v\n", L0)
+    t.Logf("ipiv0: %v\n", ipiv0)
+    t.Logf("L == L0: %v", L.AllClose(L0))
+
     // B = A*X0; solve and B should be X0
+    /*
     SolveLDL(B, L, ipiv, LOWER)
     B.Minus(X0)
     t.Logf("L*D*L.T: ||A*X - B||_1: %e\n", NormP(B, NORM_ONE))
+    t.Logf("ipiv: %v\n", ipiv)
+     */
 
+    /*
     B = B0.Copy()
     U, _ := DecomposeLDL(A.Copy(), w, ipiv, UPPER, nb)
     // B = A*X0; solve and B should be X0
     SolveLDL(B, U, ipiv, UPPER)
     B.Minus(X0)
     t.Logf("U*D*U.T: ||A*X - B||_1: %e\n", NormP(B, NORM_ONE))
+     */
 }
 
 // Local Variables:

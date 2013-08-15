@@ -48,6 +48,7 @@ func unblkLowerLDL(A *matrix.FloatMatrix, p *pPivots) (err error) {
         ABR.Diag(&acol)
         //merge2x1(&acol, &a11, &a21)
         imax := IAMax(&acol)
+        //fmt.Printf("imax=%d, val=%e\n", imax, acol.GetAt(0, imax))
         if imax > 0 {
             // pivot diagonal in symmetric matrix; will swap a11 and [imax,imax]
             applyPivotSym(&ABL, &ABR, imax, LOWER)
@@ -59,12 +60,21 @@ func unblkLowerLDL(A *matrix.FloatMatrix, p *pPivots) (err error) {
             err = onError("zero value on diagonal")
             return
         }
+        
+        //fmt.Printf("unblk pivoted %d, a11=%e, A:\n%v\n", imax, a11.Float(), A)
+        //var Ablk matrix.FloatMatrix
+        //merge1x2(&Ablk, &a21, &A22)
+        //fmt.Printf("unblk update with a11=%e, a21|A22:\n%v\n", a11.Float(), &Ablk)
 
         // A22 = A22 - l21*d11*l21.T = A22 - a21*a21.T/a11; triangular update
         err = MVUpdateTrm(&A22, &a21, &a21, -1.0/a11.Float(), LOWER)
 
         // l21 = a21/a11
         InvScale(&a21, a11.Float())
+
+        //merge1x2(&Ablk, &ABL, &ABR)
+        //fmt.Printf("unblk imax=%d, Ablk:\n%v\n", imax, &Ablk)
+
         // ---------------------------------------------------------
 
         continue3x3to2x2(
@@ -75,6 +85,134 @@ func unblkLowerLDL(A *matrix.FloatMatrix, p *pPivots) (err error) {
             &pB,    &p0, &p1,    p, pBOTTOM)
     }
     return
+}
+
+func findAndBuildPivot(AL, AR, WL, WR *matrix.FloatMatrix, k int) int {
+    var dg, acol, wcol, wrow matrix.FloatMatrix
+
+    // updated diagonal values on last column of workspace
+    WR.SubMatrix(&dg, 0, WR.Cols()-1, AR.Rows(), 1)
+
+    // find on-diagonal maximun value
+    dmax := IAMax(&dg)
+    //fmt.Printf("dmax=%d, val=%e\n", dmax, dg.GetAt(dmax, 0))
+
+    // copy to first column of WR and update with factorized columns
+    WR.SubMatrix(&wcol, 0, 0, WR.Rows(), 1)
+    if dmax == 0 {
+        AR.SubMatrix(&acol, 0, 0, AR.Rows(), 1)
+        acol.CopyTo(&wcol)
+    } else {
+        AR.SubMatrix(&acol, dmax, 0, 1, dmax+1)
+        acol.CopyTo(&wcol)
+        if dmax < AR.Rows()-1 {
+            var wrst matrix.FloatMatrix
+            WR.SubMatrix(&wrst, dmax, 0, wcol.Rows()-dmax, 1)
+            AR.SubMatrix(&acol, dmax, dmax, AR.Rows()-dmax, 1)
+            acol.CopyTo(&wrst)
+        }
+    }
+    if k > 0 {
+        WL.SubMatrix(&wrow, dmax, 0, 1, WL.Cols())
+        //fmt.Printf("update with wrow:%v\n", &wrow)
+        //fmt.Printf("update wcol\n%v\n", &wcol)
+        MVMult(&wcol, AL, &wrow, -1.0, 1.0, NOTRANS)
+        //fmt.Printf("updated wcol:\n%v\n", &wcol)
+    }
+    if dmax > 0 {
+        // pivot column in workspace
+        t0 := WR.GetAt(0, 0)
+        WR.SetAt(0, 0, WR.GetAt(dmax, 0))
+        WR.SetAt(dmax, 0, t0)
+        // pivot on diagonal
+        t0 = dg.GetAt(0, 0)
+        dg.SetAt(0, 0, dg.GetAt(dmax, 0))
+        dg.SetAt(dmax, 0, t0)
+    }
+    return dmax
+}
+
+func unblkBoundedLowerLDL(A, W *matrix.FloatMatrix, p *pPivots, ncol int) (error, int) {
+    var ATL, ATR, ABL, ABR matrix.FloatMatrix
+    var A00, a10, a11,  A20, a21, A22, adiag, wcol matrix.FloatMatrix
+    var w00, w10, w11 matrix.FloatMatrix
+    var pT, pB, p0, p1, p2 pPivots
+    var err error = nil
+
+    partition2x2(
+        &ATL, &ATR,
+        &ABL, &ABR,   A, 0, 0, pTOPLEFT)
+    partitionPivot2x1(
+        &pT,
+        &pB, p, 0, pTOP)
+
+    // copy current diagonal to last column of workspace
+    W.SubMatrix(&wcol, 0, W.Cols()-1, A.Rows(), 1)
+    A.Diag(&adiag)
+    adiag.CopyTo(&wcol)
+    //fmt.Printf("initial diagonal:\n%v\n", &wcol)
+
+    nc := 0
+    for ABR.Cols() > 0 && nc < ncol {
+
+        partition2x2(
+            &w00, nil,
+            &w10, &w11, W, nc, nc, pTOPLEFT)
+
+        dmax := findAndBuildPivot(&ABL, &ABR, &w10, &w11, nc)
+        //fmt.Printf("dmax=%d\n", dmax)
+        if dmax > 0 {
+            // pivot diagonal in symmetric matrix; will swap a11 [0,0] and [imax,imax]
+            applyPivotSym(&ABL, &ABR, dmax, LOWER)
+            swapRows(&w10, 0, dmax)
+            pB.pivots[0] = dmax + ATL.Rows() + 1
+        } else {
+            pB.pivots[0] = 0
+        }
+
+        //fmt.Printf("blk pivoted %d, A:\n%v\nW:\n%v\n", dmax, A, W)
+        repartition2x2to3x3(&ATL,
+            &A00, nil,  nil,
+            &a10, &a11, nil,
+            &A20, &a21, &A22,   A, 1, pBOTTOMRIGHT)
+        repartPivot2x1to3x1(&pT, 
+            &p0, &p1, &p2,   /**/ p, 1, pBOTTOM)
+
+        // --------------------------------------------------------
+
+        // Copy updated column from working space
+        w11.SubMatrix(&wcol, 1, 0, a21.Rows(), 1)
+        wcol.CopyTo(&a21)
+        a11.SetAt(0, 0, w11.GetAt(0, 0))
+        // l21 = a21/a11
+        InvScale(&a21, a11.Float())
+        // here: wcol == l21*d11 == a21
+        if ncol - nc > 1 {
+            // update diagonal in workspace if not last column of block
+            w11.SubMatrix(&adiag, 1, w11.Cols()-1, a21.Rows(), 1)
+            MVUpdateDiag(&adiag, &wcol, &wcol, -1.0/a11.Float())
+        }
+        //fmt.Printf("nc=%d, a11=%e\n", nc, a11.Float())
+        //fmt.Printf("l21\n%v\n", &a21)
+        //fmt.Printf("a21\n%v\n", &wcol)
+        //fmt.Printf("diag\n%v\n", &adiag)
+        //var Ablk, wblk matrix.FloatMatrix
+        //merge1x2(&Ablk, &ABL, &ABR)
+        //merge1x2(&wblk, &w10, &w11)
+        //fmt.Printf("unblk Ablk:\n%v\n", &Ablk)
+        //fmt.Printf("unblk wblk:\n%v\n", &wblk)
+
+        // ---------------------------------------------------------
+
+        nc++
+        continue3x3to2x2(
+            &ATL, &ATR,
+            &ABL, &ABR,   &A00, &a11, &A22,  A, pBOTTOMRIGHT)
+        contPivot3x1to2x1(
+            &pT,
+            &pB,    &p0, &p1,    p, pBOTTOM)
+    }
+    return err, nc
 }
 
 /*
@@ -89,8 +227,9 @@ func unblkLowerLDL(A *matrix.FloatMatrix, p *pPivots) (err error) {
 func blkLowerLDL(A, W *matrix.FloatMatrix, p *pPivots, nb int) (err error) {
     var ATL, ATR, ABL, ABR matrix.FloatMatrix
     var A00, A10, A11,  A20, A21, A22 matrix.FloatMatrix
-    var D1, wrk matrix.FloatMatrix
+    var /*D1,*/ wrk matrix.FloatMatrix
     var pT, pB, p0, p1, p2 pPivots
+    var nblk int
 
     err = nil
     partition2x2(
@@ -100,38 +239,30 @@ func blkLowerLDL(A, W *matrix.FloatMatrix, p *pPivots, nb int) (err error) {
         &pT,
         &pB, p, 0, pTOP)
 
-    for ATL.Rows() < A.Rows() {
+    for ABR.Cols() > nb {
+        err, nblk = unblkBoundedLowerLDL(&ABR, W, &pB, nb)
+
         repartition2x2to3x3(&ATL,
             &A00, nil,  nil,
             &A10, &A11, nil,
-            &A20, &A21, &A22,   A, nb, pBOTTOMRIGHT)
+            &A20, &A21, &A22,   A, nblk, pBOTTOMRIGHT)
         repartPivot2x1to3x1(&pT, 
-            &p0, &p1, &p2,   /**/ p, nb, pBOTTOM)
+            &p0, &p1, &p2,   /**/ p, nblk, pBOTTOM)
 
         // --------------------------------------------------------
 
-        // A11 = LDL(A11)
-        err = unblkLowerLDL(&A11, &p1)
-        if err != nil {
-            return
-        }
-        applyRowPivots(&A10, &p1, 0, FORWARD)
-        applyColPivots(&A21, &p1, 0, FORWARD)
-        scalePivots(&p1, ATL.Rows())
-        
-        A11.Diag(&D1)
-        // A21 = A21*A11.-T
-        SolveTrm(&A21, &A11, 1.0, LOWER|UNIT|RIGHT|TRANSA)
-        // A21 = A21*D1.-1
-        SolveDiag(&A21, &D1, RIGHT)
+        // wrk = D1*L21.T 
+        W.SubMatrix(&wrk, nblk, 0, A21.Rows(), nblk)
 
-        // W = D1*L21.T = L21*D1
-        W.SubMatrix(&wrk, 0, 0, A21.Rows(), nb)
-        A21.CopyTo(&wrk)
-        MultDiag(&wrk, &D1, RIGHT)
-
-        // A22 = A22 - L21*D1*L21.T = A22 - L21*W.T
+        // A22 = A22 - L21*D1*L21.T = A22 - L21*wrk.T
         UpdateTrm(&A22, &A21, &wrk, -1.0, 1.0, LOWER|TRANSB)
+
+        applyRowPivots(&ABL, &p1, 0, FORWARD)
+        scalePivots(&p1, ATL.Rows())
+
+        //var Ablk matrix.FloatMatrix
+        //merge1x2(&Ablk, &ABL, &ABR)
+        //fmt.Printf("blk nblk=%d, Ablk:\n%v\n", nblk, &Ablk)
 
         // ---------------------------------------------------------
 
@@ -140,7 +271,17 @@ func blkLowerLDL(A, W *matrix.FloatMatrix, p *pPivots, nb int) (err error) {
             &ABL, &ABR,   &A00, &A11, &A22,  A, pBOTTOMRIGHT)
         contPivot3x1to2x1(
             &pT,
-             &pB,    &p0, &p1,    p, pBOTTOM)
+            &pB,    &p0, &p1,    p, pBOTTOM)
+    }
+    if ABR.Cols() > 0 {
+        // A11 = LDL(A11)
+        err = unblkLowerLDL(&ABR, &pB)
+        if err != nil {
+            return
+        }
+        //fmt.Printf("unblk pivots: %v\n", pB.pivots)
+        applyRowPivots(&ABL, &pB, 0, FORWARD)
+        scalePivots(&pB, ATL.Rows())
     }
     return
 }
