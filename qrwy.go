@@ -61,7 +61,7 @@ func unblkQRBlockReflector(T, A, tau *matrix.FloatMatrix) {
 
         // t11 := tau
         tauval := tau1.GetAt(0, 0)
-        if tauval != 0 {
+        if tauval != 0.0 {
             t11.SetAt(0, 0, tauval)
 
             // t01 := a10.T + &A20.T*a21
@@ -121,7 +121,7 @@ func unblockedQRT(A, T *matrix.FloatMatrix) {
         
         // update T
         tauval := t11.GetAt(0, 0)
-        if tauval != 0 {
+        if tauval != 0.0 {
             // t01 := -tauval*(a10.T + &A20.T*a21)
             a10.CopyTo(&t01)
             MVMult(&t01, &A20, &a21, -tauval, -tauval, TRANSA)
