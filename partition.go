@@ -40,11 +40,11 @@ func partition2x1(AT, AB, A *matrix.FloatMatrix, nb int, side pDirection) {
     }
     switch (side) {
     case pTOP:
-        AT.SubMatrixOf(A, 0, 0, nb, A.Cols())
-        AB.SubMatrixOf(A, nb, 0, A.Rows()-nb, A.Cols())
+        A.SubMatrix(AT, 0, 0, nb, A.Cols())
+        A.SubMatrix(AB, nb, 0, A.Rows()-nb, A.Cols())
     case pBOTTOM:
-        AT.SubMatrixOf(A, 0, 0, A.Rows()-nb, A.Cols())
-        AB.SubMatrixOf(A, A.Rows()-nb, 0, nb, A.Cols())
+        A.SubMatrix(AT, 0, 0, A.Rows()-nb, A.Cols())
+        A.SubMatrix(AB, A.Rows()-nb, 0, nb, A.Cols())
     }
 }
 
@@ -64,16 +64,16 @@ func repartition2x1to3x1(AT, A0, A1, A2, A *matrix.FloatMatrix, nb int, pdir pDi
         if nT + nb > A.Rows() {
             nb = A.Rows() - nT
         }
-        A0.SubMatrixOf(A, 0,     0, nT, A.Cols())
-        A1.SubMatrixOf(A, nT,    0, nb, A.Cols())
-        A2.SubMatrixOf(A, nT+nb, 0, A.Rows()-nT-nb, A.Cols())
+        A.SubMatrix(A0, 0,     0, nT, A.Cols())
+        A.SubMatrix(A1, nT,    0, nb, A.Cols())
+        A.SubMatrix(A2, nT+nb, 0, A.Rows()-nT-nb, A.Cols())
     case pTOP:
         if nT < nb {
             nb = nT
         }
-        A0.SubMatrixOf(A, 0,     0, nT-nb, A.Cols())
-        A1.SubMatrixOf(A, nT-nb, 0, nb,    A.Cols())
-        A2.SubMatrixOf(A, nT,    0, A.Rows()-nT, A.Cols())
+        A.SubMatrix(A0, 0,     0, nT-nb, A.Cols())
+        A.SubMatrix(A1, nT-nb, 0, nb,    A.Cols())
+        A.SubMatrix(A2, nT,    0, A.Rows()-nT, A.Cols())
     }
 }
 
@@ -91,11 +91,11 @@ func continue3x1to2x1(AT, AB, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
     n1 := A1.Rows()
     switch (pdir) {
     case pBOTTOM:
-        AT.SubMatrixOf(A, 0,     0, n0+n1, A.Cols())
-        AB.SubMatrixOf(A, n0+n1, 0, A.Rows()-n0-n1, A.Cols())
+        A.SubMatrix(AT, 0,     0, n0+n1, A.Cols())
+        A.SubMatrix(AB, n0+n1, 0, A.Rows()-n0-n1, A.Cols())
     case pTOP:
-        AT.SubMatrixOf(A, 0,  0, n0, A.Cols())
-        AB.SubMatrixOf(A, n0, 0, A.Rows()-n0, A.Cols())
+        A.SubMatrix(AT, 0,  0, n0, A.Cols())
+        A.SubMatrix(AB, n0, 0, A.Rows()-n0, A.Cols())
     }
 }
 
@@ -108,7 +108,7 @@ func continue3x1to2x1(AT, AB, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
  *
  */
 func merge2x1(ABLK, AT, AB *matrix.FloatMatrix) {
-    ABLK.SubMatrixOf(AT, 0, 0, AT.Rows()+AB.Rows(), AT.Cols())
+    AT.SubMatrix(ABLK, 0, 0, AT.Rows()+AB.Rows(), AT.Cols())
 }
 
 /*
@@ -134,11 +134,11 @@ func partition1x2(AL, AR, A *matrix.FloatMatrix, nb int, side pDirection) {
     }
     switch (side) {
     case pLEFT:
-        AL.SubMatrixOf(A, 0, 0,  A.Rows(), nb)
-        AR.SubMatrixOf(A, 0, nb, A.Rows(), A.Cols()-nb)
+        A.SubMatrix(AL, 0, 0,  A.Rows(), nb)
+        A.SubMatrix(AR, 0, nb, A.Rows(), A.Cols()-nb)
     case pRIGHT:
-        AL.SubMatrixOf(A, 0, 0,           A.Rows(), A.Cols()-nb)
-        AR.SubMatrixOf(A, 0, A.Cols()-nb, A.Rows(), nb)
+        A.SubMatrix(AL, 0, 0,           A.Rows(), A.Cols()-nb)
+        A.SubMatrix(AR, 0, A.Cols()-nb, A.Rows(), nb)
     }
 }
 
@@ -160,17 +160,17 @@ func repartition1x2to1x3(AL, A0, A1, A2, A *matrix.FloatMatrix, nb int, pdir pDi
             nb = A.Cols() - k
         }
         // A0 is AL; [A1; A2] is AR
-        A0.SubMatrixOf(A, 0, 0,    A.Rows(), k)
-        A1.SubMatrixOf(A, 0, k,    A.Rows(), nb)
-        A2.SubMatrixOf(A, 0, k+nb, A.Rows(), A.Cols()-nb-k)
+        A.SubMatrix(A0, 0, 0,    A.Rows(), k)
+        A.SubMatrix(A1, 0, k,    A.Rows(), nb)
+        A.SubMatrix(A2, 0, k+nb, A.Rows(), A.Cols()-nb-k)
     case pLEFT:
         if nb > k {
             nb = k
         }
         // A2 is AR; [A0; A1] is AL
-        A0.SubMatrixOf(A, 0, 0,    A.Rows(), k-nb)
-        A1.SubMatrixOf(A, 0, k-nb, A.Rows(), nb)
-        A2.SubMatrixOf(A, 0, k,    A.Rows(), A.Cols()-k)
+        A.SubMatrix(A0, 0, 0,    A.Rows(), k-nb)
+        A.SubMatrix(A1, 0, k-nb, A.Rows(), nb)
+        A.SubMatrix(A2, 0, k,    A.Rows(), A.Cols()-k)
     }
 }
 
@@ -188,12 +188,12 @@ func continue1x3to1x2(AL, AR, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
     switch (pdir) {
     case pRIGHT:
         // AL is [A0; A1], AR is A2
-        AL.SubMatrixOf(A, 0, 0,         A.Rows(), k+nb)
-        AR.SubMatrixOf(A, 0, AL.Cols(), A.Rows(), A.Cols()-AL.Cols())
+        A.SubMatrix(AL, 0, 0,         A.Rows(), k+nb)
+        A.SubMatrix(AR, 0, AL.Cols(), A.Rows(), A.Cols()-AL.Cols())
     case pLEFT:
         // AL is A0; AR is [A1; A2]
-        AL.SubMatrixOf(A, 0, 0, A.Rows(), k)
-        AR.SubMatrixOf(A, 0, k, A.Rows(), A.Cols()-k)
+        A.SubMatrix(AL, 0, 0, A.Rows(), k)
+        A.SubMatrix(AR, 0, k, A.Rows(), A.Cols()-k)
     }
 }
 
@@ -204,20 +204,29 @@ func continue1x3to1x2(AL, AR, A0, A1, A *matrix.FloatMatrix, pdir pDirection) {
   A  -->   =========
            ABL | ABR
 
- Parameter nb is initial block size for ATL in column direction and mb in row direction. 
+ Parameter nb is initial block size for ATL in column direction and mb in row direction.
+ ATR and ABL may be nil pointers.
  */
 func partition2x2(ATL, ATR, ABL, ABR, A *matrix.FloatMatrix, mb, nb int, side pDirection) {
     switch (side) {
     case pTOPLEFT:
-        ATL.SubMatrixOf(A, 0, 0,  mb, nb)
-        ATR.SubMatrixOf(A, 0, nb, mb, A.Cols()-nb)
-        ABL.SubMatrixOf(A, mb, 0, A.Rows()-mb, nb)
-        ABR.SubMatrixOf(A, mb, nb)
+        A.SubMatrix(ATL, 0, 0,  mb, nb)
+        if ATR != nil {
+            A.SubMatrix(ATR, 0, nb, mb, A.Cols()-nb)
+        }
+        if ABL != nil {
+            A.SubMatrix(ABL, mb, 0, A.Rows()-mb, nb)
+        }
+        A.SubMatrix(ABR, mb, nb)
     case pBOTTOMRIGHT:
-        ATL.SubMatrixOf(A, 0, 0,  A.Rows()-mb, A.Cols()-nb)
-        ATR.SubMatrixOf(A, 0, A.Cols()-nb, A.Rows()-mb, nb)
-        ABL.SubMatrixOf(A, A.Rows()-mb, 0, mb, nb)
-        ABR.SubMatrixOf(A, A.Rows()-mb, A.Cols()-nb)
+        A.SubMatrix(ATL, 0, 0,  A.Rows()-mb, A.Cols()-nb)
+        if ATR != nil {
+            A.SubMatrix(ATR, 0, A.Cols()-nb, A.Rows()-mb, nb)
+        }
+        if ABL != nil {
+            A.SubMatrix(ABL, A.Rows()-mb, 0, mb, nb)
+        }
+        A.SubMatrix(ABR, A.Rows()-mb, A.Cols()-nb)
     }
 }
 
@@ -243,57 +252,57 @@ func repartition2x2to3x3(ATL,
         if k + nb > A.Cols() {
             nb = A.Cols() - k
         }
-        A00.SubMatrixOf(A, 0, 0,    k, k)
+        A.SubMatrix(A00, 0, 0,    k, k)
         if A01 != nil {
-            A01.SubMatrixOf(A, 0, k,    k, nb)
+            A.SubMatrix(A01, 0, k,    k, nb)
         }
         if A02 != nil {
-            A02.SubMatrixOf(A, 0, k+nb, k, A.Cols()-k-nb)
+            A.SubMatrix(A02, 0, k+nb, k, A.Cols()-k-nb)
         }
 
         if A10 != nil {
-            A10.SubMatrixOf(A, k, 0,    nb, k)
+            A.SubMatrix(A10, k, 0,    nb, k)
         }
-        A11.SubMatrixOf(A, k, k,    nb, nb)
+        A.SubMatrix(A11, k, k,    nb, nb)
         if A12 != nil {
-            A12.SubMatrixOf(A, k, k+nb, nb, A.Cols()-k-nb)
+            A.SubMatrix(A12, k, k+nb, nb, A.Cols()-k-nb)
         }
 
         if A20 != nil {
-            A20.SubMatrixOf(A, k+nb, 0,    A.Rows()-k-nb, k)
+            A.SubMatrix(A20, k+nb, 0,    A.Rows()-k-nb, k)
         }
         if A21 != nil {
-            A21.SubMatrixOf(A, k+nb, k,    A.Rows()-k-nb, nb)
+            A.SubMatrix(A21, k+nb, k,    A.Rows()-k-nb, nb)
         }
-        A22.SubMatrixOf(A, k+nb, k+nb)
+        A.SubMatrix(A22, k+nb, k+nb)
     case pTOPLEFT:
         if nb > k {
             nb = k
         }
         // move towards top left corner
-        A00.SubMatrixOf(A, 0, 0,    k-nb, k-nb)
+        A.SubMatrix(A00, 0, 0,    k-nb, k-nb)
         if A01 != nil {
-            A01.SubMatrixOf(A, 0, k-nb, k-nb, nb)
+            A.SubMatrix(A01, 0, k-nb, k-nb, nb)
         }
         if A02 != nil {
-            A02.SubMatrixOf(A, 0, k, k-nb, A.Cols()-k)
+            A.SubMatrix(A02, 0, k, k-nb, A.Cols()-k)
         }
 
         if A10 != nil {
-            A10.SubMatrixOf(A, k-nb, 0, nb, k-nb)
+            A.SubMatrix(A10, k-nb, 0, nb, k-nb)
         }
-        A11.SubMatrixOf(A, k-nb, k-nb,  nb, nb)
+        A.SubMatrix(A11, k-nb, k-nb,  nb, nb)
         if A12 != nil {
-            A12.SubMatrixOf(A, k-nb, k, nb, A.Cols()-k)
+            A.SubMatrix(A12, k-nb, k, nb, A.Cols()-k)
         }
 
         if A20 != nil {
-            A20.SubMatrixOf(A, k, 0,    A.Rows()-k, k-nb)
+            A.SubMatrix(A20, k, 0,    A.Rows()-k, k-nb)
         }
         if A21 != nil {
-            A21.SubMatrixOf(A, k, k-nb, A.Rows()-k, nb)
+            A.SubMatrix(A21, k, k-nb, A.Rows()-k, nb)
         }
-        A22.SubMatrixOf(A, k, k)
+        A.SubMatrix(A22, k, k)
     }
 }
 
@@ -316,17 +325,17 @@ func continue3x3to2x2(
     mb := A11.Cols()
     switch (pdir) {
     case pBOTTOMRIGHT:
-        ATL.SubMatrixOf(A, 0, 0,    k+mb, k+mb)
-        ATR.SubMatrixOf(A, 0, k+mb, k+mb, A.Cols()-k-mb)
+        A.SubMatrix(ATL, 0, 0,    k+mb, k+mb)
+        A.SubMatrix(ATR, 0, k+mb, k+mb, A.Cols()-k-mb)
 
-        ABL.SubMatrixOf(A, k+mb, 0, A.Rows()-k-mb, k+mb)
-        ABR.SubMatrixOf(A, k+mb, k+mb)
+        A.SubMatrix(ABL, k+mb, 0, A.Rows()-k-mb, k+mb)
+        A.SubMatrix(ABR, k+mb, k+mb)
     case pTOPLEFT:
-        ATL.SubMatrixOf(A, 0, 0,    k, k)
-        ATR.SubMatrixOf(A, 0, k, k, A.Cols()-k)
+        A.SubMatrix(ATL, 0, 0,    k, k)
+        A.SubMatrix(ATR, 0, k, k, A.Cols()-k)
 
-        ABL.SubMatrixOf(A, k, 0, A.Rows()-k, A.Cols()-k)
-        ABR.SubMatrixOf(A, k, k)
+        A.SubMatrix(ABL, k, 0, A.Rows()-k, A.Cols()-k)
+        A.SubMatrix(ABR, k, k)
     }
 }
 
