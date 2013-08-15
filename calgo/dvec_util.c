@@ -264,6 +264,27 @@ void dvec_scal(mvec_t *X,  double alpha, int N)
   }
 }
 
+/*
+ * X := Y
+ */
+void dvec_copy(mvec_t *X,  mvec_t *Y, int N)
+{
+  register int i;
+  register double *Xc, *Yc;
+
+  Xc = X->md;
+  Yc = Y->md;
+  for (i = 0; i < N-1; i += 2) {
+    Xc[0] = Yc[0];
+    Xc[X->inc] = Yc[Y->inc];
+    Xc += 2*X->inc;
+    Yc += 2*Y->inc;
+  }    
+  if (i < N) {
+    Xc[0] = Yc[0];
+  }
+}
+
 // Local Variables:
 // indent-tabs-mode: nil
 // End:

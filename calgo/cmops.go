@@ -391,7 +391,7 @@ func DSymmRank2MV(A, X, Y []float64, alpha float64, flags Flags, ldA, incX, incY
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
     Xv.inc = C.int(incX)
     Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
-    Yv.inc = C.int(incX)
+    Yv.inc = C.int(incY)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
@@ -415,7 +415,7 @@ func DTrmUpdMV(A, X, Y []float64, alpha float64, flags Flags, ldA, incX, incY, S
     Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
     Xv.inc = C.int(incX)
     Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
-    Yv.inc = C.int(incX)
+    Yv.inc = C.int(incY)
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
@@ -647,6 +647,26 @@ func DSwap(X, Y []float64, incX, incY, N int) {
     Yv.inc = C.int(incY)
 
     C.dvec_swap(
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        C.int(N))
+}
+
+// copying: X := Y
+func DCopy(X, Y []float64, incX, incY, N int) {
+
+    var Xv C.mvec_t
+    var Yv C.mvec_t
+
+    if X == nil || Y == nil || N <= 0 {
+        return
+    }
+    Xv.md =  (*C.double)(unsafe.Pointer(&X[0]))
+    Xv.inc = C.int(incX)
+    Yv.md =  (*C.double)(unsafe.Pointer(&Y[0]))
+    Yv.inc = C.int(incY)
+
+    C.dvec_copy(
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         (*C.mvec_t)(unsafe.Pointer(&Yv)),
         C.int(N))

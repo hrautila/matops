@@ -107,6 +107,7 @@ extern double dvec_asum(const mvec_t *X,  int N);
 extern double dvec_nrm2(const mvec_t *X,  int N);
 extern double dvec_dot(const mvec_t *X,  const mvec_t *Y, double alpha, int N);
 extern void dvec_swap(mvec_t *X,  mvec_t *Y, int N);
+extern void dvec_copy(mvec_t *X,  mvec_t *Y, int N);
 
 extern void dvec_invscal(mvec_t *X,  double alpha, int N);
 extern double dvec_diff_nrm2(const mvec_t *X,  const mvec_t *Y, int N);
