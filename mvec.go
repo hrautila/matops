@@ -187,7 +187,7 @@ func MVUpdateTrm(A, X, Y *matrix.FloatMatrix, alpha float64, flags Flags) error 
         incX = X.LeadingIndex()
     }
     // NOTE: This could diveded to parallel tasks like matrix-matrix multiplication
-    calgo.DTrmUpdMV(Ar, Xr, Yr, alpha, calgo.Flags(flags), ldA, incY, incX, 0, A.Cols(), nB)
+    calgo.DTrmUpdMV(Ar, Xr, Yr, alpha, calgo.Flags(flags), ldA, incX, incY, 0, A.Cols(), nB)
     return nil
 }
 
@@ -329,6 +329,33 @@ func AddDot(Z, X, Y *matrix.FloatMatrix, alpha, beta float64, index int) {
         incZ = Z.LeadingIndex()
     }
     calgo.DDotSum(Zr[incZ*index:], Xr, Yr, alpha, beta, incZ, incX, incY, X.NumElements())
+}
+
+// Y := alpha * X + Y
+func Axpy(Y, X *matrix.FloatMatrix, alpha float64)  {
+    if X == nil || Y == nil {
+        return 
+    }
+    if !isVector(X)  {
+        return 
+    }
+    if !isVector(Y)  {
+        return 
+    }
+    Xr := X.FloatArray()
+    incX := 1
+    if X.Cols() != 1 {
+        // Row vector
+        incX = X.LeadingIndex()
+    }
+    Yr := Y.FloatArray()
+    incY := 1
+    if Y.Cols() != 1 {
+        // Row vector
+        incY = Y.LeadingIndex()
+    }
+    calgo.DAxpy(Xr, Yr, alpha, incX, incY, X.NumElements())
+    return
 }
 
 // Norm2 of vector: sqrt(||x||^2)
