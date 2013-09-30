@@ -64,7 +64,7 @@ func unblkQRBlockReflector(T, A, tau *matrix.FloatMatrix) {
         if tauval != 0.0 {
             t11.SetAt(0, 0, tauval)
 
-            // t01 := a10.T + &A20.T*a21
+            // t01 := -tauval*(a10.T + &A20.T*a21)
             a10.CopyTo(&t01)
             MVMult(&t01, &A20, &a21, -tauval, -tauval, TRANSA)
             // t01 := T00*t01
@@ -150,6 +150,7 @@ func unblockedQR(A, Tvec *matrix.FloatMatrix) {
     var t0, tau1, t2  matrix.FloatMatrix
 
     //As.SubMatrixOf(A, 0, 0, mlen, nb)
+    //fmt.Printf("A = %d,%d\n", m(A), n(A))
     partition2x2(
         &ATL, &ATR,
         &ABL, &ABR, A, 0, 0, pTOPLEFT)
@@ -169,6 +170,7 @@ func unblockedQR(A, Tvec *matrix.FloatMatrix) {
 
         // ------------------------------------------------------
         computeHouseholder(&a11, &a21, &tau1, LEFT)
+        //fmt.Printf("%d, n(a12)=%d, m(a21)=%d\n", n(&ABR), n(&a12), m(&a21))
         applyHouseholder(&tau1, &a21, &a12, &A22, LEFT)
         
         // ------------------------------------------------------
@@ -422,12 +424,12 @@ func blockedQRT(A, T, W *matrix.FloatMatrix, nb int) {
 //
 //  T = -T1 * [Y10.T*Y11 + Y20.T*Y21]*T2
 //  
-//  T1 is K*K tridiagonal upper matrix
-//  T2 is nb*nb tridiagonal upper matrix
+//  T1 is K*K triangular upper matrix
+//  T2 is nb*nb triangular upper matrix
 //  T  is K*nb block matrix
 //  Y10 is nb*K block matrix
 //  Y20 is M-K-nb*K block matrix
-//  Y11 is nb*nb tridiagonal lower unit diagonal matrix
+//  Y11 is nb*nb triangular lower unit diagonal matrix
 //  Y21 is M-K-nb*nb block matrix
 //  
 func updateQRTReflector(T, Y10, Y20, Y11, Y21, T1, T2 *matrix.FloatMatrix) {
@@ -484,7 +486,7 @@ func DecomposeQR(A, tau, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, er
             return nil, errors.New("work space too small")
         }
         var Wrk matrix.FloatMatrix
-        Wrk.SubMatrixOf(W, 0, 0, A.Cols(), nb)
+        W.SubMatrix(&Wrk, 0, 0, A.Cols(), nb)
         blockedQR(A, tau, Twork, &Wrk, nb)
     }
     return A, err
@@ -525,7 +527,7 @@ func DecomposeQRT(A, T, W *matrix.FloatMatrix, nb int) (*matrix.FloatMatrix, err
             return nil, errors.New("work space too small")
         }
         var Wrk matrix.FloatMatrix
-        Wrk.SubMatrixOf(W, 0, 0, A.Cols(), nb)
+        W.SubMatrix(&Wrk, 0, 0, A.Cols(), nb)
         blockedQRT(A, T, &Wrk, nb)
     }
     return A, err
