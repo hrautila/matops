@@ -366,7 +366,7 @@ func MultTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
     }
     // if more workers available can divide to tasks by B columns if flags&LEFT or by
     // B rows if flags&RIGHT.
-    calgo.DTrmmBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, ac, 0, E, nB)
+    calgo.DTrmmBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, ac, 0, E, vpLen, nB, mB)
     return nil
 }
 
@@ -417,7 +417,7 @@ func SolveTrm(B, A *matrix.FloatMatrix, alpha float64, flags Flags) error {
     }
     // if more workers available can divide to tasks by B columns if flags&LEFT or by
     // B rows if flags&RIGHT.
-    calgo.DSolveBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, ac, 0, E, nB)
+    calgo.DSolveBlk(Br, Ar, alpha, calgo.Flags(flags), ldB, ldA, ac, 0, E, vpLen, nB, mB)
     return nil
 }
 
@@ -440,7 +440,7 @@ func RankUpdateSym(C, A *matrix.FloatMatrix, alpha, beta float64, flags Flags) e
     // if more workers available C can be divided to blocks [S:E, S:E] along diagonal
     // and updated in separate tasks. 
     calgo.DSymmRankBlk(Cr, Ar, alpha, beta, calgo.Flags(flags), ldC, ldA, P, S, E,
-        vpLen, nB)
+        vpLen, nB, mB)
     return nil
 }
 
@@ -469,7 +469,7 @@ func RankUpdate2Sym(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flag
     // if more workers available C can be divided to blocks [S:E, S:E] along diagonal
     // and updated in separate tasks. 
     calgo.DSymmRank2Blk(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
-        P, S, E, vpLen, nB)
+        P, S, E, vpLen, nB, mB)
     return nil
 }
 
@@ -517,7 +517,7 @@ func UpdateTrm(C, A, B *matrix.FloatMatrix, alpha, beta float64, flags Flags) er
     // if more workers available C can be divided to blocks [S:E, S:E] along diagonal
     // and updated in separate tasks. 
     calgo.DTrmUpdBlk(Cr, Ar, Br, alpha, beta, calgo.Flags(flags), ldC, ldA, ldB,
-        P, S, E, vpLen, nB)
+        P, S, E, vpLen, nB, mB)
     return nil
 }
 
