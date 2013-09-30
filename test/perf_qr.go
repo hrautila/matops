@@ -299,6 +299,7 @@ func main() {
         A := newMatrix(M, N)
         Ac := A.Copy()
 
+        //fmt.Printf("M=%d, N=%d\n", M, N)
         if check {
             ok, tm, reftm = runCheck(A, KB)
             if verbose {
