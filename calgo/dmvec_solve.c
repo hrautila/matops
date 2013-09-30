@@ -196,7 +196,7 @@ void dmvec_solve_blocked(mvec_t *X, const mdata_t *A, int flags, int N, int NB)
       A21.md = &A->md[i*A->step+nR];
       X2.md = &X->md[nR*X->inc];
       //printf("A21:\n"); print_tile(A21.md, A21.step, N-nR, nI);
-      dmult_gemv_blocked(&X2, &A21, &X1, -1.0, 1.0, 0, 0, nI, 0, N-nR, 0, 0);
+      dmult_gemv2(&X2, &A21, &X1, -1.0, 1.0, 0, 0, nI, 0, N-nR);
     }
   } else {
     int n;
@@ -214,7 +214,7 @@ void dmvec_solve_blocked(mvec_t *X, const mdata_t *A, int flags, int N, int NB)
       // update X0 with new solutions.
       A01.md = &A->md[n*A->step];
       //printf("A01:\n"); print_tile(A01.md, A21.step, nR, nI);
-      dmult_gemv_blocked(&X0, &A01, &X1, -1.0, 1.0, 0, 0, nI, 0, nR, 0, 0);
+      dmult_gemv2(&X0, &A01, &X1, -1.0, 1.0, 0, 0, nI, 0, nR);
     }
   }
 }
