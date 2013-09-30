@@ -17,17 +17,17 @@ void _inner_vec_ddot(double *y0, int incY, const double *a0,
                      const double *x0, int incX, double alpha, int nC)
 {
   register int i;
-  register double ytmp;
+  register double t0, t1, t2, t3;
 
-  ytmp = 0.0;
+  t0 = t1 = t2 = t3 = 0.0;
   for (i = 0; i < nC-3; i += 4) {
-    ytmp += a0[0] * x0[0];
+    t0 += a0[0] * x0[0];
     //x0 += incX;
-    ytmp += a0[1] * x0[incX];
+    t1 += a0[1] * x0[incX];
     //x0 += incX;
-    ytmp += a0[2] * x0[2*incX];
+    t2 += a0[2] * x0[2*incX];
     //x0 += incX;
-    ytmp += a0[3] * x0[3*incX];
+    t3 += a0[3] * x0[3*incX];
     //x0 += incX;
     x0 += incX << 2;
     a0 += 4;
@@ -36,22 +36,23 @@ void _inner_vec_ddot(double *y0, int incY, const double *a0,
     goto update;
 
   if (i < nC-1) {
-    ytmp += a0[0] * x0[0];
+    t0 += a0[0] * x0[0];
     //x0 += incX;
-    ytmp += a0[1] * x0[incX];
+    t1 += a0[1] * x0[incX];
     //x0 += incX;
     x0 += incX << 1;
     a0 += 2;
     i += 2;
   }
   if (i < nC) {
-    ytmp += a0[0] * x0[0];
+    t2 += a0[0] * x0[0];
     x0 += incX;
     i++;
   }
+
  update:
-  y0[0] += ytmp * alpha;
-  
+  t0 += t1; t2 += t3;
+  y0[0] += (t0 + t2) * alpha;
 }
 
 static inline
@@ -59,22 +60,22 @@ void _inner_vec2_ddot(double *y0, int incY, const double *a0, const double *a1,
                       const double *x0, int incX, double alpha, int nC)
 {
   register int i;
-  register double ytmp0, ytmp1;
+  register double t0, t1, t2, t3, t4, t5, t6, t7;
 
-  ytmp0 = 0.0;
-  ytmp1 = 0.0;
+  t0 = t1 = t2 = t3 = 0.0;
+  t4 = t5 = t6 = t7 = 0.0;
   for (i = 0; i < nC-3; i += 4) {
-    ytmp0 += a0[0] * x0[0];
-    ytmp1 += a1[0] * x0[0];
+    t0 += a0[0] * x0[0];
+    t1 += a1[0] * x0[0];
     //x0 += incX;
-    ytmp0 += a0[1] * x0[incX];
-    ytmp1 += a1[1] * x0[incX];
+    t2 += a0[1] * x0[incX];
+    t3 += a1[1] * x0[incX];
     //x0 += incX;
-    ytmp0 += a0[2] * x0[2*incX];
-    ytmp1 += a1[2] * x0[2*incX];
+    t4 += a0[2] * x0[2*incX];
+    t5 += a1[2] * x0[2*incX];
     //x0 += incX;
-    ytmp0 += a0[3] * x0[3*incX];
-    ytmp1 += a1[3] * x0[3*incX];
+    t6 += a0[3] * x0[3*incX];
+    t7 += a1[3] * x0[3*incX];
     //x0 += incX;
     x0 += incX << 2;
     a0 += 4;
@@ -84,11 +85,11 @@ void _inner_vec2_ddot(double *y0, int incY, const double *a0, const double *a1,
     goto update;
 
   if (i < nC-1) {
-    ytmp0 += a0[0] * x0[0];
-    ytmp1 += a1[0] * x0[0];
+    t0 += a0[0] * x0[0];
+    t1 += a1[0] * x0[0];
     //x0 += incX;
-    ytmp0 += a0[1] * x0[incX];
-    ytmp1 += a1[1] * x0[incX];
+    t2 += a0[1] * x0[incX];
+    t3 += a1[1] * x0[incX];
     //x0 += incX;
     x0 += incX << 1;
     a0 += 2;
@@ -96,15 +97,16 @@ void _inner_vec2_ddot(double *y0, int incY, const double *a0, const double *a1,
     i += 2;
   }
   if (i < nC) {
-    ytmp0 += a0[0] * x0[0];
-    ytmp1 += a1[0] * x0[0];
+    t4 += a0[0] * x0[0];
+    t5 += a1[0] * x0[0];
     x0 += incX;
     i++;
   }
  update:
-  y0[0] += ytmp0 * alpha;
-  y0[incY] += ytmp1 * alpha;
-  
+  t0 += t2 + t4 + t6;
+  t1 += t3 + t5 + t7;
+  y0[0] += t0 * alpha;
+  y0[incY] += t1 * alpha;
 }
 
 static inline
@@ -113,7 +115,7 @@ void _inner_vec_ddot_sse(double *y0, int incY, const double *a0,
 {
   register int i;
   register double ytmp;
-  register __m128d Y0, Y1, A0, X0, TMP0, TMP1;
+  register __m128d Y0, Y1, A0, X0, A1, X1;
 
   ytmp = 0.0;
   Y0 = _mm_set1_pd(0.0);
@@ -128,16 +130,14 @@ void _inner_vec_ddot_sse(double *y0, int incY, const double *a0,
 
   for (i = 0; i < nC-3; i += 4) {
     A0 = _mm_load_pd(a0);
-    X0 = _mm_load_pd(x0);
-    TMP0 = A0 * X0;
-    Y0 = Y0 + TMP0;
+    X0 = _mm_mul_pd(A0, _mm_load_pd(x0));
+    Y0 += X0;
     x0 += 2;
     a0 += 2;
 
-    A0 = _mm_load_pd(a0);
-    X0 = _mm_load_pd(x0);
-    TMP1 = A0 * X0;
-    Y1 = Y1 + TMP1;
+    A1 = _mm_load_pd(a0);
+    X1 = _mm_mul_pd(A1, _mm_load_pd(x0));
+    Y1 += X1;
     x0 += 2;
     a0 += 2;
   }
@@ -146,9 +146,8 @@ void _inner_vec_ddot_sse(double *y0, int incY, const double *a0,
 
   if (i < nC-1) {
     A0 = _mm_load_pd(a0);
-    X0 = _mm_load_pd(x0);
-    TMP0 = A0 * X0;
-    Y0 = Y0 + TMP0;
+    X0 = _mm_mul_pd(A0, _mm_load_pd(x0));
+    Y0 += X0;
     x0 += 2;
     a0 += 2;
     i += 2;

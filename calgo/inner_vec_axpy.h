@@ -17,105 +17,75 @@ void _inner_vec4_daxpy(double *y0, int incY, const double *a0, const double *a1,
                        const double *a2, const double *a3,
                        const double *x0, int incX, double alpha, int nRE)
 {
-  register int i, ix;
+  register int i, k, yk;
   register double cf0, cf1, cf2, cf3;
-  register double ytmp, t0, t1;
+  register double t0, t1, t2, t3, t4, t5, t6, t7;
 
-  ix = 0;
-  cf0 = alpha * x0[ix];
-  ix += incX;
-  cf1 = alpha * x0[ix];
-  ix += incX;
-  cf2 = alpha * x0[ix];
-  ix += incX;
-  cf3 = alpha * x0[ix];
+  k = 0;
+  cf0 = alpha * x0[k];
+  k += incX;
+  cf1 = alpha * x0[k];
+  k += incX;
+  cf2 = alpha * x0[k];
+  k += incX;
+  cf3 = alpha * x0[k];
 
   for (i = 0; i < nRE-3; i += 4) {
-    ytmp = a0[0] * cf0;
-    t0 = a1[0] * cf1;
-    ytmp += t0;
-    t1 = a2[0] * cf2;
-    ytmp += t1;
-    t0 = a3[0] * cf3;
-    ytmp += t0;
-    y0[0] += ytmp;
-    y0 += incY;
+    t0 = a0[0] * cf0;
+    t1 = a1[0] * cf1;
+    t2 = a2[0] * cf2;
+    t3 = a3[0] * cf3;
+    y0[0] += (t0 + t1 + t2 + t3);
 
-    ytmp = a0[1] * cf0;
-    t0 = a1[1] * cf1;
-    ytmp += t0;
-    t1 = a2[1] * cf2;
-    ytmp += t1;
-    t0 = a3[1] * cf3;
-    ytmp += t0;
-    y0[0] += ytmp;
-    y0 += incY;
+    t4 = a0[1] * cf0;
+    t5 = a1[1] * cf1;
+    t6 = a2[1] * cf2;
+    t6 = a3[1] * cf3;
+    y0[incY] += t4 + t5 + t6 + t7;
 
-    ytmp = a0[2] * cf0;
-    t0 = a1[2] * cf1;
-    ytmp += t0;
-    t1 = a2[2] * cf2;
-    ytmp += t1;
-    t0 = a3[2] * cf3;
-    ytmp += t0;
-    y0[0] += ytmp;
-    y0 += incY;
+    t0 = a0[2] * cf0;
+    t1 = a1[2] * cf1;
+    t2 = a2[2] * cf2;
+    t3 = a3[2] * cf3;
+    y0[2*incY] += t0 + t1 + t3 + t3;
 
-    ytmp = a0[3] * cf0;
-    t0 = a1[3] * cf1;
-    ytmp += t0;
-    t1 = a2[3] * cf2;
-    ytmp += t1;
-    t0 = a3[3] * cf3;
-    ytmp += t0;
-    y0[0] += ytmp;
-    y0 += incY;
+    t4 = a0[3] * cf0;
+    t5 = a1[3] * cf1;
+    t6 = a2[3] * cf2;
+    t7 = a3[3] * cf3;
+    y0[3*incY] += t4 + t5 + t6 + t7;
 
     a0 += 4;
     a1 += 4;
     a2 += 4;
     a3 += 4;
+    y0 += 4*incY;
   }
   if (i == nRE)
     return;
 
-  if (i < nRE-1) {
-    ytmp = a0[0] * cf0;
-    t0 = a1[0] * cf1;
-    ytmp += t0;
-    t1 = a2[0] * cf2;
-    ytmp += t1;
-    t0 = a3[0] * cf3;
-    ytmp += t0;
-    y0[0] += ytmp;
-    y0 += incY;
-
-    ytmp = a0[1] * cf0;
-    t0 = a1[1] * cf1;
-    ytmp += t0;
-    t1 = a2[1] * cf2;
-    ytmp += t1;
-    t0 = a3[1] * cf3;
-    ytmp += t0;
-    y0[0] += ytmp;
-    y0 += incY;
-
-    a0 += 2;
-    a1 += 2;
-    a2 += 2;
-    a3 += 2;
-    i += 2;
-  }
-
-  if (i < nRE) {
-    ytmp = a0[0] * cf0;
-    t0 = a1[0] * cf1;
-    ytmp += t0;
-    t1 = a2[0] * cf2;
-    ytmp += t1;
-    t0 = a3[0] * cf3;
-    ytmp += t0;
-    y0[0] += ytmp;
+  k = 0; yk = i*incY;
+  switch (nRE-i) {
+  case 3:
+    t0 = a0[k] * cf0;
+    t1 = a1[k] * cf1;
+    t2 = a2[k] * cf2;
+    t3 = a3[k] * cf3;
+    y0[yk] += t0 + t1 + t2 + t3;
+	k++; yk += incY;
+  case 2:
+    t4 = a0[k] * cf0;
+    t5 = a1[k] * cf1;
+    t6 = a2[k] * cf2;
+    t6 = a3[k] * cf3;
+    y0[yk] += t4 + t5 + t6 + t7;
+    k++; yk += incY;
+  case 1:
+    t0 = a0[k] * cf0;
+    t1 = a1[k] * cf1;
+    t2 = a2[k] * cf2;
+    t3 = a3[k] * cf3;
+    y0[yk] += t0 + t1 + t2 + t3;
   }
 }
 
@@ -395,3 +365,7 @@ void _inner_vec4_daxpy_sse(double *y0, const double *a0, const double *a1,
 }
 
 #endif
+
+// Local Variables:
+// indent-tabs-mode: nil
+// End:
