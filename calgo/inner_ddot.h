@@ -10,10 +10,11 @@
 
 // SSE3 version with HADDPD (Horizontal Add Packed Double)
 // update 4 columns from 2 by 4 block.
-INLINE void _inner_ddot4_2_sse3(double *Cr0, double *Cr1, double *Cr2, double *Cr3,
-				 const double *a0, const double *a1,
-				 const double *b0, const double *b1,
-				 const double *b2, const double *b3, double alpha, int nVP)
+INLINE
+void _inner_ddot4_2_sse3(double *Cr0, double *Cr1, double *Cr2, double *Cr3,
+                         const double *a0, const double *a1,
+                         const double *b0, const double *b1,
+                         const double *b2, const double *b3, double alpha, int nVP)
 {
   register int k, i;
   register double cval0, cval1, cval2, cval3;
@@ -34,28 +35,32 @@ INLINE void _inner_ddot4_2_sse3(double *Cr0, double *Cr1, double *Cr2, double *C
   // unrolling of loops;
   for (k = nVP-1; k > 0; k -= 2) {
     A0 = _mm_load_pd(a0);
-    B0 = _mm_load_pd(b0);
-    B1 = _mm_load_pd(b1);
-    B2 = _mm_load_pd(b2);
-    B3 = _mm_load_pd(b3);
-    F0   = A0 * B0;
-    F1   = A0 * B1;
-    F2   = A0 * B2;
-    F3   = A0 * B3;
-    C0_0 = C0_0 + F0;
-    C1_0 = C1_0 + F1;
-    C2_0 = C2_0 + F2;
-    C3_0 = C3_0 + F3;
+    A1 = _mm_load_pd(a1);
+    C0_0 += _mm_mul_pd(A0, _mm_load_pd(b0));
+    C1_0 += _mm_mul_pd(A0, _mm_load_pd(b1));
+    C2_0 += _mm_mul_pd(A0, _mm_load_pd(b2));
+    C3_0 += _mm_mul_pd(A0, _mm_load_pd(b3));
+    C0_1 += _mm_mul_pd(A1, _mm_load_pd(b0));
+    C1_1 += _mm_mul_pd(A1, _mm_load_pd(b1));
+    C2_1 += _mm_mul_pd(A1, _mm_load_pd(b2));
+    C3_1 += _mm_mul_pd(A1, _mm_load_pd(b3));
+    //F0   = A0 * B0;
+    //F1   = A0 * B1;
+    //F2   = A0 * B2;
+    //F3   = A0 * B3;
+    //C0_0 = C0_0 + F0;
+    //C1_0 = C1_0 + F1;
+    //C2_0 = C2_0 + F2;
+    //C3_0 = C3_0 + F3;
 
-    A0 = _mm_load_pd(a1);
-    F0   = A0 * B0;
-    F1   = A0 * B1;
-    F2   = A0 * B2;
-    F3   = A0 * B3;
-    C0_1 = C0_1 + F0;
-    C1_1 = C1_1 + F1;
-    C2_1 = C2_1 + F2;
-    C3_1 = C3_1 + F3;
+    //F0   = A1 * B0;
+    //F1   = A1 * B1;
+    //F2   = A1 * B2;
+    //F3   = A1 * B3;
+    //C0_1 = C0_1 + F0;
+    //C1_1 = C1_1 + F1;
+    //C2_1 = C2_1 + F2;
+    //C3_1 = C3_1 + F3;
 
     a0 += 2;
     a1 += 2;
@@ -65,19 +70,19 @@ INLINE void _inner_ddot4_2_sse3(double *Cr0, double *Cr1, double *Cr2, double *C
     b3 += 2;
   }
   // update result
-  F0 = _mm_hadd_pd(C0_0, C1_0);
-  F1 = _mm_hadd_pd(C2_0, C3_0);
-  F0 *= ALP;
-  F1 *= ALP;
+  F0 = _mm_mul_pd(ALP, _mm_hadd_pd(C0_0, C1_0));
+  F1 = _mm_mul_pd(ALP, _mm_hadd_pd(C2_0, C3_0));
+  //F0 *= ALP;
+  //F1 *= ALP;
   Cr0[0] += F0[0];
   Cr1[0] += F0[1];
   Cr2[0] += F1[0];
   Cr3[0] += F1[1];
 
-  F2 = _mm_hadd_pd(C0_1, C1_1);
-  F3 = _mm_hadd_pd(C2_1, C3_1);
-  F2 *= ALP;
-  F3 *= ALP;
+  F2 = _mm_mul_pd(ALP, _mm_hadd_pd(C0_1, C1_1));
+  F3 = _mm_mul_pd(ALP, _mm_hadd_pd(C2_1, C3_1));
+  //F2 *= ALP;
+  //F3 *= ALP;
   Cr0[1] += F2[0];
   Cr1[1] += F2[1];
   Cr2[1] += F3[0];
