@@ -11,9 +11,15 @@
 
 #include "cmops.h"
 #include "inner_axpy.h"
-//#include "inner_vec_axpy.h"
 #include "inner_ddot.h"
 #include "inner_ddot_trans.h"
+
+extern
+void __dmult_inner_a_no_scale(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                              double alpha, int flags,
+                              int P, int nSL, int nR, 
+                              int KB, int NB, int MB, mdata_t *Acpy, mdata_t *Bcpy);
+
 
 static inline void _dmmat_scale(mdata_t *A, double f0, int M, int N) {
   dscale_tile(A->md, A->step, f0, M, N);
@@ -462,7 +468,9 @@ void dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int 
  */
 static void
 _dmmat_solve_blk_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                       int N, int S, int E, int NB, cbuf_t *Acpy, cbuf_t *Bcpy)
+                       int N, int S, int E,
+                       int KB, int NB, int MB,
+                       mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ, cI, cJ, nA, nB;
   mdata_t A0, A1, B0, B1;
@@ -489,7 +497,8 @@ _dmmat_solve_blk_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
       // solve bottom block
       dmmat_solve_unb(&B1, &A1, 1.0, flags, nI, 0, nJ);
       // update top with bottom solution
-      _dmult_mm_intern(&B0, &A0, &B1, -1.0, 0, nI, nJ, i-nI, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B0, &A0, &B1, -1.0, 0, nI, nJ, i-nI, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B0, &A0, &B1, -1.0, 0, nI, nJ, i-nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
   if (alpha != 1.0) {
@@ -513,7 +522,9 @@ _dmmat_solve_blk_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
  */
 static void
 _dmmat_solve_blk_u_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                         int N, int S, int E, int NB, cbuf_t *Acpy, cbuf_t *Bcpy)
+                         int N, int S, int E,
+                         int KB, int NB, int MB,
+                         mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ, cI, cJ, nA, nB;
   mdata_t A0, A1, B0, B1;
@@ -539,7 +550,8 @@ _dmmat_solve_blk_u_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       B1.md = &B->md[cJ*B->step + cI];   // bottom B block
 
       // update bottom block with top block
-      _dmult_mm_intern(&B1, &A0, &B0, -1.0, MTX_TRANSA, i, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B1, &A0, &B0, -1.0, MTX_TRANSA, i, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B1, &A0, &B0, -1.0, MTX_TRANSA, i, nJ, nI, KB, NB, MB, Acpy, Bcpy);
       // solve bottom block
       dmmat_solve_unb(&B1, &A1, 1.0, flags, nI, 0, nJ);
     }
@@ -565,7 +577,9 @@ _dmmat_solve_blk_u_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
  */
 static void
 _dmmat_solve_blk_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                       int N, int S, int E, int NB, cbuf_t *Acpy, cbuf_t *Bcpy)
+                       int N, int S, int E,
+                       int KB, int NB, int MB,
+                       mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ, cI, cJ, nA, nB;
   mdata_t A0, A1, B0, B1;
@@ -592,7 +606,8 @@ _dmmat_solve_blk_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
       // solve top block
       dmmat_solve_unb(&B0, &A0, 1.0, flags, nI, 0, nJ);
       // update bottom block with top block
-      _dmult_mm_intern(&B1, &A1, &B0, -1.0, 0, nI, nJ, N-i-nI, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B1, &A1, &B0, -1.0, 0, nI, nJ, N-i-nI, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B1, &A1, &B0, -1.0, 0, nI, nJ, N-i-nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
   if (alpha != 1.0) {
@@ -616,7 +631,9 @@ _dmmat_solve_blk_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
  */
 static void
 _dmmat_solve_blk_l_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                         int N, int S, int E, int NB, cbuf_t *Acpy, cbuf_t *Bcpy)
+                         int N, int S, int E,
+                         int KB, int NB, int MB,
+                         mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ, cI, cJ, nA, nB;
   mdata_t A0, A1, B0, B1;
@@ -641,7 +658,8 @@ _dmmat_solve_blk_l_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       B1.md = &B->md[cJ*B->step + i];       // bottom B block
 
       // update top with bottom solution
-      _dmult_mm_intern(&B0, &A1, &B1, -1.0, MTX_TRANSA, N-i, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B0, &A1, &B1, -1.0, MTX_TRANSA, N-i, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B0, &A1, &B1, -1.0, MTX_TRANSA, N-i, nJ, nI, KB, NB, MB, Acpy, Bcpy);
       // solve top block
       dmmat_solve_unb(&B0, &A0, 1.0, flags, nI, 0, nJ);
     }
@@ -666,7 +684,9 @@ _dmmat_solve_blk_l_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
  */
 static void
 _dmmat_solve_blk_r_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                         int N, int S, int E, int NB, cbuf_t *Acpy, cbuf_t *Bcpy)
+                         int N, int S, int E,
+                         int KB, int NB, int MB,
+                         mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ, cI, cJ, nA, nB;
   mdata_t Ab, At, Br, Bl;
@@ -693,7 +713,8 @@ _dmmat_solve_blk_r_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Bl.md = &B->md[cJ];                   // left B block  [nJ*cI]
 
       // update right with left solution
-      _dmult_mm_intern(&Br, &Bl, &At, -1.0, 0, cI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&Br, &Bl, &At, -1.0, 0, cI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&Br, &Bl, &At, -1.0, 0, cI, nI, nJ, KB, NB, MB, Acpy, Bcpy);
       // solve right block
       dmmat_solve_unb(&Br, &Ab, 1.0, flags, nI, 0, nJ);
     }
@@ -717,7 +738,9 @@ _dmmat_solve_blk_r_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
  */
 static void
 _dmmat_solve_blk_ru_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                         int N, int S, int E, int NB, cbuf_t *Acpy, cbuf_t *Bcpy)
+                         int N, int S, int E,
+                         int KB, int NB, int MB,
+                         mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ, cI, cJ, nA, nB;
   mdata_t Al, Ar, Br, Bl;
@@ -744,7 +767,8 @@ _dmmat_solve_blk_ru_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Br.md = &B->md[i*Br.step + cJ];       // right B block [nJ*N-i]
 
       // update left with right solution
-      _dmult_mm_intern(&Bl, &Br, &Ar, -1.0, MTX_TRANSB, N-i, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&Bl, &Br, &Ar, -1.0, MTX_TRANSB, N-i, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&Bl, &Br, &Ar, -1.0, MTX_TRANSB, N-i, nI, nJ, KB, NB, MB, Acpy, Bcpy);
       // solve right block
       dmmat_solve_unb(&Bl, &Al, 1.0, flags, nI, 0, nJ);
     }
@@ -769,7 +793,9 @@ _dmmat_solve_blk_ru_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
  */
 static void
 _dmmat_solve_blk_r_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                         int N, int S, int E, int NB, cbuf_t *Acpy, cbuf_t *Bcpy)
+                         int N, int S, int E,
+                         int KB, int NB, int MB,
+                         mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ, cI, cJ, nA, nB;
   mdata_t At, Ab, Br, Bl;
@@ -796,7 +822,8 @@ _dmmat_solve_blk_r_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Br.md = &B->md[i*Br.step + cJ];       // right B block [nJ*N-i]
 
       // update left with right solution
-      _dmult_mm_intern(&Bl, &Br, &Ab, -1.0, 0, N-i, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&Bl, &Br, &Ab, -1.0, 0, N-i, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&Bl, &Br, &Ab, -1.0, 0, N-i, nI, nJ, KB, NB, MB, Acpy, Bcpy);
       // solve right block
       dmmat_solve_unb(&Bl, &At, 1.0, flags, nI, 0, nJ);
     }
@@ -822,7 +849,9 @@ _dmmat_solve_blk_r_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
  */
 static void
 _dmmat_solve_blk_rl_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                         int N, int S, int E, int NB, cbuf_t *Acpy, cbuf_t *Bcpy)
+                          int N, int S, int E,
+                          int KB, int NB, int MB,
+                          mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ, cI, cJ, nA, nB;
   mdata_t Ar, Al, Br, Bl;
@@ -849,7 +878,8 @@ _dmmat_solve_blk_rl_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Bl.md = &B->md[cJ];                   // left B block  [nJ*cI]
 
       // update right with left solution
-      _dmult_mm_intern(&Br, &Bl, &Al, -1.0, MTX_TRANSB, cI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&Br, &Bl, &Al, -1.0, MTX_TRANSB, cI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&Br, &Bl, &Al, -1.0, MTX_TRANSB, cI, nI, nJ, KB, NB, MB, Acpy, Bcpy);
       // solve right block
       dmmat_solve_unb(&Br, &Ar, 1.0, flags, nI, 0, nJ);
     }
@@ -862,47 +892,58 @@ _dmmat_solve_blk_rl_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
 
 // B = A.-1*B, B = A.-T*B, B = B*A.-1, B = B*A.-T; blocked versions
 void dmmat_solve_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                     int N, int S, int E, int NB)
+                     int N, int S, int E, int KB, int NB, int MB)
 {
   // S < E <= N
-  double Abuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(64)));
-  double Bbuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(64)));
-  cbuf_t Acpy = {Abuf, MAX_VP_ROWS*MAX_VP_COLS};
-  cbuf_t Bcpy = {Bbuf, MAX_VP_ROWS*MAX_VP_COLS};
+  mdata_t Acpy, Bcpy;
+  double Abuf[MAX_KB*MAX_MB], Bbuf[MAX_KB*MAX_NB] __attribute__((aligned(64)));
 
-  if (E-S <= 0)
+  Acpy.md = Abuf;
+  Acpy.step = MAX_KB;
+  Bcpy.md = Bbuf;
+  Bcpy.step = MAX_KB;
+
+  if (E-S <= 0 || N <= 0)
     return;
 
-  if (NB > MAX_VP_COLS || NB <= 0) {
-    NB = MAX_VP_COLS;
+  // restrict block sizes as data is copied to aligned buffers of predefined max sizes.
+  if (NB > MAX_NB || NB <= 0) {
+    NB = MAX_NB;
   }
+  if (MB > MAX_MB || MB <= 0) {
+    MB = MAX_MB;
+  }
+  if (KB > MAX_KB || KB <= 0) {
+    KB = MAX_KB;
+  }
+
   if (flags & MTX_RIGHT) {
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_blk_ru_trans(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_solve_blk_ru_trans(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       } else {
-        _dmmat_solve_blk_r_upper(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_solve_blk_r_upper(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_blk_rl_trans(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_solve_blk_rl_trans(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       } else {
-        _dmmat_solve_blk_r_lower(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_solve_blk_r_lower(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       }
     }
   } else {
     // B = A.-1*B; B = A.-T*B
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_blk_u_trans(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_solve_blk_u_trans(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       } else {
-        _dmmat_solve_blk_upper(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_solve_blk_upper(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_solve_blk_l_trans(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_solve_blk_l_trans(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       } else {
-        _dmmat_solve_blk_lower(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_solve_blk_lower(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       }
     }
   }
