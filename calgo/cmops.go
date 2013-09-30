@@ -8,9 +8,11 @@
 
 package calgo
 
-// -O3 -msse4.1 -funroll-loops -fomit-frame-pointer -ffast-math 
+// -O3 -fomit-frame-pointer -ffast-math 
+// -O3 -msse4.1 -fomit-frame-pointer -ffast-math 
+// -O3 -mavx -fomit-frame-pointer -ffast-math 
 
-// #cgo CFLAGS: -O3 -msse4.1 -fomit-frame-pointer -ffast-math 
+// #cgo CFLAGS: -O3 -march=native -fomit-frame-pointer -ffast-math 
 // #cgo LDFLAGS: -lm
 // #include "cmops.h"
 import "C"
@@ -81,7 +83,7 @@ func DMult(C, A, B []float64, alpha, beta float64, trans Flags, ldC, ldA, ldB, P
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
 
-    C.dmult_mm_blocked3(
+    C.dmult_mm_blocked4(
         (*C.mdata_t)(unsafe.Pointer(&Cm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
@@ -108,7 +110,7 @@ func DMultSymm(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ld
     Bm.md =  (*C.double)(unsafe.Pointer(&B[0]))
     Bm.step = C.int(ldB)
 
-    C.dmult_symm_blocked2(
+    C.dmult_symm_blocked3(
         (*C.mdata_t)(unsafe.Pointer(&Cm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
@@ -134,7 +136,7 @@ func DTrmmUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, N
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
-    C.dmmat_trid_unb(
+    C.dmmat_trmm_unb(
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(E),
@@ -143,7 +145,7 @@ func DTrmmUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, N
 }
 
 // blas TRMM; blocked
-func DTrmmBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB int) {
+func DTrmmBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, KB, NB, MB int) {
     var Bm C.mdata_t
     var Am C.mdata_t
 
@@ -162,7 +164,7 @@ func DTrmmBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB 
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(E),
-        /*C.int(R), C.int(E),*/ C.int(NB))
+        C.int(KB), C.int(NB), C.int(MB))
 
 }
 
@@ -192,7 +194,7 @@ func DSolveUnblk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E i
 
 // blas TRSM; blocked
 // S is the start column (LEFT), row (RIGHT); E is the end column (LEFT), row (RIGHT)
-func DSolveBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB int) {
+func DSolveBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, KB, NB, MB int) {
     var Bm C.mdata_t
     var Am C.mdata_t
 
@@ -210,13 +212,14 @@ func DSolveBlk(B, A []float64, alpha float64, flags Flags, ldB, ldA, N, S, E, NB
     C.dmmat_solve_blk(
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
-        C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(E), C.int(NB))
+        C.double(alpha), C.int(flags), C.int(N), C.int(S), C.int(E),
+        C.int(KB), C.int(NB), C.int(MB))
 
 }
 
 // blas SYRK; blocked
 // S is the start column and row in C; E is the end column and row in C
-func DSymmRankBlk(C, A []float64, alpha, beta float64, flags Flags, ldC, ldA, N, S, E, H, NB int) {
+func DSymmRankBlk(C, A []float64, alpha, beta float64, flags Flags, ldC, ldA, N, S, E, KB, NB, MB int) {
     var Cm C.mdata_t
     var Am C.mdata_t
 
@@ -235,13 +238,13 @@ func DSymmRankBlk(C, A []float64, alpha, beta float64, flags Flags, ldC, ldA, N,
         (*C.mdata_t)(unsafe.Pointer(&Cm)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         C.double(alpha), C.double(beta),
-        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(H), C.int(NB))
+        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(KB), C.int(NB), C.int(MB))
 
 }
 
 // blas SYR2K; blocked
 // S is the start column and row in C; E is the end column and row in C
-func DSymmRank2Blk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, N, S, E, H, NB int) {
+func DSymmRank2Blk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, N, S, E, KB, NB, MB int) {
     var Cm C.mdata_t
     var Am C.mdata_t
     var Bm C.mdata_t
@@ -264,13 +267,13 @@ func DSymmRank2Blk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         C.double(alpha), C.double(beta),
-        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(H), C.int(NB))
+        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(KB), C.int(NB), C.int(MB))
 
 }
 
 // Generic triangular matrix update; blocked
 // S is the start column and row in C; E is the end column and row in C
-func DTrmUpdBlk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, N, S, E, H, NB int) {
+func DTrmUpdBlk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, ldB, N, S, E, KB, NB, MB int) {
     var Cm C.mdata_t
     var Am C.mdata_t
     var Bm C.mdata_t
@@ -293,7 +296,7 @@ func DTrmUpdBlk(C, A, B []float64, alpha, beta float64, flags Flags, ldC, ldA, l
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         (*C.mdata_t)(unsafe.Pointer(&Bm)),
         C.double(alpha), C.double(beta),
-        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(H), C.int(NB))
+        C.int(flags), C.int(N), C.int(S), C.int(E), C.int(KB), C.int(NB), C.int(MB))
 
 }
 
@@ -317,6 +320,7 @@ func DMultMV(Y, A, X []float64, alpha, beta float64, flags Flags, incY, ldA, inc
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
+    /*
     C.dmult_gemv_blocked(
         (*C.mvec_t)(unsafe.Pointer(&Yv)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
@@ -324,6 +328,13 @@ func DMultMV(Y, A, X []float64, alpha, beta float64, flags Flags, incY, ldA, inc
         C.double(alpha), C.double(beta), C.int(flags),
         C.int(S), C.int(L), C.int(R), C.int(E),
         C.int(H), C.int(MB))
+     */
+    C.dmult_gemv2(
+        (*C.mvec_t)(unsafe.Pointer(&Yv)),
+        (*C.mdata_t)(unsafe.Pointer(&Am)),
+        (*C.mvec_t)(unsafe.Pointer(&Xv)),
+        C.double(alpha), C.double(beta), C.int(flags),
+        C.int(S), C.int(L), C.int(R), C.int(E))
 }
 
 
@@ -481,7 +492,7 @@ func DTrimvUnblkMV(X, A []float64, flags Flags, incX, ldA, N int) {
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
-    C.dmvec_trid_unb(
+    C.dmvec_trmv_unb(
         (*C.mvec_t)(unsafe.Pointer(&Xv)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
         C.int(flags), C.int(N))

@@ -38,9 +38,22 @@ enum {
 #define MAX_NB_DDOT 94
 #define MAX_VP_DDOT 194
 
-#define MAX_MB 254
-#define MAX_NB 254
-#define MAX_VP 194
+//#define MAX_MB 252
+//#define MAX_NB 252
+//#define MAX_VP 196
+
+#ifndef MAX_KB
+#define MAX_KB 160
+#endif
+
+#ifndef MAX_NB
+#define MAX_NB 128
+#endif
+
+#ifndef MAX_MB
+#define MAX_MB 128
+#endif
+
 
 #define OFFSET(a,b) ((unsigned int)(a-b))
 
@@ -137,6 +150,12 @@ dmult_mm_blocked3(mdata_t *C, const mdata_t *A, const mdata_t *B,
                   int P, int S, int L, int R, int E, 
                   int vlen, int NB, int MB);
 
+extern void
+dmult_mm_blocked4(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                  double alpha, double beta, int flags,
+                  int P, int S, int L, int R, int E, 
+                  int KB, int NB, int MB);
+
 
 extern void 
 dmult_symm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
@@ -152,6 +171,13 @@ dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
                     int vlen, int NB, int MB);
 
 
+extern void 
+dmult_symm_blocked3(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                    double alpha, double beta, int flags,
+                    int P, int S, int L, int R, int E,
+                    int KB, int NB, int MB);
+
+
 // matrix-vector: Y = alpha*A*X + beta*Y
 extern void
 dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
@@ -159,6 +185,10 @@ dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
                    int S, int L, int R, int E,
                    int vlen, int MB);
 
+
+void dmult_gemv2(mvec_t *Y, const mdata_t *A, const mvec_t *X,
+                 double alpha, double beta, int flags,
+                 int S, int L, int R, int E);
 
 // A = A + alpha * x * y.T; A is M*N, x is M*1, Y is N*1 (GER)
 extern void
@@ -190,15 +220,15 @@ dmvec_solve_blocked(mvec_t *X, const mdata_t *A, int flags, int N, int NB);
 
 // for TRMV (unblocked)
 extern void
-dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N);
+dmvec_trmv_unb(mvec_t *X, const mdata_t *A, int flags, int N);
 
 // for TRMM (unblocked)
 extern void
-dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int L);
+dmmat_trmm_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int L);
 
 extern void
 dmmat_trmm_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
-               int N, int S, /*int L, int R,*/ int E, int NB);
+               int N, int S, int E, int KB, int NB, int MB);
 
 // for TRSM
 extern void
@@ -206,24 +236,24 @@ dmmat_solve_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, in
 
 extern void
 dmmat_solve_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                int N, int S, int E, int NB);
+                int N, int S, int E, int KB, int NB, int MB);
 
 // for SYRK
 extern void
 dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
-               int flags,  int P, int S, int E, int vlen, int NB);
+               int flags,  int P, int S, int E, int KB, int NB, int MB);
 
 // for SYR2K
 extern void
 dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
                 double alpha, double beta, int flags,
-                int P, int S, int E,  int vlen, int NB);
+                int P, int S, int E,  int KB, int NB, int MB);
 
 // Generic triangular matrix update
 extern void
 dmmat_trmupd_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
                  double alpha, double beta,
-                 int flags,  int P, int S, int E, int vlen, int NB);
+                 int flags,  int P, int S, int E, int KB, int NB, int MB);
 
 #endif
 
