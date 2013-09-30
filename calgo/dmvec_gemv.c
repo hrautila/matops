@@ -9,420 +9,329 @@
 #include <stdint.h>
 
 #include "cmops.h"
-#include "inner_vec_axpy.h"
-#include "inner_vec_dot.h"
 
-static
-void _dmvec_ddot(double *Yc, const double *Aroot, const double *Xc, double alpha,
-                 int incY, int ldA, int incX, int nRE, int nC)
+
+static inline
+void __vmult1axpy(double *y, int incy,
+                 const double *a0, const double *x, int incx,
+                 double alpha, int nR)
 {
-  register int j, k;
-  register const double *a0, *a1, *a2, *a3, *x0;
-  register double *y0;
-  const double *Ac;
+  register int k;
+  register double cf;
 
-  Ac = Aroot;
-  x0 = Xc;
-  // 4 columns of A
-  for (j = 0; j < nRE-3; j += 4) {
-    y0 = Yc;
-    a0 = Ac;
-    a1 = a0 + ldA;
-    a2 = a1 + ldA;
-    a3 = a2 + ldA;
-    _inner_vec2_ddot(y0, incY, a0, a1, Xc, incX, alpha, nC);
-    y0 += 2*incY;
-    _inner_vec2_ddot(y0, incY, a2, a3, Xc, incX, alpha, nC);
-    Ac += 4*ldA;
-    Yc += 4*incY;
+  cf = alpha*x[0];
+
+  for (k = 0; k < nR-3; k += 4) {
+    y[(k+0)*incy] += a0[k+0]*cf;
+    y[(k+1)*incy] += a0[k+1]*cf;
+    y[(k+2)*incy] += a0[k+2]*cf;
+    y[(k+3)*incy] += a0[k+3]*cf;
   }
-  // Here if j == nRE --> nRE mod 4 == 0 and we are done
-  // If work is divided right this should happen most of the time.
-  if (j == nRE)
+  if (k == nR)
     return;
 
-  // do the not-multiples of 4 cases....
-  if (j < nRE-1) {
-    y0 = Yc;
-    a0 = Ac;
-    a1 = a0 + ldA;
-    _inner_vec2_ddot(y0, incY, a0, a1, Xc, incX, alpha, nC);
-    y0 += incY;
-    Yc += 2*incY;
-    Ac += 2*ldA;
-    j += 2;
-  }
-
-  if (j < nRE) {
-    // not multiple of 2
-    y0 = Yc;
-    a0 = Ac;
-    _inner_vec_ddot(y0, incY, a0, Xc, incX, alpha, nC);
-    Yc += incY;
-    Ac += ldA;
-    j++;
+  switch (nR-k) {
+  case 3:
+    y[(k+0)*incy] += a0[k+0]*cf;
+    k++;
+  case 2:
+    y[(k+0)*incy] += a0[k+0]*cf;
+    k++;
+  case 1:
+    y[(k+0)*incy] += a0[k+0]*cf;
   }
 }
 
-static
-void _dmvec_ddot_unaligned(mvec_t *Y, const mdata_t *A, const mvec_t *X,
-                          double alpha, double beta,
-                          int S, int L, int R, int E, int vlen)
+
+static inline
+void __vmult2axpy(double *y, int incy,
+                 const double *a0, const double *a1, const double *x, int incx,
+                 double alpha, int nR)
 {
-  int j, k, vpS, vpL;
-  const double *Xc, *Ac, *AvpS;
-  double *Yc;
+  register int k;
+  register double cf0, cf1, t0, t1, t2, t3, t4, t5, t6, t7;
 
-  vpS = S;
-  vpL = vlen < L-S ? S + vlen : L;
+  cf0 = alpha*x[0];
+  cf1 = alpha*x[incx];
 
-  Yc = &Y->md[R*Y->inc];
-
-  while (vpS < L) {
-    AvpS = &A->md[R*A->step + vpS];
-    Xc = &X->md[vpS*X->inc];
-
-    _dmvec_ddot(Yc, AvpS, Xc, alpha, Y->inc, A->step, X->inc, E-R, vpL-vpS);
-
-    vpS = vpL;
-    vpL += vlen;
-    if (vpL > L) {
-      vpL = L;
-    }
+  for (k = 0; k < nR-3; k += 4) {
+    t0 = a0[k+0]*cf0;
+    t1 = a0[k+1]*cf0;
+    t2 = a0[k+2]*cf0;
+    t3 = a0[k+3]*cf0;
+    t4 = a1[k+0]*cf1;
+    t5 = a1[k+1]*cf1;
+    t6 = a1[k+2]*cf1;
+    t7 = a1[k+3]*cf1;
+    y[(k+0)*incy] += t0 + t4;
+    y[(k+1)*incy] += t1 + t5;
+    y[(k+2)*incy] += t2 + t6;
+    y[(k+3)*incy] += t3 + t7;
   }
-}
-
-void _dmvec_ddot_sse(double *Yc, const double *Aroot, const double *Xc, double alpha,
-                     int incY, int ldA, int incX, int nRE, int nC, int oddstart)
-{
-  register int j, k;
-  register double *y0;
-  register const double *x0, *a0, *a1, *a2, *a3;
-  const double *Ac;
-
-  Ac = Aroot;
-  x0 = Xc;
-  // 4 columns of A
-  for (j = 0; j < nRE-3; j += 4) {
-    y0 = Yc;
-    a0 = Ac;
-    a1 = a0 + ldA;
-    a2 = a1 + ldA;
-    a3 = a2 + ldA;
-    _inner_vec2_ddot_sse(y0, incY, a0, a1, Xc, alpha, nC, oddstart);
-    y0 += 2*incY;
-    _inner_vec2_ddot_sse(y0, incY, a2, a3, Xc, alpha, nC, oddstart);
-    Ac += 4*ldA;
-    Yc += 4*incY;
-  }
-  // Here if j == nC --> nC mod 4 == 0 and we are done
-  // If work is divided right this should happen most of the time.
-  if (j == nRE)
+  if (k == nR)
     return;
 
-  // do the not-multiples of 4 cases....
-  if (j < nRE-1) {
-    y0 = Yc;
-    a0 = Ac;
-    a1 = a0 + ldA;
-    _inner_vec2_ddot_sse(y0, incY, a0, a1, Xc, alpha, nC, oddstart);
-    y0 += incY;
-    Yc += 2*incY;
-    Ac += 2*ldA;
-    j += 2;
-  }
-
-  if (j < nRE) {
-    // not multiple of 2
-    y0 = Yc;
-    a0 = Ac;
-    _inner_vec_ddot_sse(y0, incY, a0, Xc, alpha, nC, oddstart);
-    Yc += incY;
-    Ac += ldA;
-    j++;
-  }
-}
-
-// here we have a chance for SSE, ldA is even and incY is one and Y and A
-// data arrays have same alignment.
-static
-void _dmvec_ddot_aligned(mvec_t *Y, const mdata_t *A, const mvec_t *X,
-                         double alpha, double beta,
-                         int S, int L, int R, int E, int vlen)
-{
-  int j, k, vpS, vpL, oddStart;
-  const double *Xc, *Ac, *AvpS;
-  double *Yc;
-
-  //printf("R=%d, E=%d\n", R, E);
-  vpS = S;
-  vpL = vlen < L-S ? S + vlen : L;
-
-  // Y element 
-  Yc = &Y->md[R];
-
-  while (vpS < L) {
-    AvpS = &A->md[R*A->step + vpS];
-    // X element
-    Xc = &X->md[vpS*X->inc];
-    oddStart = ((uintptr_t)Xc & 0xF) != 0;
-
-    //printf("  vpS=%d, vpL=%d\n", vpS, vpL);
-    _dmvec_ddot_sse(Yc, AvpS, Xc, alpha, Y->inc, A->step, X->inc, E-R, vpL-vpS, oddStart);
-
-    vpS = vpL;
-    vpL += vlen;
-    if (vpL > L) {
-      vpL = L;
-    }
+  switch (nR-k) {
+  case 3:
+    y[k*incy] += a0[k]*cf0 + a1[k]*cf1;
+    k++;
+  case 2:
+    y[k*incy] += a0[k]*cf0 + a1[k]*cf1;
+    k++;
+  case 1:
+    y[k*incy] += a0[k]*cf0 + a1[k]*cf1;
   }
 }
 
 
-static 
-void _dmvec_daxpy(double *Yc, const double *Aroot, const double *Xc, double alpha,
-                 int incY, int ldA, int incX, int nRE, int nC)
+static inline
+void __vmult4axpy(double *y, int incy,
+                 const double *a0, const double *a1, const double *a2, const double *a3,
+                 const double *x, int incx,
+                 double alpha, int nR)
 {
-  register int j, k;
-  register const double *a0, *a1, *a2, *a3;
-  const double *Ac;
+  register int k;
+  register double cf0, cf1, cf2, cf3, t0, t1, t2, t3, t4, t5, t6, t7;
 
-  Ac = Aroot;
-  // 4 columns of A
-  for (j = 0; j < nC-3; j += 4) {
-    a0 = Ac;
-    a1 = a0 + ldA;
-    a2 = a1 + ldA;
-    a3 = a2 + ldA;
-    _inner_vec2_daxpy(Yc, incY, a0, a1, Xc, incX, alpha, nRE);
-    Xc += 2*incX;
-    _inner_vec2_daxpy(Yc, incY, a2, a3, Xc, incX, alpha, nRE);
-    Xc += 2*incX;
-    //_inner_vec4_daxpy(Yc, incY, a0, a1, a2, a3, Xc, incX, alpha, nRE);
-    //Xc += 4*incX;
-    Ac += 4*ldA;
+  cf0 = alpha*x[0];
+  cf1 = alpha*x[incx];
+  cf2 = alpha*x[2*incx];
+  cf3 = alpha*x[3*incx];
+
+  for (k = 0; k < nR-1; k += 2) {
+    t0 = a0[k+0]*cf0;
+    t1 = a0[k+1]*cf0;
+
+    t2 = a1[k+0]*cf1;
+    t3 = a1[k+1]*cf1;
+
+    t4 = a2[k+0]*cf2;
+    t5 = a2[k+1]*cf2;
+
+    t6 = a3[k+0]*cf3;
+    t7 = a3[k+1]*cf3;
+
+    y[(k+0)*incy] += t0 + t2 + t4 + t6;
+    y[(k+1)*incy] += t1 + t3 + t5 + t7;
   }
-  // Here if j == nC --> nC mod 4 == 0 and we are done
-  // If work is divided right this should happen most of the time.
-  if (j == nC)
+  if (k == nR)
     return;
 
-  // do the not-multiples of 4 cases....
-  if (j < nC-1) {
-    a0 = Ac;
-    a1 = a0 + ldA;
-    _inner_vec2_daxpy(Yc, incY, a0, a1, Xc, incX, alpha, nRE);
-    Xc += 2*incX;
-    Ac += 2*ldA;
-    j += 2;
-  }
-
-  if (j < nC) {
-    // not multiple of 2
-    a0 = Ac;
-    _inner_vec_daxpy(Yc, incY, a0, Xc, incX, alpha, nRE);
-    Xc += incX;
-    Ac += ldA;
-    j++;
-  }
+  t0 = a0[k+0]*cf0;
+  t2 = a1[k+0]*cf1;
+  t4 = a2[k+0]*cf2;
+  t6 = a3[k+0]*cf3;
+  y[k*incy] += t0 + t2 + t4 + t6;
 }
 
-void _dmvec_daxpy_unaligned(mvec_t *Y, const mdata_t *A, const mvec_t *X,
-                            double alpha, double beta,
-                            int S, int L, int R, int E, int vlen)
+
+
+static inline
+void __vmult1dot(double *y, int incy,
+                const double *a0, const double *x, int incx,
+                double alpha, int nR)
 {
-  int j, k, vpS, vpL;
-  const double *Xc, *Ac, *AvpS;
-  double *Yc;
+  register int k;
+  register double t0, t1, t2, t3;
 
-  vpS = S;
-  vpL = vlen < L-S ? S + vlen : L;
-
-  Yc = &Y->md[R*X->inc];
-
-  while (vpS < L) {
-    AvpS = &A->md[vpS*A->step + R];
-    Xc = &X->md[vpS*X->inc];
-
-    //printf("  vpS=%d, vpL=%d\n", vpS, vpL);
-    _dmvec_daxpy(Yc, AvpS, Xc, alpha, Y->inc, A->step, X->inc, E-R, vpL-vpS);
-
-    vpS = vpL;
-    vpL += vlen;
-    if (vpL > L) {
-      vpL = L;
-    }
+  t0 = t1 = t2 = t3 = 0.0;
+  for (k = 0; k < nR-3; k += 4) {
+    t0 += a0[k+0]*x[(k+0)*incx];
+    t1 += a0[k+1]*x[(k+1)*incx];
+    t2 += a0[k+2]*x[(k+2)*incx];
+    t3 += a0[k+3]*x[(k+3)*incx];
   }
+  if (k == nR)
+    goto update;
+  switch (nR-k) {
+  case 3:
+    t0 += a0[k]*x[k*incx];
+    k++;
+  case 2:
+    t1 += a0[k]*x[k*incx];
+    k++;
+  case 1:
+    t2 += a0[k]*x[k*incx];
+  }
+ update:
+  t0 += t1; t2 += t3;
+  y[0]    += (t0 + t2)*alpha;
 }
 
 
-void _dmvec_daxpy_sse(double *Yc, const double *Aroot, const double *Xc, double alpha,
-                     int ldA, int incX, int nRE, int nC, int oddStart)
+static inline
+void __vmult2dot(double *y, int incy,
+                const double *a0, const double *a1, const double *x, int incx,
+                double alpha, int nR)
 {
-  register int j, k;
-  register double *y0;
-  register const double *x0, *a0, *a1, *a2, *a3;
-  const double *Ac;
+  register int k;
+  register double t0, t1, t2, t3, t4, t5, t6, t7;
 
-  Ac = Aroot;
-  // 4 columns of A
-  for (j = 0; j < nC-3; j += 4) {
-    x0 = Xc;
-    y0 = Yc;
-    a0 = Ac;
-    a1 = a0 + ldA;
-    a2 = a1 + ldA;
-    a3 = a2 + ldA;
-    //_inner_vec4_daxpy_sse(y0, a0, a1, a2, a3, x0, incX, alpha, nRE, oddStart);
-    _inner_vec2_daxpy_sse(y0, a0, a1, x0, incX, alpha, nRE, oddStart);
-    x0 += 2*incX;
-    _inner_vec2_daxpy_sse(y0, a2, a3, x0, incX, alpha, nRE, oddStart);
-    Ac += 4*ldA;
-    Xc += 4*incX;
-  }
-  // Here if j == nC --> nC mod 4 == 0 and we are done
-  if (j == nC)
-    return;
+  t0 = t1 = t2 = t3 = t4 = t5 = t6 = t7 = 0.0;
+  for (k = 0; k < nR-3; k += 4) {
+    t0 += a0[k+0]*x[(k+0)*incx];
+    t1 += a0[k+1]*x[(k+1)*incx];
+    t2 += a0[k+2]*x[(k+2)*incx];
+    t3 += a0[k+3]*x[(k+3)*incx];
 
-  // do the not-multiples of 4 cases....
-  if (j < nC-1) {
-    x0 = Xc;
-    y0 = Yc;
-    a0 = Ac;
-    a1 = a0 + ldA;
-    //_inner_vec2_daxpy(y0, 1, a0, a1, x0, incX, alpha, nRE);
-    _inner_vec2_daxpy_sse(y0, a0, a1, x0, incX, alpha, nRE, oddStart);
-    Xc += 2*incX;
-    Ac += 2*ldA;
-    j += 2;
+    t4 += a1[k+0]*x[(k+0)*incx];
+    t5 += a1[k+1]*x[(k+1)*incx];
+    t6 += a1[k+2]*x[(k+2)*incx];
+    t7 += a1[k+3]*x[(k+3)*incx];
   }
-
-  if (j < nC) {
-    // not multiple of 2
-    x0 = Xc;
-    y0 = Yc;
-    a0 = Ac;
-    //_inner_vec_daxpy(y0, 1, a0, x0, incX, alpha, nRE);
-    _inner_vec_daxpy_sse(y0, a0, x0, incX, alpha, nRE, oddStart);
-    Xc += incX;
-    Ac += ldA;
-    j++;
+  if (k == nR)
+    goto update;
+  switch (nR-k) {
+  case 3:
+    t0 += a0[k]*x[k*incx];
+    t4 += a1[k]*x[k*incx];
+    k++;
+  case 2:
+    t1 += a0[k]*x[k*incx];
+    t5 += a1[k]*x[k*incx];
+    k++;
+  case 1:
+    t2 += a0[k]*x[k*incx];
+    t6 += a1[k]*x[k*incx];
   }
+ update:
+  t0 += t1; t2 += t3;
+  t4 += t5; t6 += t7;
+  y[0]    += (t0 + t2)*alpha;
+  y[incy] += (t4 + t6)*alpha;
 }
 
-// here we have a chance for SSE, ldA is even and incY is one and Y and A
-// data arrays have same alignment.
-void _dmvec_daxpy_aligned(mvec_t *Y, const mdata_t *A, const mvec_t *X,
-                           double alpha, double beta,
-                           int S, int L, int R, int E, int vlen)
+static inline
+void __vmult4dot(double *y, int incy,
+                const double *a0, const double *a1, const double *a2, const double *a3,
+                const double *x, int incx,
+                double alpha, int nR)
 {
-  int j, k, vpS, vpL, oddStart;
-  const double *Xc, *Ac, *AvpS;
-  double *Yc;
+  register int k;
+  register double t0, t1, t2, t3, t4, t5, t6, t7;
 
-  vpS = S;
-  vpL = vlen < L-S ? S + vlen : L;
+  t0 = t1 = t2 = t3 = t4 = t5 = t6 = t7 = 0.0;
+  for (k = 0; k < nR-1; k += 2) {
+    t0 += a0[k+0]*x[(k+0)*incx];
+    t1 += a0[k+1]*x[(k+1)*incx];
 
-  // Y element 
-  Yc = &Y->md[R];
-  oddStart = ((uintptr_t)Yc & 0xF) != 0;
+    t2 += a1[k+0]*x[(k+0)*incx];
+    t3 += a1[k+1]*x[(k+1)*incx];
 
-  while (vpS < L) {
-    AvpS = &A->md[vpS*A->step + R];
-    Xc = &X->md[vpS*X->inc];
+    t4 += a2[k+0]*x[(k+0)*incx];
+    t5 += a2[k+1]*x[(k+1)*incx];
 
-    _dmvec_daxpy_sse(Yc, AvpS, Xc, alpha, A->step, X->inc, E-R, vpL-vpS, oddStart);
-
-    vpS = vpL;
-    vpL += vlen;
-    if (vpL > L) {
-      vpL = L;
-    }
+    t6 += a3[k+0]*x[(k+0)*incx];
+    t7 += a3[k+1]*x[(k+1)*incx];
   }
+  if (k == nR)
+    goto update;
+
+  t0 += a0[k]*x[k*incx];
+  t2 += a1[k]*x[k*incx];
+  t4 += a2[k]*x[k*incx];
+  t6 += a3[k]*x[k*incx];
+
+ update:
+  t0 += t1; t2 += t3;
+  t4 += t5; t6 += t7;
+  y[0]      += t0*alpha;
+  y[incy]   += t2*alpha;
+  y[2*incy] += t4*alpha;
+  y[3*incy] += t6*alpha;
 }
 
-// if A, Y == aligned(16) and incY == 1 and ldA == even
-//      --> we can use SSE with _mm_load() for A, Y and _mm_store() for Y
-//
-// other cases 
-//      --> use the non-SSE version 
 
 // Y = alpha*A*X + beta*Y for rows R:E, A is M*N and 0 < R < E <= M, Update
 // with S:L columns from A and correspoding elements from X.
 // length of X. With matrix-vector operation will avoid copying data.
-void dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
-                        double alpha, double beta, int flags,
-                        int S, int L, int R, int E,
-                        int vlen, int MB)
+void dmult_gemv2(mvec_t *Y, const mdata_t *A, const mvec_t *X,
+                 double alpha, double beta, int flags,
+                 int S, int L, int R, int E)
 {
-  int i, j, nI, nJ, a_aligned, y_aligned, x_aligned, lda_even;
+  int i, j;
+  register double *y;
+  register const double *x;
+  register const double *a0, *a1, *a2, *a3;
 
-
+  // L - S is columns in A, elements in X
+  // E - R is rows in A, elements in Y 
   if (L - S <= 0 || E - R <= 0) {
     return;
   }
 
-  a_aligned = ((uintptr_t)A->md & 0xF);
-  lda_even = (A->step & 0x1) == 0;
-
-  if (flags & MTX_TRANSA) {
-    // here we will use DOT operations to update Y vector.
-    if (MB <= 0) {
-      MB = L - S;
-    }
-    if (vlen <= 0) {
-      vlen = 1024;
-    }
-    x_aligned = ((uintptr_t)X->md & 0xF);
-
-    if (lda_even && Y->inc == 1 && a_aligned == x_aligned) {
-      //printf("transA aligned ...\n");
-      for (i = S; i < L; i += MB) {
-        nI = L - i < MB ? L - i : MB;
-        if (beta != 1.0) {
-          dscale_vec(&Y->md[R*Y->inc], Y->inc, beta, E-R);
-        }
-        _dmvec_ddot_aligned(Y, A, X, alpha, beta, i, i+nI, R, E, vlen);
+  if (beta != 1.0) {
+    if (beta != 0.0) {
+      for (i = R; i < E; i++) {
+        Y->md[i*Y->inc] *= beta;
       }
     } else {
-      //printf("transA unaligned ...\n");
-      for (i = S; i < L; i += MB) {
-        nI = L - i < MB ? L - i : MB;
-        if (beta != 1.0) {
-          dscale_vec(&Y->md[R*Y->inc], Y->inc, beta, E-R);
-        }
-        _dmvec_ddot_unaligned(Y, A, X, alpha, beta, i, i+nI, R, E, vlen);
+      for (i = R; i < E; i++) {
+        Y->md[i*Y->inc] = 0.0;
       }
+    }
   }
 
-  } else {
-    // here we will use AXPY operations to update Y vector.
-    if (MB <= 0) {
-      MB = E - R;
+  if ((flags & MTX_TRANSA) || (flags & MTX_TRANS)) {
+
+    x = &X->md[S*X->inc];
+    for (i = R; i < E-3; i += 4) {
+      y = &Y->md[i*Y->inc];
+      a0 = &A->md[(i+0)*A->step];
+      a1 = &A->md[(i+1)*A->step];
+      a2 = &A->md[(i+2)*A->step];
+      a3 = &A->md[(i+3)*A->step];
+      __vmult4dot(y, Y->inc, a0, a1, a2, a3, x, X->inc, alpha, L-S);
     }
-    if (vlen <= 0) {
-      vlen = 256;
+    if (i == E)
+      return;
+
+    switch (E-i) {
+    case 3:
+    case 2:
+      y = &Y->md[i*Y->inc];
+      a0 = &A->md[(i+0)*A->step];
+      a1 = &A->md[(i+1)*A->step];
+      __vmult2dot(y, Y->inc, a0, a1, x, X->inc, alpha, L-S);
+      i += 2;
     }
-    y_aligned = ((uintptr_t)Y->md & 0xF);
-    if (lda_even && Y->inc == 1 && a_aligned == y_aligned) {
-      //printf("NO trans, aligned ...\n");
-      for (i = R; i < E; i += MB) {
-        nI = E - i < MB ? E - i : MB;
-        if (beta != 1.0) {
-          dscale_vec(&Y->md[i*Y->inc], Y->inc, beta, nI);
-        }
-        _dmvec_daxpy_aligned(Y, A, X, alpha, beta, S, L, i, i+nI, vlen);
-      }
-    } else {
-      //printf("NO trans, unaligned ...\n");
-      for (i = R; i < E; i += MB) {
-        nI = E - i < MB ? E - i : MB;
-        if (beta != 1.0) {
-          dscale_vec(&Y->md[i*Y->inc], Y->inc, beta, nI);
-        }
-        _dmvec_daxpy_unaligned(Y, A, X, alpha, beta, S, L, i, i+nI, vlen);
-      }
+    if (i < E) {
+      y = &Y->md[i*Y->inc];
+      a0 = &A->md[(i+0)*A->step];
+      __vmult1dot(y, Y->inc, a0, x, X->inc, alpha, L-S);
     }
+    return;
+  }
+
+  // Non-Transposed A here
+
+
+  y = &Y->md[R*Y->inc];
+  for (j = S; j < L-3; j += 4) {
+    x = &X->md[j*X->inc];
+    a0 = &A->md[R+(j+0)*A->step];
+    a1 = &A->md[R+(j+1)*A->step];
+    a2 = &A->md[R+(j+2)*A->step];
+    a3 = &A->md[R+(j+3)*A->step];
+    __vmult4axpy(y, Y->inc, a0, a1, a2, a3, x, X->inc, alpha, E-R);
+  }
+
+  if (j == L)
+    return;
+
+  switch (L-j) {
+  case 3:
+  case 2:
+    x = &X->md[j*X->inc];
+    a0 = &A->md[R+(j+0)*A->step];
+    a1 = &A->md[R+(j+1)*A->step];
+    __vmult2axpy(y, Y->inc, a0, a1, x, X->inc, alpha, E-R);
+    j += 2;
+  }
+  if (j < L) {
+    x = &X->md[j*X->inc];
+    a0 = &A->md[R+(j+0)*A->step];
+    __vmult1axpy(y, Y->inc, a0, x, X->inc, alpha, E-R);
   }
 }
 
