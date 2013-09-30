@@ -9,7 +9,8 @@
 #ifndef _COLCPY_H
 #define _COLCPY_H
 
-extern void *memcpy(void *, const void *, size_t);
+#include <string.h>
+//extern void *memcpy(void *, const void *, size_t);
 
 static inline
 void colcpy(double * __restrict dst, int ldD,
