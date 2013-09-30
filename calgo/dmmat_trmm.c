@@ -15,6 +15,14 @@
 #include "inner_ddot_trans.h"
 
 
+extern
+void __dmult_inner_a_no_scale(mdata_t *C, const mdata_t *A, const mdata_t *B,
+                              double alpha, int flags,
+                              int P, int nSL, int nR, 
+                              int KB, int NB, int MB, mdata_t *Acpy, mdata_t *Bcpy);
+
+
+
 // Functions here implement various versions of TRMM operation.
 
 /*
@@ -34,7 +42,7 @@
   Updates are calculated in breadth first manner by with successive AXPY operations.
  */
 static void
-_dmmat_trid_unb_lower(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trmm_unb_lower(double *Bc, const double *Ac, double alpha, int unit,
                           int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -79,7 +87,7 @@ _dmmat_trid_unb_lower(double *Bc, const double *Ac, double alpha, int unit,
   Updates are calculated in depth first manner with DOT operations.
  */
 static void
-_dmmat_trid_unb_u_trans(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trmm_unb_u_trans(double *Bc, const double *Ac, double alpha, int unit,
                         int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -127,7 +135,7 @@ _dmmat_trid_unb_u_trans(double *Bc, const double *Ac, double alpha, int unit,
 */
 
 static void
-_dmmat_trid_unb_upper(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trmm_unb_upper(double *Bc, const double *Ac, double alpha, int unit,
                       int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -156,7 +164,7 @@ _dmmat_trid_unb_upper(double *Bc, const double *Ac, double alpha, int unit,
 
 // Calculate forward a diagonal block and current B-values from first to last.
 static void
-_dmmat_trid_unb_l_trans(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trmm_unb_l_trans(double *Bc, const double *Ac, double alpha, int unit,
                         int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -196,7 +204,7 @@ _dmmat_trid_unb_l_trans(double *Bc, const double *Ac, double alpha, int unit,
     --> work it backwards as b12 & b02 are not needed for b11, b01, ...
 */
 static void
-_dmmat_trid_unb_r_upper(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trmm_unb_r_upper(double *Bc, const double *Ac, double alpha, int unit,
                         int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -241,7 +249,7 @@ _dmmat_trid_unb_r_upper(double *Bc, const double *Ac, double alpha, int unit,
     --> work it forward as b00 are not needed for b01, b02, ... with DOT
 */
 static void
-_dmmat_trid_unb_r_lower(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trmm_unb_r_lower(double *Bc, const double *Ac, double alpha, int unit,
                          int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -287,7 +295,7 @@ _dmmat_trid_unb_r_lower(double *Bc, const double *Ac, double alpha, int unit,
     --> work it forward as b00 & b010 are not needed for b01, b11, ... with AXPY
 */
 static void
-_dmmat_trid_unb_ru_trans(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trmm_unb_ru_trans(double *Bc, const double *Ac, double alpha, int unit,
                            int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -331,7 +339,7 @@ _dmmat_trid_unb_ru_trans(double *Bc, const double *Ac, double alpha, int unit,
     --> work it backward as b02 & b12 are not needed for b01, b11, ... with AXPY
 */
 static void
-_dmmat_trid_unb_rl_trans(double *Bc, const double *Ac, double alpha, int unit,
+_dmmat_trmm_unb_rl_trans(double *Bc, const double *Ac, double alpha, int unit,
                          int ldB, int ldA, int nRE, int nC)
 {
   // Y is 
@@ -366,7 +374,7 @@ _dmmat_trid_unb_rl_trans(double *Bc, const double *Ac, double alpha, int unit,
 //extern void memset(void *, int, size_t);
 
 // X = A*X; unblocked version
-void dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int E)
+void dmmat_trmm_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N, int S, int E)
 {
   // indicates if diagonal entry is unit (=1.0) or non-unit.
   int unit = flags & MTX_UNIT ? 1 : 0;
@@ -378,18 +386,18 @@ void dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
         // axpy_left_fwd
-        _dmmat_trid_unb_ru_trans(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+        _dmmat_trmm_unb_ru_trans(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
       } else {
         // dot_bleft_backward
-        _dmmat_trid_unb_r_upper(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+        _dmmat_trmm_unb_r_upper(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
       }
     } else {
       if (flags & MTX_TRANSA) {
         // axpy_bleft_backwd
-        _dmmat_trid_unb_rl_trans(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+        _dmmat_trmm_unb_rl_trans(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
       } else {
         // dot_bleft_fwd
-        _dmmat_trid_unb_r_lower(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
+        _dmmat_trmm_unb_r_lower(Bc, A->md, alpha, unit, B->step, A->step, E-S, N);
       }
     }
   } else {
@@ -398,18 +406,18 @@ void dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
         // dot_backward
-        _dmmat_trid_unb_u_trans(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
+        _dmmat_trmm_unb_u_trans(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
       } else {
         // axpy_forward
-        _dmmat_trid_unb_upper(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
+        _dmmat_trmm_unb_upper(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
       }
     } else {
       if (flags & MTX_TRANSA) {
         // dot_forward
-        _dmmat_trid_unb_l_trans(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
+        _dmmat_trmm_unb_l_trans(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
       } else {
         // axpy_backward
-        _dmmat_trid_unb_lower(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
+        _dmmat_trmm_unb_lower(Bc, A->md, alpha, unit, B->step, A->step, N, E-S);
       }
     }
   }
@@ -430,8 +438,9 @@ void dmmat_trid_unb(mdata_t *B, const mdata_t *A, double alpha, int flags, int N
     B2 = A22*B2                  
  */
 void _dmmat_trmm_blk_upper(mdata_t *B, const mdata_t *A,
-                           double alpha, int flags, int N, int S, int L, int NB,
-                           cbuf_t *Acpy, cbuf_t *Bcpy)
+                           double alpha, int flags, int N, int S, int L,
+                           int KB, int NB, int MB,
+                           mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ;
   mdata_t A0, A1, B0, B1;
@@ -451,10 +460,10 @@ void _dmmat_trmm_blk_upper(mdata_t *B, const mdata_t *A,
       B1.md = &B->md[j*B->step + i+nI];    // bottom B block
       
       // update current part with diagonal
-      dmmat_trid_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
+      dmmat_trmm_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      //_dblock_mult_panel(&B0, &A1, &B1, alpha, 0, N-i-nI, nJ, nI, NB, Acpy, Bcpy);
-      _dmult_mm_intern(&B0, &A1, &B1, alpha, 0, N-i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B0, &A1, &B1, alpha, 0, N-i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B0, &A1, &B1, alpha, 0, N-i-nI, nJ, nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
 }
@@ -471,8 +480,9 @@ void _dmmat_trmm_blk_upper(mdata_t *B, const mdata_t *A,
     B2 = A02*B0 + A12*B1 + A22*B2                  
 */
 void _dmmat_trmm_blk_u_trans(mdata_t *B, const mdata_t *A,
-                             double alpha, int flags, int N, int S, int L, int NB,
-                             cbuf_t *Acpy, cbuf_t *Bcpy)
+                             double alpha, int flags, int N, int S, int L,
+                             int KB, int NB, int MB,
+                             mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ;
   mdata_t A0, A1, B0, B1;
@@ -491,17 +501,11 @@ void _dmmat_trmm_blk_u_trans(mdata_t *B, const mdata_t *A,
       B0.md = &B->md[j*B->step];             // top B block
       B1.md = &B->md[j*B->step+(i-nI)];      // bottom B block
       
-      //printf("i: %d, j: %d, nI: %d, nJ: %d, i-nI: %d\n", i, j, nI, nJ, i-nI);
-      //printf("..A1:\n"); print_tile(A1.md, A1.step, nI, nI);
-      //printf("..A0:\n"); print_tile(A0.md, A0.step, nI, i-nI);
-      //printf("..B1:\n"); print_tile(B1.md, B1.step, nI, nJ);
-      //printf("..B0:\n"); print_tile(B0.md, B0.step, i-nI, nJ);
-      
       // update current part with diagonal
-      dmmat_trid_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
+      dmmat_trmm_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      //_dblock_mult_panel(&B1, &A0, &B0, alpha, MTX_TRANSA, i-nI, nJ, nI, NB, Acpy, Bcpy);
-      _dmult_mm_intern(&B1, &A0, &B0, alpha, MTX_TRANSA, i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B1, &A0, &B0, alpha, MTX_TRANSA, i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B1, &A0, &B0, alpha, MTX_TRANSA, i-nI, nJ, nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
 }
@@ -520,8 +524,9 @@ void _dmmat_trmm_blk_u_trans(mdata_t *B, const mdata_t *A,
     B2 = A20*B0 + A21*B1 + A22*B2
  */
 void _dmmat_trmm_blk_lower(mdata_t *B, const mdata_t *A,
-                           double alpha, int flags, int N, int S, int L, int NB,
-                           cbuf_t *Acpy, cbuf_t *Bcpy)
+                           double alpha, int flags, int N, int S, int L,
+                           int KB, int NB, int MB,
+                           mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ;
   mdata_t A0, A1, B0, B1;
@@ -540,17 +545,11 @@ void _dmmat_trmm_blk_lower(mdata_t *B, const mdata_t *A,
       B0.md = &B->md[j*B->step];             // top B block
       B1.md = &B->md[j*B->step+(i-nI)];      // current B block
       
-      //printf("i: %d, j: %d, nI: %d, nJ: %d, i-nI: %d\n", i, j, nI, nJ, i-nI);
-      //printf("..A1:\n"); print_tile(A1.md, A1.step, nI, nI);
-      //printf("..A0:\n"); print_tile(A0.md, A0.step, nI, i-nI);
-      //printf("..B1:\n"); print_tile(B1.md, B1.step, nI, nJ);
-      //printf("..B0:\n"); print_tile(B0.md, B0.step, i-nI, nJ);
-      
       // update current part with diagonal
-      dmmat_trid_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
+      dmmat_trmm_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      //_dblock_mult_panel(&B1, &A0, &B0, alpha, 0, i-nI, nJ, nI, NB, Acpy, Bcpy);
-      _dmult_mm_intern(&B1, &A0, &B0, alpha, 0, i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B1, &A0, &B0, alpha, 0, i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B1, &A0, &B0, alpha, 0, i-nI, nJ, nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
 }
@@ -567,8 +566,9 @@ void _dmmat_trmm_blk_lower(mdata_t *B, const mdata_t *A,
     B2 = A22*B2
  */
 void _dmmat_trmm_blk_l_trans(mdata_t *B, const mdata_t *A,
-                             double alpha, int flags, int N, int S, int L, int NB,
-                             cbuf_t *Acpy, cbuf_t *Bcpy)
+                             double alpha, int flags, int N, int S, int L,
+                             int KB, int NB, int MB,
+                             mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ;
   mdata_t A0, A1, B0, B1;
@@ -588,10 +588,10 @@ void _dmmat_trmm_blk_l_trans(mdata_t *B, const mdata_t *A,
       B1.md = &B->md[j*B->step + i+nI];    // bottom B block
       
       // update current part with diagonal
-      dmmat_trid_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
+      dmmat_trmm_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      //_dblock_mult_panel(&B0, &A1, &B1, alpha, MTX_TRANSA, N-i-nI, nJ, nI, NB, Acpy, Bcpy);
-      _dmult_mm_intern(&B0, &A1, &B1, alpha, MTX_TRANSA, N-i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B0, &A1, &B1, alpha, MTX_TRANSA, N-i-nI, nJ, nI, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B0, &A1, &B1, alpha, MTX_TRANSA, N-i-nI, nJ, nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
 }
@@ -609,8 +609,9 @@ void _dmmat_trmm_blk_l_trans(mdata_t *B, const mdata_t *A,
     B2 = B0*A02 + B1*A12 + B2*A22 = trmm_unb(B2, A22) + [B0; B1]*[A02; A12].T
  */
 void _dmmat_trmm_blk_r_upper(mdata_t *B, const mdata_t *A,
-                             double alpha, int flags, int N, int S, int L, int NB,
-                             cbuf_t *Acpy, cbuf_t *Bcpy)
+                             double alpha, int flags, int N, int S, int L,
+                             int KB, int NB, int MB,
+                             mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ;
   mdata_t A0, A1, B0, B1;
@@ -629,17 +630,11 @@ void _dmmat_trmm_blk_r_upper(mdata_t *B, const mdata_t *A,
       B0.md = &B->md[j];                     // left of B block
       B1.md = &B->md[(i-nI)*B->step+j];      // current B block
       
-      //printf("i: %d, j: %d, nI: %d, nJ: %d, i-nI: %d\n", i, j, nI, nJ, i-nI);
-      //printf("..A1:\n"); print_tile(A1.md, A1.step, nI, nI);
-      //printf("..A0:\n"); print_tile(A0.md, A0.step, N-i, nI);
-      //printf("..B1:\n"); print_tile(B1.md, B1.step, nJ, nI);
-      //printf("..B0:\n"); print_tile(B0.md, B0.step, nJ, N-i);
-      
       // update current part with diagonal
-      dmmat_trid_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
+      dmmat_trmm_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      //_dblock_mult_panel(&B1, &B0, &A0, alpha, 0, i-nI, nI, nJ, NB, Acpy, Bcpy);
-      _dmult_mm_intern(&B1, &B0, &A0, alpha, 0, i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B1, &B0, &A0, alpha, 0, i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B1, &B0, &A0, alpha, 0, i-nI, nJ, nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
 }
@@ -657,8 +652,9 @@ void _dmmat_trmm_blk_r_upper(mdata_t *B, const mdata_t *A,
     B2 = B2*A22                   = trmm_unb(B2, A22)
  */
 void _dmmat_trmm_blk_ru_trans(mdata_t *B, const mdata_t *A,
-                              double alpha, int flags, int N, int S, int L, int NB,
-                              cbuf_t *Acpy, cbuf_t *Bcpy)
+                              double alpha, int flags, int N, int S, int L,
+                              int KB, int NB, int MB,
+                              mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ;
   mdata_t A0, A1, B0, B1;
@@ -678,10 +674,10 @@ void _dmmat_trmm_blk_ru_trans(mdata_t *B, const mdata_t *A,
       B1.md = &B->md[(i+nI)*B->step + j];  // right B block
       
       // update current part with diagonal; left with diagonal
-      dmmat_trid_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
+      dmmat_trmm_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      //_dblock_mult_panel(&B0, &B1, &A1, alpha, MTX_TRANSB, N-i-nI, nI, nJ, NB, Acpy, Bcpy);
-      _dmult_mm_intern(&B0, &B1, &A1, alpha, MTX_TRANSB, N-i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B0, &B1, &A1, alpha, MTX_TRANSB, N-i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B0, &B1, &A1, alpha, MTX_TRANSB, N-i-nI, nI, nJ, KB, NB, MB, Acpy, Bcpy);
     }
   }
 }
@@ -699,8 +695,9 @@ void _dmmat_trmm_blk_ru_trans(mdata_t *B, const mdata_t *A,
     B2 = B2*A22
  */
 void _dmmat_trmm_blk_r_lower(mdata_t *B, const mdata_t *A,
-                             double alpha, int flags, int N, int S, int L, int NB,
-                             cbuf_t *Acpy, cbuf_t *Bcpy)
+                             double alpha, int flags, int N, int S, int L,
+                             int KB, int NB, int MB,
+                             mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ;
   mdata_t A0, A1, B0, B1;
@@ -720,10 +717,10 @@ void _dmmat_trmm_blk_r_lower(mdata_t *B, const mdata_t *A,
       B1.md = &B->md[(i+nI)*B->step + j];  // right B block
       
       // update current part with diagonal; left with diagonal
-      dmmat_trid_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
+      dmmat_trmm_unb(&B0, &A0, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      //_dblock_mult_panel(&B0, &B1, &A1, alpha, 0, N-i-nI, nI, nJ, NB, Acpy, Bcpy);
-      _dmult_mm_intern(&B0, &B1, &A1, alpha, 0, N-i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B0, &B1, &A1, alpha, 0, N-i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B0, &B1, &A1, alpha, 0, N-i-nI, nI, nJ, KB, NB, MB, Acpy, Bcpy);
     }
   }
 }
@@ -741,8 +738,9 @@ void _dmmat_trmm_blk_r_lower(mdata_t *B, const mdata_t *A,
     B2 = B0*A02 + B1*A12 + B2*A22
  */
 void _dmmat_trmm_blk_rl_trans(mdata_t *B, const mdata_t *A,
-                              double alpha, int flags, int N, int S, int L, int NB,
-                              cbuf_t *Acpy, cbuf_t *Bcpy)
+                              double alpha, int flags, int N, int S, int L,
+                              int KB, int NB, int MB,
+                              mdata_t *Acpy, mdata_t *Bcpy)
 {
   register int i, j, nI, nJ;
   mdata_t A0, A1, B0, B1;
@@ -761,51 +759,55 @@ void _dmmat_trmm_blk_rl_trans(mdata_t *B, const mdata_t *A,
       B0.md = &B->md[j];                     // left of B block
       B1.md = &B->md[(i-nI)*B->step+j];      // current B block
       
-      //printf("i: %d, j: %d, nI: %d, nJ: %d, i-nI: %d\n", i, j, nI, nJ, i-nI);
-      //printf("..A1:\n"); print_tile(A1.md, A1.step, nI, nI);
-      //printf("..A0:\n"); print_tile(A0.md, A0.step, N-i, nI);
-      //printf("..B1:\n"); print_tile(B1.md, B1.step, nJ, nI);
-      //printf("..B0:\n"); print_tile(B0.md, B0.step, nJ, N-i);
-      
       // update current part with diagonal
-      dmmat_trid_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
+      dmmat_trmm_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      //_dblock_mult_panel(&B1, &B0, &A0, alpha, MTX_TRANSB, i-nI, nI, nJ, NB, Acpy, Bcpy);
-      _dmult_mm_intern(&B1, &B0, &A0, alpha, MTX_TRANSB, i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      //_dmult_mm_intern(&B1, &B0, &A0, alpha, MTX_TRANSB, i-nI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&B1, &B0, &A0, alpha, MTX_TRANSB, i-nI, nI, nJ, KB, NB, MB, Acpy, Bcpy);
     }
   }
 }
 
 
 void dmmat_trmm_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
-                    int N, int S, /*int L, int R,*/ int E, int NB)
+                    int N, int S, int E, int KB, int NB, int MB)
 {
   // S < E <= N
-  double Abuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(16)));
-  double Bbuf[MAX_VP_ROWS*MAX_VP_COLS] __attribute__((aligned(16)));
-  cbuf_t Acpy = {Abuf, MAX_VP_COLS*MAX_VP_COLS};
-  cbuf_t Bcpy = {Bbuf, MAX_VP_COLS*MAX_VP_COLS};
+  mdata_t Acpy, Bcpy;
+  double Abuf[MAX_KB*MAX_MB], Bbuf[MAX_KB*MAX_NB] __attribute__((aligned(64)));
+
+  Acpy.md = Abuf;
+  Acpy.step = MAX_KB;
+  Bcpy.md = Bbuf;
+  Bcpy.step = MAX_KB;
 
   if (E-S <= 0 || N <= 0)
     return;
 
-  if (NB > MAX_VP_COLS || NB <= 0) {
-    NB = MAX_VP_COLS;
+  // restrict block sizes as data is copied to aligned buffers of predefined max sizes.
+  if (NB > MAX_NB || NB <= 0) {
+    NB = MAX_NB;
+  }
+  if (MB > MAX_MB || MB <= 0) {
+    MB = MAX_MB;
+  }
+  if (KB > MAX_KB || KB <= 0) {
+    KB = MAX_KB;
   }
 
   if (flags & MTX_RIGHT) {
     // B = alpha*B*op(A)
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_trmm_blk_ru_trans(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_trmm_blk_ru_trans(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       } else {
-        _dmmat_trmm_blk_r_upper(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_trmm_blk_r_upper(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_trmm_blk_rl_trans(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_trmm_blk_rl_trans(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       } else {
-        _dmmat_trmm_blk_r_lower(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_trmm_blk_r_lower(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       }
     }
 
@@ -813,15 +815,15 @@ void dmmat_trmm_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
     // B = alpha*op(A)*B
     if (flags & MTX_UPPER) {
       if (flags & MTX_TRANSA) {
-        _dmmat_trmm_blk_u_trans(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_trmm_blk_u_trans(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       } else {
-        _dmmat_trmm_blk_upper(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_trmm_blk_upper(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       }
     } else {
       if (flags & MTX_TRANSA) {
-        _dmmat_trmm_blk_l_trans(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_trmm_blk_l_trans(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       } else {
-        _dmmat_trmm_blk_lower(B, A, alpha, flags, N, S, E, NB, &Acpy, &Bcpy);
+        _dmmat_trmm_blk_lower(B, A, alpha, flags, N, S, E, KB, NB, MB, &Acpy, &Bcpy);
       }
     }
   }

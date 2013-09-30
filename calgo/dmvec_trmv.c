@@ -92,7 +92,7 @@
    Updates are calculated in breadth first manner by with successive AXPY operations.
  */
 static void
-_dmvec_trid_axpy_backward(double *Xc, const double *Ac, int unit,
+_dmvec_trmv_axpy_backward(double *Xc, const double *Ac, int unit,
                           int incX, int ldA, int nRE)
 {
   // Y is 
@@ -122,7 +122,7 @@ _dmvec_trid_axpy_backward(double *Xc, const double *Ac, int unit,
 // Calculates backward a diagonal block and updates Xc values from bottom to top.
 // Updates are calculated in depth first manner with DOT operations.
 static void
-_dmvec_trid_dot_backward(double *Xc, const double *Ac, int unit,
+_dmvec_trmv_dot_backward(double *Xc, const double *Ac, int unit,
                          int incX, int ldA, int nRE)
 {
   // Y is 
@@ -154,7 +154,7 @@ _dmvec_trid_dot_backward(double *Xc, const double *Ac, int unit,
 // Calculate forward a diagonal block and updates x0 values from first to last.
 // x0 updated in breadth first manner with successive AXPY operations.
 static void
-_dmvec_trid_axpy_forward(double *Xc, const double *Ac, double unit,
+_dmvec_trmv_axpy_forward(double *Xc, const double *Ac, double unit,
                          int incX, int ldA, int nRE)
 {
   // Y is 
@@ -181,7 +181,7 @@ _dmvec_trid_axpy_forward(double *Xc, const double *Ac, double unit,
 // Update X values from top to bottom; current x is inner product of current A [a11; a12]
 // column and current and following x values [x1; x2]
 static void
-_dmvec_trid_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ldA, int nRE)
+_dmvec_trmv_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ldA, int nRE)
 {
   // Y is 
   register int i;
@@ -206,7 +206,7 @@ _dmvec_trid_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ld
 //extern void memset(void *, int, size_t);
 
 // X = A*X; unblocked version
-void dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N)
+void dmvec_trmv_unb(mvec_t *X, const mdata_t *A, int flags, int N)
 {
   // indicates if diagonal entry is unit (=1.0) or non-unit.
   int unit = flags & MTX_UNIT ? 1 : 0;
@@ -216,21 +216,22 @@ void dmvec_trid_unb(mvec_t *X, const mdata_t *A, int flags, int N)
   }
   if (flags & MTX_UPPER) {
     if (flags & MTX_TRANSA || flags & MTX_TRANS) {
-      _dmvec_trid_dot_backward(X->md, A->md, unit, X->inc, A->step, N);
+      _dmvec_trmv_dot_backward(X->md, A->md, unit, X->inc, A->step, N);
     } else {
-      _dmvec_trid_axpy_forward(X->md, A->md, unit, X->inc, A->step, N);
+      _dmvec_trmv_axpy_forward(X->md, A->md, unit, X->inc, A->step, N);
     }
   } else {
     if (flags & MTX_TRANSA || flags & MTX_TRANS) {
-      _dmvec_trid_dot_forward(X->md, A->md, unit, X->inc, A->step, N);
+      _dmvec_trmv_dot_forward(X->md, A->md, unit, X->inc, A->step, N);
     } else {
-      _dmvec_trid_axpy_backward(X->md, A->md, unit, X->inc, A->step, N);
+      _dmvec_trmv_axpy_backward(X->md, A->md, unit, X->inc, A->step, N);
     }
   }
 }
 
 
-void dmvec_trid_blocked(mvec_t *X, const mdata_t *A, double alpha, int flags, int N, int NB)
+#if 0
+void dmvec_trmv_blocked(mvec_t *X, const mdata_t *A, double alpha, int flags, int N, int NB)
 {
   int i, nI;
   mvec_t Y;
@@ -248,10 +249,11 @@ void dmvec_trid_blocked(mvec_t *X, const mdata_t *A, double alpha, int flags, in
   if (flags & MTX_UPPER) {
     for (i = 0; i < N; i += NB) {
       nI = N - i < NB ? N - i : NB;
-      _dmvec_trid_axpy_forward(&X->md[i], &A->md[i*A->step+i], unit, X->inc, A->step, nI);
+      _dmvec_trmv_axpy_forward(&X->md[i], &A->md[i*A->step+i], unit, X->inc, A->step, nI);
     }
   }
 }
+#endif
 
 // Local Variables:
 // indent-tabs-mode: nil
