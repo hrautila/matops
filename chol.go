@@ -40,12 +40,12 @@ func unblockedCHOL(A *matrix.FloatMatrix, flags Flags, nr int) (err error) {
             // a21 = a21/a11
             InvScale(&a21, a11.Float())
             // A22 = A22 - a21*a21' (SYR)
-            err = MVRankUpdateSym(&A22, &a21, -1.0, flags)
+            err = MVRankUpdateSym(&A22, &a21, -1.0, LOWER)
         } else {
             // a21 = a12/a11
             InvScale(&a12, a11.Float())
             // A22 = A22 - a12'*a12 (SYR)
-            err = MVRankUpdateSym(&A22, &a12, -1.0, flags)
+            err = MVRankUpdateSym(&A22, &a12, -1.0, UPPER)
         }
 
         continue3x3to2x2(
