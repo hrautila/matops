@@ -10,8 +10,6 @@
 #include <stdint.h>
 
 #include "cmops.h"
-#include "inner_axpy.h"
-#include "inner_ddot.h"
 
 extern
 void __dmult_inner_a_no_scale(mdata_t *C, const mdata_t *A, const mdata_t *B,
@@ -39,7 +37,6 @@ _dmmat_rank_diag(mdata_t *C, const mdata_t *A, const mdata_t *B,
       // scale the target row with beta
       dscale_vec(C->md, C->step, beta, nC-i);
       // update one row of C  (nC-i columns, 1 row)
-      //_dblock_mult_panel(C, &A0, &B0, alpha, trans, P, nC-i, 1, vlen, Acpy, Bcpy);
       __dmult_inner_a_no_scale(C, &A0, &B0, alpha, trans, P, nC-i, 1, KB, NB, MB, Acpy, Bcpy);
       // move along the diagonal to next row of C
       C->md += C->step + 1;
@@ -53,7 +50,6 @@ _dmmat_rank_diag(mdata_t *C, const mdata_t *A, const mdata_t *B,
       // scale the target row with beta
       dscale_vec(C->md, C->step, beta, i+1);
       // update one row of C  (nC-i columns, 1 row)
-      //_dblock_mult_panel(C, &A0, &B0, alpha, trans, P, i+1, 1, vlen, Acpy, Bcpy);
       __dmult_inner_a_no_scale(C, &A0, &B0, alpha, trans, P, i+1, 1, KB, NB, MB, Acpy, Bcpy);
       // move to next row of C
       C->md ++;
@@ -118,8 +114,6 @@ void dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
       Bd.md = flags & MTX_LOWER ? &A->md[S*A->step] : &A->md[(i+nI)*A->step];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
-      //_dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
       __dmult_inner_a_no_scale(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, KB, NB, MB, &Acpy, &Bcpy);
     }
   } else {
@@ -137,8 +131,6 @@ void dmmat_rank_blk(mdata_t *C, const mdata_t *A, double alpha, double beta,
       Bd.md = flags & MTX_LOWER ? &A->md[S] : &A->md[i+nI];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
-      //_dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
       __dmult_inner_a_no_scale(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, KB, NB, MB, &Acpy, &Bcpy);
     }
   }
@@ -200,8 +192,6 @@ void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_LOWER ? &B->md[S*B->step] : &B->md[(i+nI)*B->step];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
-      //_dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
       __dmult_inner_a_no_scale(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, KB, NB, MB, &Acpy, &Bcpy);
 
       // 2nd part
@@ -217,8 +207,6 @@ void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_LOWER ? &A->md[S*A->step] : &A->md[(i+nI)*A->step];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, &Acpy, &Bcpy);
-      //_dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
       __dmult_inner_a_no_scale(&Cd, &Ad, &Bd, alpha, MTX_TRANSA, P, nC, nI, KB, NB, MB, &Acpy, &Bcpy);
 
     }
@@ -239,8 +227,6 @@ void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_LOWER ? &B->md[S] : &B->md[i+nI];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
-      //_dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
       __dmult_inner_a_no_scale(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, KB, NB, MB, &Acpy, &Bcpy);
 
       Cd.md = &C->md[i*C->step+i];
@@ -255,8 +241,6 @@ void dmmat_rank2_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_LOWER ? &A->md[S] : &A->md[i+nI];
       nC = flags & MTX_LOWER ? i : E-i-nI;
 
-      //_dblock_mult_panel(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, &Acpy, &Bcpy);
-      //_dmult_mm_intern(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, vlen, NB, NB, &Acpy, &Bcpy);
       __dmult_inner_a_no_scale(&Cd, &Ad, &Bd, alpha, MTX_TRANSB, P, nC, nI, KB, NB, MB, &Acpy, &Bcpy);
     }
   }
@@ -292,7 +276,6 @@ _dmmat_trmupd_diag(mdata_t *C, const mdata_t *A, const mdata_t *B,
       // scale the target row with beta
       dscale_vec(C->md, C->step, beta, nC-i);
       // update one row of C  (nC-i columns, 1 row)
-      //_dblock_mult_panel(C, &A0, &B0, alpha, flags, P, nC-i, 1, vlen, Acpy, Bcpy);
       __dmult_inner_a_no_scale(C, &A0, &B0, alpha, flags, P, nC-i, 1, KB, NB, MB, Acpy, Bcpy);
       // move along the diagonal to next row of C
       C->md += C->step + 1;
@@ -306,7 +289,6 @@ _dmmat_trmupd_diag(mdata_t *C, const mdata_t *A, const mdata_t *B,
       // scale the target row with beta
       dscale_vec(C->md, C->step, beta, i+1);
       // update one row of C  (nC-i columns, 1 row)
-      //_dblock_mult_panel(C, &A0, &B0, alpha, flags, P, i+1, 1, vlen, Acpy, Bcpy);
       __dmult_inner_a_no_scale(C, &A0, &B0, alpha, flags, P, i+1, 1, KB, NB, MB, Acpy, Bcpy);
       // move to next row of C
       C->md ++;
@@ -367,7 +349,7 @@ void dmmat_trmupd_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Ad.md = &A->md[S];
       Bd.md = flags & MTX_TRANSB ? &B->md[i] : &B->md[i*B->step];
       nR = i;
-      //_dmult_mm_intern(&Cd, &Ad, &Bd, alpha, flags, P, nI, nR, vlen, NB, &Acpy, &Bcpy);
+
       __dmult_inner_a_no_scale(&Cd, &Ad, &Bd, alpha, flags, P, nI, nR, KB, NB, MB, &Acpy, &Bcpy);
 
       // 2. update block on diagonal
@@ -393,7 +375,6 @@ void dmmat_trmupd_blk(mdata_t *C, const mdata_t *A, const mdata_t *B,
       Bd.md = flags & MTX_TRANSB ? &B->md[i] : &B->md[i*B->step];
       nR = E-i-nI;
 
-      //_dmult_mm_intern(&Cd, &Ad, &Bd, alpha, flags, P, nI, nR, vlen, NB, NB, &Acpy, &Bcpy);
       __dmult_inner_a_no_scale(&Cd, &Ad, &Bd, alpha, flags, P, nI, nR, KB, NB, MB, &Acpy, &Bcpy);
     }
   }

@@ -10,8 +10,7 @@
 #include <stdint.h>
 
 #include "cmops.h"
-#include "inner_vec_axpy.h"
-#include "inner_vec_dot.h"
+#include "mvec_nosimd.h"
 
 /*
  TRMV UPPER:
@@ -110,7 +109,7 @@ _dmvec_trmv_axpy_backward(double *Xc, const double *Ac, int unit,
     Ar = Acl + i - 1; // move on diagonal
 
     // update all x-values below with the current A column and current X
-    _inner_vec_daxpy(xr+incX, incX, Ar+1, xr, incX, 1.0, nRE-i);
+    __vmult1axpy(xr+incX, incX, Ar+1, xr, incX, 1.0, nRE-i);
     xr[0] *= unit ? 1.0 : Ar[0];
 
     // previous X, previous column in A 
@@ -125,24 +124,20 @@ static void
 _dmvec_trmv_dot_backward(double *Xc, const double *Ac, int unit,
                          int incX, int ldA, int nRE)
 {
-  // Y is 
   register int i;
   register double *xr;
   double xtmp;
   register const double *Ar, *Acl;
 
-  // lower diagonal matrix (transposed) of nRE rows/cols and vector X of length nRE
-  // we do it really forward!! unlike the _axpy method above.
+  // last column of A; last element of X;
   Acl = Ac + (nRE-1)*ldA;
   xr = Xc + (nRE-1)*incX;
 
   // xr is the current X element, Ar is row in current A column.
   for (i = 0; i < nRE; i++) {
-    //Ar = Ac + i; // move on diagonal
-
     // update current x-value with the current A column and top
     xtmp = unit ? xr[0] : 0.0;
-    _inner_vec_ddot(&xtmp, 1, Acl, Xc, incX, 1.0, nRE-unit-i);
+    __vmult1dot(&xtmp, 1, Acl, Xc, incX, 1.0, nRE-unit-i);
     xr[0] = xtmp;
 
     // previous X, previous column in A 
@@ -162,14 +157,13 @@ _dmvec_trmv_axpy_forward(double *Xc, const double *Ac, double unit,
   register double *X0, *x1;
   register const double *a11;
 
-  // upper diagonal matrix of nRE rows/cols and vector X, Y of length nRE
   X0 = Xc;
   x1 = Xc;
 
   // xr is the current X element, Ar is row in current A column.
   for (i = 0; i < nRE; i++) {
     // update all previous x-values with current A column and current X
-    _inner_vec_daxpy(X0, incX, Ac, x1, incX, 1.0, i);
+    __vmult1axpy(X0, incX, Ac, x1, incX, 1.0, i);
     a11 = Ac + i;
     x1[0] *= unit ? 1.0 : a11[0];
     // next X, next column in A 
@@ -183,7 +177,6 @@ _dmvec_trmv_axpy_forward(double *Xc, const double *Ac, double unit,
 static void
 _dmvec_trmv_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ldA, int nRE)
 {
-  // Y is 
   register int i;
   register double *x1;
   double xtmp;
@@ -195,15 +188,13 @@ _dmvec_trmv_dot_forward(double *Xc, const double *Ac, int unit, int incX, int ld
     a11 = Ac + i + unit;
     // update current x-value with current A column and current and following X
     xtmp = unit ? x1[0] : 0.0;
-    _inner_vec_ddot(&xtmp, 1, a11, x1, incX, 1.0, nRE-unit-i);
+    __vmult1dot(&xtmp, 1, a11, x1, incX, 1.0, nRE-unit-i);
     x1[0] = xtmp;
     // next X, next column in A 
     x1 += incX;
     Ac += ldA;
   }
 }
-
-//extern void memset(void *, int, size_t);
 
 // X = A*X; unblocked version
 void dmvec_trmv_unb(mvec_t *X, const mdata_t *A, int flags, int N)
@@ -244,7 +235,6 @@ void dmvec_trmv_blocked(mvec_t *X, const mdata_t *A, double alpha, int flags, in
   if (NB <= 0) {
     NB = 68;
   }
-  //memset(cB, 0, sizeof(cB));
 
   if (flags & MTX_UPPER) {
     for (i = 0; i < N; i += NB) {

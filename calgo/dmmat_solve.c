@@ -10,9 +10,7 @@
 #include <stdint.h>
 
 #include "cmops.h"
-#include "inner_axpy.h"
-#include "inner_ddot.h"
-#include "inner_ddot_trans.h"
+#include "mvec_nosimd.h"
 
 extern
 void __dmult_inner_a_no_scale(mdata_t *C, const mdata_t *A, const mdata_t *B,
@@ -69,7 +67,7 @@ _dmmat_solve_unb_upper(double *Bc, const double *Ac, double alpha, int flags,
       b1 = b0 + i;
       b1[0] = unit ? b1[0] : b1[0]/a11[0];
       // update all x0-values with in current column (i is the count above current row)
-      _inner_daxpy(b0, a01, b1, -1.0, i);
+      __vmult1axpy(b0, 1, a01, b1, 1, -1.0, i);
 
       // repartition: previous column in B
       b0  -= ldB;
@@ -78,6 +76,7 @@ _dmmat_solve_unb_upper(double *Bc, const double *Ac, double alpha, int flags,
     Acl -= ldA;
   }
 }
+
 /*
   A: N*N, UPPER, TRANS     B: N*2
      a00 : a01 | a02       b00|b01
@@ -114,7 +113,7 @@ _dmmat_solve_unb_u_trans(double *Bc, const double *Ac, double alpha, int flags,
       b1 = b0 + i;
       btmp = 0.0;
       // update current element with b0-values
-      _inner_ddot(&btmp, a01, b0, 1.0, i);
+      __vmult1dot(&btmp, 1, a01, b0, 1, 1.0, i);
       b1[0] = unit ? b1[0] - btmp : (b1[0] - btmp)/a11[0];
 
       // next column
@@ -161,7 +160,7 @@ _dmmat_solve_unb_lower(double *Bc, const double *Ac, double alpha, int flags,
       b2 = b1 + 1;
       b1[0] = unit ? b1[0] : b1[0]/a11[0];
       // update all b2-values with in current column
-      _inner_daxpy(b2, a21, b1, -1.0, nRE-1-i);
+      __vmult1axpy(b2, 1, a21, b1, 1, -1.0, nRE-1-i);
 
       b1 += ldB;
     }
@@ -206,7 +205,7 @@ _dmmat_solve_unb_l_trans(double *Bc, const double *Ac, double alpha, int flags,
       b2 = b1 + 1;
       // update current value with previous values.
       btmp = 0.0;
-      _inner_ddot(&btmp, a21, b2, 1.0, nRE-1-i);
+      __vmult1dot(&btmp, 1, a21, b2, 1, 1.0, nRE-1-i);
       b1[0] = unit ? b1[0] - btmp : (b1[0] - btmp)/a11[0];
 
       // repartition: previous column in B
@@ -250,7 +249,7 @@ _dmmat_solve_unb_r_upper(double *Bc, const double *Ac, double alpha, int flags,
     for (j = 0; j < nRE; j++) {
       a11 = Acl + j;    // diagonal entry
       btmp = 0.0;
-      _inner_ddot_trans(&btmp, Acl, b0, 1.0, j, ldB);
+      __vmult1dot(&btmp, 1, Acl, b0, ldB, 1.0, j);
       // update current value with previous values.
       b1[0] = unit ? b1[0] - btmp : (b1[0] - btmp)/a11[0];
 
@@ -295,7 +294,7 @@ _dmmat_solve_unb_ru_trans(double *Bc, const double *Ac, double alpha, int flags,
       a11 = Acl + j;  // diagonal entry in A
       b1[0] = unit ? b1[0] : b1[0]/a11[0];
       // update preceeding values with current values
-      _inner_axpy_trans(b0, Acl, b1, -1.0, j, ldB);
+      __vmult1axpy(b0, ldB, Acl, b1, ldB, -1.0, j);
 
       // repartition: previous column in B, A
       b1  -= ldB;
@@ -343,7 +342,7 @@ _dmmat_solve_unb_r_lower(double *Bc, const double *Ac, double alpha, int flags,
       a21 = a11 + 1;
       // update current value with previous values.
       btmp = 0.0;
-      _inner_ddot_trans(&btmp, a21, b2, 1.0, nRE-1-j, ldB);
+      __vmult1dot(&btmp, 1, a21, b2, ldB, 1.0, nRE-1-j);
       b1[0] = unit ? b1[0] - btmp : (b1[0] - btmp)/a11[0];
 
       // repartition: previous column in B, A
@@ -391,7 +390,7 @@ _dmmat_solve_unb_rl_trans(double *Bc, const double *Ac, double alpha, int flags,
       b1[0] = unit ? b1[0] : b1[0]/a11[0];
 
       // update following values with current values
-      _inner_axpy_trans(b2, a11+1, b1, -1.0, nRE-1-j, ldB);
+      __vmult1axpy(b2, ldB, a11+1, b1, ldB, -1.0, nRE-1-j);
 
       // repartition: previous column in B, A
       b1  += ldB;
@@ -497,7 +496,6 @@ _dmmat_solve_blk_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
       // solve bottom block
       dmmat_solve_unb(&B1, &A1, 1.0, flags, nI, 0, nJ);
       // update top with bottom solution
-      //_dmult_mm_intern(&B0, &A0, &B1, -1.0, 0, nI, nJ, i-nI, NB, NB, NB, Acpy, Bcpy);
       __dmult_inner_a_no_scale(&B0, &A0, &B1, -1.0, 0, nI, nJ, i-nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
@@ -550,7 +548,6 @@ _dmmat_solve_blk_u_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       B1.md = &B->md[cJ*B->step + cI];   // bottom B block
 
       // update bottom block with top block
-      //_dmult_mm_intern(&B1, &A0, &B0, -1.0, MTX_TRANSA, i, nJ, nI, NB, NB, NB, Acpy, Bcpy);
       __dmult_inner_a_no_scale(&B1, &A0, &B0, -1.0, MTX_TRANSA, i, nJ, nI, KB, NB, MB, Acpy, Bcpy);
       // solve bottom block
       dmmat_solve_unb(&B1, &A1, 1.0, flags, nI, 0, nJ);
@@ -606,7 +603,6 @@ _dmmat_solve_blk_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
       // solve top block
       dmmat_solve_unb(&B0, &A0, 1.0, flags, nI, 0, nJ);
       // update bottom block with top block
-      //_dmult_mm_intern(&B1, &A1, &B0, -1.0, 0, nI, nJ, N-i-nI, NB, NB, NB, Acpy, Bcpy);
       __dmult_inner_a_no_scale(&B1, &A1, &B0, -1.0, 0, nI, nJ, N-i-nI, KB, NB, MB, Acpy, Bcpy);
     }
   }
@@ -658,7 +654,6 @@ _dmmat_solve_blk_l_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       B1.md = &B->md[cJ*B->step + i];       // bottom B block
 
       // update top with bottom solution
-      //_dmult_mm_intern(&B0, &A1, &B1, -1.0, MTX_TRANSA, N-i, nJ, nI, NB, NB, NB, Acpy, Bcpy);
       __dmult_inner_a_no_scale(&B0, &A1, &B1, -1.0, MTX_TRANSA, N-i, nJ, nI, KB, NB, MB, Acpy, Bcpy);
       // solve top block
       dmmat_solve_unb(&B0, &A0, 1.0, flags, nI, 0, nJ);
@@ -713,7 +708,6 @@ _dmmat_solve_blk_r_upper(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Bl.md = &B->md[cJ];                   // left B block  [nJ*cI]
 
       // update right with left solution
-      //_dmult_mm_intern(&Br, &Bl, &At, -1.0, 0, cI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
       __dmult_inner_a_no_scale(&Br, &Bl, &At, -1.0, 0, cI, nI, nJ, KB, NB, MB, Acpy, Bcpy);
       // solve right block
       dmmat_solve_unb(&Br, &Ab, 1.0, flags, nI, 0, nJ);
@@ -767,8 +761,8 @@ _dmmat_solve_blk_ru_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Br.md = &B->md[i*Br.step + cJ];       // right B block [nJ*N-i]
 
       // update left with right solution
-      //_dmult_mm_intern(&Bl, &Br, &Ar, -1.0, MTX_TRANSB, N-i, nI, nJ, NB, NB, NB, Acpy, Bcpy);
-      __dmult_inner_a_no_scale(&Bl, &Br, &Ar, -1.0, MTX_TRANSB, N-i, nI, nJ, KB, NB, MB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&Bl, &Br, &Ar, -1.0, MTX_TRANSB, N-i, nI, nJ,
+                               KB, NB, MB, Acpy, Bcpy);
       // solve right block
       dmmat_solve_unb(&Bl, &Al, 1.0, flags, nI, 0, nJ);
     }
@@ -822,7 +816,6 @@ _dmmat_solve_blk_r_lower(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Br.md = &B->md[i*Br.step + cJ];       // right B block [nJ*N-i]
 
       // update left with right solution
-      //_dmult_mm_intern(&Bl, &Br, &Ab, -1.0, 0, N-i, nI, nJ, NB, NB, NB, Acpy, Bcpy);
       __dmult_inner_a_no_scale(&Bl, &Br, &Ab, -1.0, 0, N-i, nI, nJ, KB, NB, MB, Acpy, Bcpy);
       // solve right block
       dmmat_solve_unb(&Bl, &At, 1.0, flags, nI, 0, nJ);
@@ -878,8 +871,8 @@ _dmmat_solve_blk_rl_trans(mdata_t *B, const mdata_t *A, double alpha, int flags,
       Bl.md = &B->md[cJ];                   // left B block  [nJ*cI]
 
       // update right with left solution
-      //_dmult_mm_intern(&Br, &Bl, &Al, -1.0, MTX_TRANSB, cI, nI, nJ, NB, NB, NB, Acpy, Bcpy);
-      __dmult_inner_a_no_scale(&Br, &Bl, &Al, -1.0, MTX_TRANSB, cI, nI, nJ, KB, NB, MB, Acpy, Bcpy);
+      __dmult_inner_a_no_scale(&Br, &Bl, &Al, -1.0, MTX_TRANSB, cI, nI, nJ,
+                               KB, NB, MB, Acpy, Bcpy);
       // solve right block
       dmmat_solve_unb(&Br, &Ar, 1.0, flags, nI, 0, nJ);
     }
@@ -948,6 +941,8 @@ void dmmat_solve_blk(mdata_t *B, const mdata_t *A, double alpha, int flags,
     }
   }
 }
+
+
 // Local Variables:
 // indent-tabs-mode: nil
 // End:

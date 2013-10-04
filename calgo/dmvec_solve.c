@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include "cmops.h"
-#include "inner_vec_axpy.h"
+#include "mvec_nosimd.h"
 
 /*
   A: N*N, lower          X: N*1
@@ -62,8 +62,7 @@ _dmvec_solve_backward(double *Xc, const double *Ac, int unit,
   double *x0, *x1;
   const double *a11, *A01;
 
-  // upper diagonal matrix of nRE rows/cols and vector X, Y of length nRE
-  // move to point to last column and last entry of X.
+  // last column of A; last entry of X.
   A01 = Ac + (nRE-1)*ldA;
   x1 = Xc + (nRE-1)*incX;
   x0 = Xc;
@@ -74,7 +73,7 @@ _dmvec_solve_backward(double *Xc, const double *Ac, int unit,
     x1[0] = unit ? x1[0] : x1[0]/a11[0];
 
     // update all x0-values with in current column (i is the count above current row)
-    _inner_vec_daxpy(x0, incX, A01, x1, incX, -1.0, i);
+    __vmult1axpy(x0, incX, A01, x1, incX, -1.0, i);
     // repartition: previous X, previous column in A 
     x1  -= incX;
     A01 -= ldA;
@@ -92,7 +91,6 @@ _dmvec_solve_forward(double *Xc, const double *Ac, int unit,
   register double *x1, *x2, xtmp;
   const double *a11, *a21;
 
-  // lower diagonal matrix of nRE rows/cols and vector X, Y of length nRE
   a11 = Ac;
   x1 = Xc;
   x2 = x1 + incX;
@@ -104,17 +102,13 @@ _dmvec_solve_forward(double *Xc, const double *Ac, int unit,
     //xtmp = xr[0] - yr[0];
     x1[0] = unit ? x1[0] : x1[0]/a11[0];
     // update all x2-values with in current column
-    _inner_vec_daxpy(x2, incX, a21, x1, incX, -1.0, nRE-1-i);
+    __vmult1axpy(x2, incX, a21, x1, incX, -1.0, nRE-1-i);
     // next X, next column in A 
     x1 += incX;
     x2 = x1 + incX;
     Ac += ldA;
   }
 }
-
-extern void memset(void *, int, size_t);
-
-#define MAX_VEC_NB 256
 
 // X = A(-1)*X
 void dmvec_solve_unb(mvec_t *X, const mdata_t *A, int flags, int N)
