@@ -21,27 +21,27 @@ void dvec_dots(mvec_t *Z, const mvec_t *X,  const mvec_t *Y, double alpha, doubl
 
   c0 = c1 = c2 = c3 = 0.0;
   for (i = 0; i < N-3; i += 4) {
-	x0 = X->md[(i+0)*X->inc];
-	x1 = X->md[(i+1)*X->inc];
-	x2 = X->md[(i+2)*X->inc];
-	x3 = X->md[(i+3)*X->inc];
-	c0 += x0*Y->md[(i+0)*Y->inc];
-	c1 += x1*Y->md[(i+1)*Y->inc];
-	c2 += x2*Y->md[(i+2)*Y->inc];
-	c3 += x3*Y->md[(i+3)*Y->inc];
+    x0 = X->md[(i+0)*X->inc];
+    x1 = X->md[(i+1)*X->inc];
+    x2 = X->md[(i+2)*X->inc];
+    x3 = X->md[(i+3)*X->inc];
+    c0 += x0*Y->md[(i+0)*Y->inc];
+    c1 += x1*Y->md[(i+1)*Y->inc];
+    c2 += x2*Y->md[(i+2)*Y->inc];
+    c3 += x3*Y->md[(i+3)*Y->inc];
   }    
   if (i == N)
-	goto update;
+    goto update;
 
   kx = i*X->inc;
   ky = i*Y->inc;
   switch (N-i) {
   case 3:
     c0 += X->md[kx] * Y->md[ky];
-	kx++; ky++;
+    kx += X->inc; ky += Y->inc;
   case 2:
     c1 += X->md[kx] * Y->md[ky];
-	kx++; ky++;
+    kx += X->inc; ky += Y->inc;
   case 1:
     c2 += X->md[kx] * Y->md[ky];
   }
@@ -60,27 +60,27 @@ double dvec_dot(const mvec_t *X,  const mvec_t *Y, double alpha, int N)
 
   c0 = c1 = c2 = c3 = 0.0;
   for (i = 0; i < N-3; i += 4) {
-	x0 = X->md[(i+0)*X->inc];
-	x1 = X->md[(i+1)*X->inc];
-	x2 = X->md[(i+2)*X->inc];
-	x3 = X->md[(i+3)*X->inc];
-	c0 += x0*Y->md[(i+0)*Y->inc];
-	c1 += x1*Y->md[(i+1)*Y->inc];
-	c2 += x2*Y->md[(i+2)*Y->inc];
-	c3 += x3*Y->md[(i+3)*Y->inc];
+    x0 = X->md[(i+0)*X->inc];
+    x1 = X->md[(i+1)*X->inc];
+    x2 = X->md[(i+2)*X->inc];
+    x3 = X->md[(i+3)*X->inc];
+    c0 += x0*Y->md[(i+0)*Y->inc];
+    c1 += x1*Y->md[(i+1)*Y->inc];
+    c2 += x2*Y->md[(i+2)*Y->inc];
+    c3 += x3*Y->md[(i+3)*Y->inc];
   }    
   if (i == N)
-	goto update;
+    goto update;
 
   kx = i*X->inc;
   ky = i*Y->inc;
   switch (N-i) {
   case 3:
     c0 += X->md[kx] * Y->md[ky];
-	kx++; ky++;
+    kx += X->inc; ky += Y->inc;
   case 2:
     c1 += X->md[kx] * Y->md[ky];
-	kx++; ky++;
+    kx += X->inc; ky += Y->inc;
   case 1:
     c2 += X->md[kx] * Y->md[ky];
   }
@@ -98,22 +98,22 @@ void dvec_axpy(mvec_t *Y,  const mvec_t *X, double alpha, int N)
 
   // gcc uses different XMM target registers for yN, xN; 
   for (i = 0; i < N-3; i += 4) {
-	y0 = Y->md[(i+0)*Y->inc];
-	y1 = Y->md[(i+1)*Y->inc];
-	y2 = Y->md[(i+2)*Y->inc];
-	y3 = Y->md[(i+3)*Y->inc];
-	x0 = X->md[(i+0)*X->inc];
-	x1 = X->md[(i+1)*X->inc];
-	x2 = X->md[(i+2)*X->inc];
-	x3 = X->md[(i+3)*X->inc];
-	y0 += alpha*x0;
-	y1 += alpha*x1;
-	y2 += alpha*x2;
-	y3 += alpha*x3;
-	Y->md[(i+0)*Y->inc] = y0;
-	Y->md[(i+1)*Y->inc] = y1;
-	Y->md[(i+2)*Y->inc] = y2;
-	Y->md[(i+3)*Y->inc] = y3;
+    y0 = Y->md[(i+0)*Y->inc];
+    y1 = Y->md[(i+1)*Y->inc];
+    y2 = Y->md[(i+2)*Y->inc];
+    y3 = Y->md[(i+3)*Y->inc];
+    x0 = X->md[(i+0)*X->inc];
+    x1 = X->md[(i+1)*X->inc];
+    x2 = X->md[(i+2)*X->inc];
+    x3 = X->md[(i+3)*X->inc];
+    y0 += alpha*x0;
+    y1 += alpha*x1;
+    y2 += alpha*x2;
+    y3 += alpha*x3;
+    Y->md[(i+0)*Y->inc] = y0;
+    Y->md[(i+1)*Y->inc] = y1;
+    Y->md[(i+2)*Y->inc] = y2;
+    Y->md[(i+3)*Y->inc] = y3;
   }    
   if (i == N)
 	return;
@@ -121,16 +121,16 @@ void dvec_axpy(mvec_t *Y,  const mvec_t *X, double alpha, int N)
   kx = i*X->inc; ky = i*Y->inc;
   switch (N-i) {
   case 3:
-	y0 = Y->md[ky];
-	Y->md[ky] = y0 + alpha*X->md[kx];
-	kx++; ky++;
+    y0 = Y->md[ky];
+    Y->md[ky] = y0 + alpha*X->md[kx];
+    kx += X->inc; ky += Y->inc;
   case 2:
-	y0 = Y->md[ky];
-	Y->md[ky] = y0 + alpha*X->md[kx];
-	kx++; ky++;
+    y0 = Y->md[ky];
+    Y->md[ky] = y0 + alpha*X->md[kx];
+    kx += X->inc; ky += Y->inc;
   case 1:
-	y0 = Y->md[ky];
-	Y->md[ky] = y0 + alpha*X->md[kx];
+    y0 = Y->md[ky];
+    Y->md[ky] = y0 + alpha*X->md[kx];
   }
 }
 
@@ -144,29 +144,29 @@ double dvec_diff_nrm2(const mvec_t *X,  const mvec_t *Y, int N)
 
   c0 = c1 = c2 = c3 = 0.0;
   for (i = 0; i < N-3; i += 4) {
-	y0 = Y->md[(i+0)*Y->inc];
-	y1 = Y->md[(i+1)*Y->inc];
-	y2 = Y->md[(i+2)*Y->inc];
-	y3 = Y->md[(i+3)*Y->inc];
-	x0 = X->md[(i+0)*X->inc];
-	x1 = X->md[(i+1)*X->inc];
-	x2 = X->md[(i+2)*X->inc];
-	x3 = X->md[(i+3)*X->inc];
-	x0 = x0 - y0;
-	x1 = x1 - y1;
-	x2 = x2 - y2;
-	x3 = x3 - y3;
-	x0 = fabs(x0);
-	x1 = fabs(x1);
-	x2 = fabs(x2);
-	x3 = fabs(x3);
+    y0 = Y->md[(i+0)*Y->inc];
+    y1 = Y->md[(i+1)*Y->inc];
+    y2 = Y->md[(i+2)*Y->inc];
+    y3 = Y->md[(i+3)*Y->inc];
+    x0 = X->md[(i+0)*X->inc];
+    x1 = X->md[(i+1)*X->inc];
+    x2 = X->md[(i+2)*X->inc];
+    x3 = X->md[(i+3)*X->inc];
+    x0 = x0 - y0;
+    x1 = x1 - y1;
+    x2 = x2 - y2;
+    x3 = x3 - y3;
+    x0 = fabs(x0);
+    x1 = fabs(x1);
+    x2 = fabs(x2);
+    x3 = fabs(x3);
     c0 += x0 * x0;
     c1 += x1 * x1;
     c2 += x2 * x2;
     c3 += x3 * x3;
   }    
   if (i == N)
-	goto update;
+    goto update;
 
   kx = i*X->inc;
   ky = i*Y->inc;
@@ -174,11 +174,11 @@ double dvec_diff_nrm2(const mvec_t *X,  const mvec_t *Y, int N)
   case 3:
     x0 = fabs(X->md[kx] - Y->md[ky]);
     c0 += x0 * x0;
-	kx++; ky++;
+    kx += X->inc; ky += Y->inc;
   case 2:
     x1 = fabs(X->md[kx] - Y->md[ky]);
     c1 += x1 * x1;
-	kx++; ky++;
+    kx += X->inc; ky += Y->inc;
   case 1:
     x2 = fabs(X->md[kx] - Y->md[ky]);
     c2 += x2 * x2;
@@ -199,28 +199,28 @@ double dvec_nrm2(const mvec_t *X,  int N)
     a1 = X->md[(i+1)*X->inc];
     a2 = X->md[(i+2)*X->inc];
     a3 = X->md[(i+3)*X->inc];
-	a0 = fabs(a0);
-	a1 = fabs(a1);
-	a2 = fabs(a2);
-	a3 = fabs(a3);
+    a0 = fabs(a0);
+    a1 = fabs(a1);
+    a2 = fabs(a2);
+    a3 = fabs(a3);
     c0 += a0*a0;
-	c1 += a1*a1;
+    c1 += a1*a1;
     c2 += a2*a2;
-	c3 += a3*a3;
+    c3 += a3*a3;
   }    
   if (i == N)
-	goto update;
+    goto update;
 
   k = i*X->inc;
   switch (N-i) {
   case 3:
     a0 = fabs(X->md[k]);
     c0 += a0*a0;
-	k++;
+    k += X->inc;
   case 2:
     a1 = fabs(X->md[k]);
     c1 += a1*a1;
-	k++;
+    k += X->inc;
   case 1:
     a2 = fabs(X->md[k]);
     c2 += a2*a2;
@@ -241,26 +241,26 @@ double dvec_asum(const mvec_t *X,  int N)
     a1 = X->md[(i+1)*X->inc];
     a2 = X->md[(i+2)*X->inc];
     a3 = X->md[(i+3)*X->inc];
-	a0 = fabs(a0);
-	a1 = fabs(a1);
-	a2 = fabs(a2);
-	a3 = fabs(a3);
-	c0 += a0;
-	c1 += a1;
-	c2 += a2;
-	c3 += a3;
+    a0 = fabs(a0);
+    a1 = fabs(a1);
+    a2 = fabs(a2);
+    a3 = fabs(a3);
+    c0 += a0;
+    c1 += a1;
+    c2 += a2;
+    c3 += a3;
   }    
   if (i == N)
-	goto update;
+    goto update;
   
   k = i*X->inc;
   switch (N-i) {
   case 3:
     c0 += fabs(X->md[k]);
-	k++;
+    k += X->inc;
   case 2:
     c1 += fabs(X->md[k]);
-	k++;
+    k += X->inc;
   case 1:
     c2 += fabs(X->md[k]);
   }
@@ -280,8 +280,8 @@ int dvec_iamax(const mvec_t *X,  int N)
   max = 0.0;
   ix = 0;
   for (i = 0; i < N-1; i += 2) {
-	c0 = fabs(X->md[(i+0)*X->inc]);
-	c1 = fabs(X->md[(i+1)*X->inc]);
+    c0 = fabs(X->md[(i+0)*X->inc]);
+    c1 = fabs(X->md[(i+1)*X->inc]);
     if (c1 > c0) {
       n = 1;
       c0 = c1;
@@ -308,22 +308,22 @@ void dvec_swap(mvec_t *X,  mvec_t *Y, int N)
   register double y0, y1, y2, y3, x0, x1, x2, x3;
 
   for (i = 0; i < N-3; i += 4) {
-	y0 = Y->md[(i+0)*Y->inc];
-	y1 = Y->md[(i+1)*Y->inc];
-	y2 = Y->md[(i+2)*Y->inc];
-	y3 = Y->md[(i+3)*Y->inc];
-	x0 = X->md[(i+0)*X->inc];
-	x1 = X->md[(i+1)*X->inc];
-	x2 = X->md[(i+2)*X->inc];
-	x3 = X->md[(i+3)*X->inc];
+    y0 = Y->md[(i+0)*Y->inc];
+    y1 = Y->md[(i+1)*Y->inc];
+    y2 = Y->md[(i+2)*Y->inc];
+    y3 = Y->md[(i+3)*Y->inc];
+    x0 = X->md[(i+0)*X->inc];
+    x1 = X->md[(i+1)*X->inc];
+    x2 = X->md[(i+2)*X->inc];
+    x3 = X->md[(i+3)*X->inc];
     X->md[(i+0)*X->inc] = y0;
     X->md[(i+1)*X->inc] = y1;
     X->md[(i+2)*X->inc] = y2;
     X->md[(i+3)*X->inc] = y3;
-	Y->md[(i+0)*Y->inc] = x0;
-	Y->md[(i+1)*Y->inc] = x1;
-	Y->md[(i+2)*Y->inc] = x2;
-	Y->md[(i+3)*Y->inc] = x3;
+    Y->md[(i+0)*Y->inc] = x0;
+    Y->md[(i+1)*Y->inc] = x1;
+    Y->md[(i+2)*Y->inc] = x2;
+    Y->md[(i+3)*Y->inc] = x3;
   }    
   if (i == N)
     return;
@@ -335,12 +335,12 @@ void dvec_swap(mvec_t *X,  mvec_t *Y, int N)
     y0 = Y->md[ky];
     Y->md[ky] = X->md[kx];
     X->md[kx] = y0;
-    kx++; ky++;
+    kx += X->inc; ky += Y->inc;
   case 2:
     y0 = Y->md[ky];
     Y->md[ky] = X->md[kx];
     X->md[kx] = y0;
-    kx++; ky++;
+    kx += X->inc; ky += Y->inc;
   case 1:
     y0 = Y->md[ky];
     Y->md[ky] = X->md[kx];
@@ -360,17 +360,17 @@ void dvec_invscal(mvec_t *X,  double alpha, int N)
   // gcc compiles loop body to use 4 different XMM result registers
   // and results to 4 independent computations.
   for (i = 0; i < N-3; i += 4) {
-	f0 =  X->md[(i+0)*X->inc] / alpha;
-	f1 =  X->md[(i+1)*X->inc] / alpha;
-	f2 =  X->md[(i+2)*X->inc] / alpha;
-	f3 =  X->md[(i+3)*X->inc] / alpha;
-	X->md[(i+0)*X->inc] = f0;
-	X->md[(i+1)*X->inc] = f1;
-	X->md[(i+2)*X->inc] = f2;
-	X->md[(i+3)*X->inc] = f3;
+    f0 =  X->md[(i+0)*X->inc] / alpha;
+    f1 =  X->md[(i+1)*X->inc] / alpha;
+    f2 =  X->md[(i+2)*X->inc] / alpha;
+    f3 =  X->md[(i+3)*X->inc] / alpha;
+    X->md[(i+0)*X->inc] = f0;
+    X->md[(i+1)*X->inc] = f1;
+    X->md[(i+2)*X->inc] = f2;
+    X->md[(i+3)*X->inc] = f3;
   }    
   if (i == N)
-	return;
+    return;
 
   // do the index calculations only once.
   x0 = &X->md[i*X->inc];
@@ -378,10 +378,10 @@ void dvec_invscal(mvec_t *X,  double alpha, int N)
   switch(N-i) {
   case 3:
     x0[k] /= alpha;
-	k++;
+    k += X->inc;
   case 2:
     x0[k] /= alpha;
-	k++;
+    k += X->inc;
   case 1:
     x0[k] /= alpha;
   }
@@ -399,17 +399,17 @@ void dvec_scal(mvec_t *X,  double alpha, int N)
   // gcc compiles loop body to use 4 different XMM result registers
   // and results to 4 independent computations.
   for (i = 0; i < N-3; i += 4) {
-	f0 =  X->md[(i+0)*X->inc] * alpha;
-	f1 =  X->md[(i+1)*X->inc] * alpha;
-	f2 =  X->md[(i+2)*X->inc] * alpha;
-	f3 =  X->md[(i+3)*X->inc] * alpha;
-	X->md[(i+0)*X->inc] = f0;
-	X->md[(i+1)*X->inc] = f1;
-	X->md[(i+2)*X->inc] = f2;
-	X->md[(i+3)*X->inc] = f3;
+    f0 =  X->md[(i+0)*X->inc] * alpha;
+    f1 =  X->md[(i+1)*X->inc] * alpha;
+    f2 =  X->md[(i+2)*X->inc] * alpha;
+    f3 =  X->md[(i+3)*X->inc] * alpha;
+    X->md[(i+0)*X->inc] = f0;
+    X->md[(i+1)*X->inc] = f1;
+    X->md[(i+2)*X->inc] = f2;
+    X->md[(i+3)*X->inc] = f3;
   }    
   if (i == N)
-	return;
+    return;
 
   // do the index calculations only once.
   x0 = &X->md[i*X->inc];
@@ -417,10 +417,10 @@ void dvec_scal(mvec_t *X,  double alpha, int N)
   switch(N-i) {
   case 3:
     x0[k] *= alpha;
-	k++;
+    k += X->inc;
   case 2:
     x0[k] *= alpha;
-	k++;
+    k += X->inc;
   case 1:
     x0[k] *= alpha;
   }
@@ -436,30 +436,30 @@ void dvec_copy(mvec_t *X,  mvec_t *Y, int N)
 
   // gcc compiles loop body to use different target XMM registers
   for (i = 0; i < N-3; i += 4) {
-	f0 = Y->md[(i+0)*Y->inc];
-	f1 = Y->md[(i+1)*Y->inc];
-	f2 = Y->md[(i+2)*Y->inc];
-	f3 = Y->md[(i+3)*Y->inc];
+    f0 = Y->md[(i+0)*Y->inc];
+    f1 = Y->md[(i+1)*Y->inc];
+    f2 = Y->md[(i+2)*Y->inc];
+    f3 = Y->md[(i+3)*Y->inc];
     X->md[(i+0)*X->inc] = f0;
     X->md[(i+1)*X->inc] = f1;
     X->md[(i+2)*X->inc] = f2;
     X->md[(i+3)*X->inc] = f3;
   }    
   if (i == N)
-	return;
+    return;
 
   // calculate indexes only once
   kx = i*X->inc;
   ky = i*Y->inc;
   switch (N-i) {
   case 3:
-	X->md[kx] = Y->md[ky];
-	kx++; ky++;
+    X->md[kx] = Y->md[ky];
+    kx++; ky++;
   case 2:
-	X->md[kx] = Y->md[ky];
-	kx++; ky++;
+    X->md[kx] = Y->md[ky];
+    kx++; ky++;
   case 1:
-	X->md[kx] = Y->md[ky];
+    X->md[kx] = Y->md[ky];
   }
 }
 
