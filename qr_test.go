@@ -13,7 +13,7 @@ import (
 )
 
 func TestDecomposeQR(t *testing.T) {
-    M := 60
+    M := 80
 	N := 40
 	nb := 4
 	A := matrix.FloatUniform(M, N)
@@ -34,7 +34,7 @@ func TestDecomposeQR(t *testing.T) {
 }
 
 func TestDecomposeQRT(t *testing.T) {
-    M := 60
+    M := 80
 	N := 40
 	nb := 12
 	A := matrix.FloatUniform(M, N)
@@ -54,7 +54,7 @@ func TestDecomposeQRT(t *testing.T) {
 }
 
 func TestMultQ(t *testing.T) {
-    M := 60
+    M := 80
 	N := 40
 	K := 30
 	nb := 12
@@ -82,7 +82,7 @@ func TestMultQ(t *testing.T) {
 }
 
 func TestMultQT(t *testing.T) {
-    M := 60
+    M := 80
 	N := 40
 	K := 30
 	nb := 12
@@ -111,7 +111,7 @@ func TestMultQT(t *testing.T) {
 }
 
 func TestSolveLeastSquaresQR(t *testing.T) {
-    M := 60
+    M := 80
 	N := 40
 	K := 30
 	nb := 12
@@ -143,7 +143,7 @@ func TestSolveLeastSquaresQR(t *testing.T) {
 }
 
 func TestSolveLeastSquaresQRT(t *testing.T) {
-    M := 60
+    M := 80
 	N := 40
 	K := 30
 	nb := 12

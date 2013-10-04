@@ -13,7 +13,7 @@ import (
 )
 
 
-func _TestLDLnoPiv(t *testing.T) {
+func TestLDLnoPiv(t *testing.T) {
 	N := 42
     nb := 8
 
@@ -53,7 +53,7 @@ func TestLDLlower(t *testing.T) {
     A := matrix.FloatMatrixFromTable(Ldata, matrix.RowOrder)
     N := A.Rows()
      */
-	N := 7
+	N := 40
     nb := 0
 
 	A0 := matrix.FloatUniform(N, N)
@@ -100,8 +100,8 @@ func TestLDLlower(t *testing.T) {
     t.Logf("pivots: %v\n", ipiv)
 }
 
-func _TestLDLupper(t *testing.T) {
-	N := 8
+func TestLDLupper(t *testing.T) {
+	N := 40
     nb := 0
 
 	A0 := matrix.FloatUniform(N, N)
@@ -142,7 +142,7 @@ func _TestLDLupper(t *testing.T) {
     t.Logf("pivots: %v\n", ipiv)
 }
 
-func TestLDLSolve(t *testing.T) {
+func _TestLDLSolve(t *testing.T) {
     N := 7
     nb := 4
     K := 6

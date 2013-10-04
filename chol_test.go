@@ -15,7 +15,7 @@ import (
 
 
 func TestUpperCHOL(t *testing.T) {
-	N := 60
+	N := 90
     K := 30
     nb := 16
     Z := matrix.FloatUniform(N, N)
@@ -24,7 +24,7 @@ func TestUpperCHOL(t *testing.T) {
 	X := B.Copy()
 
 	// R = chol(A) = U.T*U
-    R, _ := DecomposeCHOL(TriU(A.Copy()), UPPER, nb)
+    R, _ := DecomposeCHOL(A.Copy(), UPPER, nb)
 
 	// X = A.-1*B = U.-1*(U.-T*B)
 	SolveCHOL(X, R, UPPER)
@@ -39,7 +39,7 @@ func TestUpperCHOL(t *testing.T) {
 
 
 func TestLowerCHOL(t *testing.T) {
-    N := 60
+    N := 90
 	K := 30
     nb := 16
     Z := matrix.FloatUniform(N, N)

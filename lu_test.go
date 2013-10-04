@@ -14,7 +14,7 @@ import (
 
 
 func TestLU(t *testing.T) {
-	N := 60
+	N := 90
 	K := 30
 	nb := 12
 	A := matrix.FloatUniform(N, N)
