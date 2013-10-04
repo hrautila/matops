@@ -1,4 +1,10 @@
 
+// Copyright (c) Harri Rautila, 2012,2013
+
+// This file is part of github.com/hrautila/matops package. It is free software,
+// distributed under the terms of GNU Lesser General Public License Version 3, or
+// any later version. See the COPYING tile included in this archive.
+
 #ifndef _MULT_AVX_H
 #define _MULT_AVX_H 1
 
@@ -24,9 +30,9 @@
 #endif
 
 
-// update 1x4 block of C; one row, four columns
+// update 1x4 block of C; one row, four columns (mult4x1x1)
 static inline
-void mult4x1x1(double *c0, double *c1, double *c2, double *c3,
+void __mult1c4(double *c0, double *c1, double *c2, double *c3,
                const double *a, const double *b0, const double *b1,
                const double *b2, const double *b3, double alpha, int nR)
 {
@@ -76,9 +82,9 @@ update:
 }
 
 
-// update 2x4 block of C; two rows, four columns
+// update 2x4 block of C; two rows, four columns (mult4x2x1)
 static inline
-void mult4x2x1(double *c0, double *c1, double *c2, double *c3,
+void __mult2c4(double *c0, double *c1, double *c2, double *c3,
                const double *a0, const double *a1, const double *b0,
                const double *b1, const double *b2, const double *b3,
                double alpha, int nR)
@@ -153,9 +159,9 @@ update:
 }
 
 
-// update 1x2 block of C; one row, two columns
+// update 1x2 block of C; one row, two columns (mult2x1x1)
 static inline
-void mult2x1x1(double *c0, double *c1,
+void __mult1c2(double *c0, double *c1,
                const double *a, const double *b0, const double *b1,
                double alpha, int nR)
 {
@@ -198,8 +204,9 @@ update:
 }
 
 
+// update 2x2 block of C; (mult2x2x1)
 static inline
-void mult2x2x1(double *c0, double *c1,
+void __mult2c2(double *c0, double *c1,
                const double *a0, const double *a1,
                const double *b0, const double *b1,
                double alpha, int nR)
@@ -259,7 +266,7 @@ update:
 
 // update single element of C; with inner product of A row and B column
 static inline
-void mult1x1x1(double *c, const double *a, const double *b, double alpha, int nR)
+void __mult1c1(double *c, const double *a, const double *b, double alpha, int nR)
 {
   register int k;
   register __m256d y0, A, ALPHA, Z;
@@ -296,14 +303,12 @@ update:
 // version for breadth-first update of C; update C row-wise
 // 1 to 4 rows of A, 1 or 2 rows of B, update atmost 4x2 block of C 
 
-
-
-// update 4x1 block of C; four rows, one column
+// update 4x1 block of C; four rows, one column (dmult4x1x1)
 static inline
-void dmult4x1x1(double *c0, 
-                const double *a0, const double *a1,
-                const double *a2, const double *a3,
-                const double *b0, double alpha, int nR)
+void __mult4c1(double *c0, 
+               const double *a0, const double *a1,
+               const double *a2, const double *a3,
+               const double *b0, double alpha, int nR)
 {
   register int k;
   register __m256d y0, y1, y2, y3, B0, Z, ALPHA;
@@ -351,12 +356,12 @@ update:
 }
 
 
-// update 4x2 block of C; four rows, one column
+// update 4x2 block of C; four rows, one column (dmult4x2x1)
 static inline
-void dmult4x2x1(double *c0, double *c1,
-                const double *a0, const double *a1,
-                const double *a2, const double *a3,
-                const double *b0, const double *b1, double alpha, int nR)
+void __mult4c2(double *c0, double *c1,
+               const double *a0, const double *a1,
+               const double *a2, const double *a3,
+               const double *b0, const double *b1, double alpha, int nR)
 {
   register int k;
   register __m256d y0, y1, y2, y3, y4, y5, y6, y7, B0, B1, Z, ALPHA;
@@ -428,11 +433,11 @@ update:
 
 
 
-// update 2x1 block of C; two rows, one column
+// update 2x1 block of C; two rows, one column; (dmult2x1x1)
 static inline
-void dmult2x1x1(double *c0, 
-                const double *a0, const double *a1,
-                const double *b0, double alpha, int nR)
+void __mult2c1(double *c0, 
+               const double *a0, const double *a1,
+               const double *b0, double alpha, int nR)
 {
   register int k;
   register __m256d y0, y1, B0, ALPHA, Z;

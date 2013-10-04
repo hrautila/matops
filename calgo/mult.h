@@ -1,4 +1,10 @@
 
+// Copyright (c) Harri Rautila, 2012,2013
+
+// This file is part of github.com/hrautila/matops package. It is free software,
+// distributed under the terms of GNU Lesser General Public License Version 3, or
+// any later version. See the COPYING tile included in this archive.
+
 #ifndef __MULT_H
 #define __MULT_H 1
 
@@ -9,42 +15,13 @@
 // AVX1 256bit vectorization
 #include "mult_avx.h"
 
-#define _mult2c4  mult4x2x1
-#define _mult1c4  mult4x1x1
-#define _mult2c2  mult2x2x1
-#define _mult1c2  mult2x1x1
-#define _mult1c1  mult1x1x1
-#define _mult4c2  dmult4x2x1
-#define _mult4c1  dmult4x1x1
-#define _mult2c1  dmult2x1x1
-
 #elif defined(__SSE3__) //&& defined(USE_SSE)
 // SSE 128bit vectorization
 #include "mult_sse.h"
 
-#define _mult2c4  mult4x2x1
-#define _mult1c4  mult4x1x1
-#define _mult2c2  mult2x2x1
-#define _mult1c2  mult2x1x1
-#define _mult1c1  mult1x1x1
-#define _mult4c2  dmult4x2x1
-#define _mult4c1  dmult4x1x1
-#define _mult2c1  dmult2x1x1
-
-
 #else
 // unvectorized version
 #include "mult_nosimd.h"
-
-#define _mult2c4  mult4x2x1
-#define _mult1c4  mult4x1x1
-#define _mult2c2  mult2x2x2
-#define _mult1c2  mult2x1x4
-#define _mult1c1  mult1x1x4
-#define _mult4c2  dmult4x2x1
-#define _mult4c1  dmult4x1x1
-#define _mult2c1  dmult2x1x2
-
 
 #endif
 
@@ -67,7 +44,7 @@ void __CMULT4(mdata_t *C, const mdata_t *A, const mdata_t *B, double alpha, int 
     c3 = &C->md[i+(col+3)*C->step];
     a0 = &A->md[(i+0)*A->step];      
     a1 = &A->md[(i+1)*A->step];      
-    _mult2c4(c0, c1, c2, c3, a0, a1, b0, b1, b2, b3, alpha, nP);
+    __mult2c4(c0, c1, c2, c3, a0, a1, b0, b1, b2, b3, alpha, nP);
   }
   if (i == nI)
     return;
@@ -76,7 +53,7 @@ void __CMULT4(mdata_t *C, const mdata_t *A, const mdata_t *B, double alpha, int 
   c2 = &C->md[i+(col+2)*C->step];
   c3 = &C->md[i+(col+3)*C->step];
   a0 = &A->md[(i+0)*A->step];      
-  _mult1c4(c0, c1, c2, c3, a0, b0, b1, b2, b3, alpha, nP);
+  __mult1c4(c0, c1, c2, c3, a0, b0, b1, b2, b3, alpha, nP);
 }
 
 
@@ -93,14 +70,14 @@ void __CMULT2(mdata_t *C, const mdata_t *A, const mdata_t *B, double alpha, int 
     c1 = &C->md[i+(col+1)*C->step];
     a0 = &A->md[(i+0)*A->step];      
     a1 = &A->md[(i+1)*A->step];      
-    _mult2c2(c0, c1, a0, a1, b0, b1, alpha, nP);
+    __mult2c2(c0, c1, a0, a1, b0, b1, alpha, nP);
   }
   if (i == nI)
     return;
   c0 = &C->md[i+(col+0)*C->step];
   c1 = &C->md[i+(col+1)*C->step];
   a0 = &A->md[(i+0)*A->step];      
-  _mult1c2(c0, c1, a0, b0, b1, alpha, nP);
+  __mult1c2(c0, c1, a0, b0, b1, alpha, nP);
 }
 
 // update one column of C;
@@ -114,7 +91,7 @@ void __CMULT1(mdata_t *C, const mdata_t *A, const mdata_t *B, double alpha, int 
   for (i = 0; i < nI; i++) {
     c0 = &C->md[i+(col+0)*C->step];
     a0 = &A->md[i*A->step];
-    _mult1c1(c0, a0, b0, alpha, nP);
+    __mult1c1(c0, a0, b0, alpha, nP);
   }
 }
 
@@ -135,13 +112,13 @@ void __RMULT4(mdata_t *C, const mdata_t *A, const mdata_t *B, double alpha, int 
     c1 = &C->md[row+(k+1)*C->step];
     b0 = &B->md[(k+0)*B->step];      
     b1 = &B->md[(k+1)*B->step];      
-    _mult4c2(c0, c1, a0, a1, a2, a3, b0, b1, alpha, nP);
+    __mult4c2(c0, c1, a0, a1, a2, a3, b0, b1, alpha, nP);
   }
   if (k == nJ)
     return;
   c0 = &C->md[row+(k+0)*C->step];
   b0 = &B->md[(k+0)*B->step];      
-  _mult4c1(c0, a0, a1, a2, a3, b0, alpha, nP);
+  __mult4c1(c0, a0, a1, a2, a3, b0, alpha, nP);
 }
 
 // update 2 rows of C;
@@ -158,13 +135,13 @@ void __RMULT2(mdata_t *C, const mdata_t *A, const mdata_t *B, double alpha, int 
     c1 = &C->md[row+(k+1)*C->step];
     b0 = &B->md[(k+0)*B->step];      
     b1 = &B->md[(k+1)*B->step];      
-    _mult2c2(c0, c1, a0, a1, b0, b1, alpha, nP);
+    __mult2c2(c0, c1, a0, a1, b0, b1, alpha, nP);
   }
   if (k == nJ)
     return;
   c0 = &C->md[row+(k+0)*C->step];
   b0 = &B->md[(k+0)*B->step];      
-  _mult2c1(c0, a0, a1, b0, alpha, nP);
+  __mult2c1(c0, a0, a1, b0, alpha, nP);
 }
 
 // update 1row of C;
@@ -178,7 +155,7 @@ void __RMULT1(mdata_t *C, const mdata_t *A, const mdata_t *B, double alpha, int 
   for (k = 0; k < nJ; k += 1) {
     c0 = &C->md[row+(k+0)*C->step];
     b0 = &B->md[(k+0)*B->step];      
-    _mult1c1(c0, a0, b0, alpha, nP);
+    __mult1c1(c0, a0, b0, alpha, nP);
   }
 }
 
