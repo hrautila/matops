@@ -3,6 +3,8 @@ matops
 
 Matrix operations. Almost complete implementation of BLAS level 1, 2 and 3 routines for double precision floating point. All computation is in place. The implementation supports matrix views (submatrices of larger matrices) and parallel execution of matrix operations in multiple threads. Some functions already allow parallel execution for better performance.
 
+New low level matrix operations primitives use 256bit and 128bit vectorization instructions when possible. Refactored calculations achieve better instruction level parallelism.
+
 Supported functionality is:
 
   Blas level 3
@@ -25,7 +27,10 @@ Supported functionality is:
 
   Blas level 1
 
-    Norm2(X, Y)         Vector norm (NRM2)
+    ASum(X)             Sum of absolute values sum(|x|) (ASUM)
+    Axpy(Y, X, alpha)   Vector sum Y := alpha*X + Y (AXPY)
+    IAMax(X)            Index of absolute maximum value (IAMAX)
+    Norm2(X)            Vector norm sqrt(||x||^2) (NRM2)
     Dot(X, Y)           Inner product (DOT)
     Swap(X, Y)          Vector-vector swap (SWAP)
     InvScale(X, alpha)  Inverse scaling of X 
@@ -40,6 +45,7 @@ Supported functionality is:
 
   Lapack
   
+    DecomposeBK(A, W, ipiv, flgs, nb)   Bunch-Kauffman LDL factorization with pivoting (SYTRF)
     DecomposeCHOL(A, nb)                Cholesky factorization (DPOTRF)
     DecomposeLDLnoPiv(A, nb)            LDL factorization without pivoting
     DecomposeLDL(A, W, ipiv, flgs, nb)  LDL factorization with pivoting
@@ -52,6 +58,7 @@ Supported functionality is:
     BuildQ(A, tau, W, nb)               Build matrix Q with ortonormal columns (DORGQR)
     BuildQT(A, T, W, nb)                Build matrix Q with ortonormal columns 
     BuildT(T, A, tau)                   Build block reflector T from elementary reflectors (DLARFT)
+    SolveBK(B, A, pivots, flags)        Solve Bunch-Kauffman LDL factorized linear system (SYTRS)
     SolveCHOL(B, A, flags)              Solve Cholesky factorized linear system (DPOTRS)
     SolveLDL(B, A, pivots, flags)       Solve LDL factorized linear system
     SolveLU(B, A, pivots, flags)        Solve LU factorized linear system (DGETRS)
