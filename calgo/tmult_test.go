@@ -20,9 +20,9 @@ import (
 
 
 func _TestMultSmall(t *testing.T) {
-    bM := 6
-    bN := 6
-    bP := 6
+    bM := 7
+    bN := 7
+    bP := 7
     D := matrix.FloatNormal(bM, bP)
     E := matrix.FloatNormal(bP, bN)
     C0 := matrix.FloatWithValue(bM, bN, 1.0)
@@ -41,7 +41,7 @@ func _TestMultSmall(t *testing.T) {
 }
 
 
-func _TestMultBig(t *testing.T) {
+func TestMultBig(t *testing.T) {
     bM := 100*M + 3
     bN := 100*N + 3
     bP := 100*P + 3
@@ -85,7 +85,7 @@ func _TestMultTransASmall(t *testing.T) {
 }
 
 
-func _TestMultTransABig(t *testing.T) {
+func TestMultTransABig(t *testing.T) {
     bM := 100*M + 3
     bN := 100*N + 3
     bP := 100*P + 3
@@ -128,7 +128,7 @@ func _TestMultTransBSmall(t *testing.T) {
 }
 
 
-func _TestMultTransBBig(t *testing.T) {
+func TestMultTransBBig(t *testing.T) {
     bM := 100*M + 3
     bN := 100*N + 3
     bP := 100*P + 3
@@ -172,7 +172,7 @@ func _TestMultTransABSmall(t *testing.T) {
 }
 
 
-func _TestMultTransABBig(t *testing.T) {
+func TestMultTransABBig(t *testing.T) {
     bM := 100*M
     bN := 100*N
     bP := 100*P
@@ -217,8 +217,8 @@ func _TestMultMVSmall(t *testing.T) {
 }
 
 
-func _TestMultMV(t *testing.T) {
-    bM := 100*M
+func TestMultMV(t *testing.T) {
+    bM := 1000*M
     bN := 100*N
     A := matrix.FloatNormal(bM, bN)
     X := matrix.FloatNormal(bN, 1)
@@ -243,7 +243,7 @@ func _TestMultMV(t *testing.T) {
      */
 }
 
-func TestMultMVTransASmall(t *testing.T) {
+func _TestMultMVTransASmall(t *testing.T) {
     data6 := [][]float64{
         []float64{-1.59e+00,  6.56e-02,  2.14e-01,  6.79e-01,  2.93e-01,  5.24e-01},
         []float64{ 4.28e-01,  1.57e-01,  3.81e-01,  2.19e-01,  2.97e-01,  2.83e-02},
@@ -317,9 +317,9 @@ func TestMultMVTransASmall(t *testing.T) {
     t.Logf("row Y1: %v\n", Y1)
 }
 
-func _TestMultMVTransA(t *testing.T) {
+func TestMultMVTransA(t *testing.T) {
     bM := 1000*M
-    bN := 1000*N
+    bN := 100*N
     A := matrix.FloatNormal(bN, bM)
     X := matrix.FloatWithValue(bN, 1, 1.0)
     Y1 := matrix.FloatZeros(bM, 1)
@@ -344,8 +344,11 @@ func _TestMultMVTransA(t *testing.T) {
 }
 
 
-func _TestMultSymmSmall(t *testing.T) {
+func _TestMultSymmUpperSmall(t *testing.T) {
     //bM := 5
+    var A4, B4, C04, C14 matrix.FloatMatrix
+    var B, C0, C1 *matrix.FloatMatrix
+    
     bN := 7
     bP := 7
     Adata := [][]float64{
@@ -357,24 +360,49 @@ func _TestMultSymmSmall(t *testing.T) {
         []float64{0.0, 0.0, 0.0, 0.0, 0.0, 6.0, 6.0},
         []float64{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0}}
 
+    nN := 5; nP := 5;
+
     A := matrix.FloatMatrixFromTable(Adata, matrix.RowOrder)
-    B := matrix.FloatWithValue(bN, bP, 2.0)
-    C0 := matrix.FloatZeros(bN, bP)
-    C1 := matrix.FloatZeros(bN, bP)
+    A.SubMatrix(&A4, 0, 0, nN, nN);
 
-    Ar := A.FloatArray()
-    Br := B.FloatArray()
-    C1r := C1.FloatArray()
+    side := linalg.OptLeft
+    flags := UPPER
+    left := false
 
-    blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptUpper, linalg.OptRight)
+    if left {
+        B = matrix.FloatWithValue(bN, bP, 2.0)
+        B.SubMatrix(&B4, 0, 0, nN, nP)
+        C0 = matrix.FloatZeros(bN, bP)
+        C0.SubMatrix(&C04, 0, 0, nN, nP)
+        C1 = matrix.FloatZeros(bN, bP)
+        C1.SubMatrix(&C14, 0, 0, nN, nP)
+    } else {
+        B = matrix.FloatWithValue(bP, bN, 2.0)
+        B.SubMatrix(&B4, 0, 0, nP, nN)
+        C0 = matrix.FloatZeros(bP, bN)
+        C0.SubMatrix(&C04, 0, 0, nP, nN)
+        C1 = matrix.FloatZeros(bP, bN)
+        C1.SubMatrix(&C14, 0, 0, nP, nN)
+        side = linalg.OptRight
+        flags |= RIGHT
+    }
 
-    DMultSymm(C1r, Ar, Br, 1.0, 1.0, UPPER|RIGHT, bN, A.LeadingIndex(), bN, bN, 0,  bP, 0,  bN, 2, 2, 2)
-    ok := C0.AllClose(C1)
+    Ar := A4.FloatArray()
+    Br := B4.FloatArray()
+    C1r := C14.FloatArray()
+
+    blas.SymmFloat(&A4, &B4, &C04, 1.0, 1.0, linalg.OptUpper, side)
+
+    DMultSymm(C1r, Ar, Br, 1.0, 1.0, Flags(flags), 
+        C14.LeadingIndex(), A4.LeadingIndex(), B4.LeadingIndex(),
+        A4.Cols(), 0, B4.Cols(), 0, C14.Rows(), 4, 4, 4)
+    ok := C04.AllClose(&C14)
     t.Logf("C0 == C1: %v\n", ok)
     if ! ok {
-        t.Logf("A=\n%v\n", A)
-        t.Logf("blas: C=A*B\n%v\n", C0)
-        t.Logf("C1: C1 = A*X\n%v\n", C1)
+        t.Logf("A=\n%v\n", &A4)
+        t.Logf("B=\n%v\n", &B4)
+        t.Logf("blas: C=A*B\n%v\n", &C04)
+        t.Logf("C1: C1 = A*X\n%v\n", &C14)
     }
 }
 
@@ -395,25 +423,40 @@ func _TestMultSymmLowerSmall(t *testing.T) {
     B := matrix.FloatNormal(bN, bP)
     C0 := matrix.FloatZeros(bN, bP)
     C1 := matrix.FloatZeros(bN, bP)
+    C2 := C0.Copy()
+    C3 := C1.Copy()
 
     Ar := A.FloatArray()
     Br := B.FloatArray()
     C1r := C1.FloatArray()
+    C3r := C3.FloatArray()
 
-    blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptLower, linalg.OptRight)
+    blas.SymmFloat(A, B, C0, 1.0, 1.0, linalg.OptLower)
+    blas.SymmFloat(A, B, C2, 1.0, 1.0, linalg.OptLower, linalg.OptRight)
 
-    DMultSymm(C1r, Ar, Br, 1.0, 1.0, LOWER|RIGHT, bN, A.LeadingIndex(), bN,
-        bN, 0,  bP, 0,  bN, 2, 2, 2)
+    DMultSymm(C1r, Ar, Br, 1.0, 1.0, LOWER, bN, A.LeadingIndex(), bN,
+        bN, 0,  bP, 0,  bN, 4, 4, 4)
+    DMultSymm(C3r, Ar, Br, 1.0, 1.0, LOWER|RIGHT, bN, A.LeadingIndex(), bN,
+        bN, 0,  bP, 0,  bN, 4, 4, 4)
+
     ok := C0.AllClose(C1)
     t.Logf("C0 == C1: %v\n", ok)
     if ! ok {
         t.Logf("A=\n%v\n", A)
-        t.Logf("blas: C=A*B\n%v\n", C0)
-        t.Logf("C1: C1 = A*X\n%v\n", C1)
+        t.Logf("blas: C = A*B\n%v\n", C0)
+        t.Logf("C1:   C = A*B\n%v\n", C1)
+    }
+
+    ok = C2.AllClose(C3)
+    t.Logf("C2 == C3: %v\n", ok)
+    if ! ok {
+        t.Logf("A=\n%v\n", A)
+        t.Logf("blas: C = B*A\n%v\n", C2)
+        t.Logf("C1:   C = B*A\n%v\n", C3)
     }
 }
 
-func _TestMultSymmUpper(t *testing.T) {
+func TestMultSymmUpper(t *testing.T) {
     //bM := 5
     bN := 100*N + 3
     bP := 100*P + 3
@@ -433,10 +476,10 @@ func _TestMultSymmUpper(t *testing.T) {
     t.Logf("C0 == C1: %v\n", C0.AllClose(C1))
 }
 
-func _TestMultSymmLower(t *testing.T) {
+func TestMultSymmLower(t *testing.T) {
     //bM := 5
-    bN := 100*N
-    bP := 100*P
+    bN := 100*N + 3
+    bP := 100*P + 3
     A := matrix.FloatNormalSymmetric(bN, matrix.Lower)
     B := matrix.FloatNormal(bN, bP)
     C0 := matrix.FloatZeros(bN, bP)
@@ -454,7 +497,7 @@ func _TestMultSymmLower(t *testing.T) {
 }
 
 
-func TestUpdateTrmLower(t *testing.T) {
+func _TestUpdateTrmLower(t *testing.T) {
     //bM := 5
     bN := 8
     bP := 4
@@ -477,9 +520,9 @@ func TestUpdateTrmLower(t *testing.T) {
     DMult(C1r, Ar, Br, 2.0, 1.0, NOTRANS, C1.LeadingIndex(), A.LeadingIndex(), B.LeadingIndex(),
         bP, 0,  bN, 0,  bN, nb, nb, nb)
     DTrmUpdBlk(C0r, Ar, Br, 2.0, 1.0, LOWER, C0.LeadingIndex(), A.LeadingIndex(), B.LeadingIndex(),
-        bP, 0, bN, nb, nb)
+        bP, 0, bN, nb, nb, nb)
     DTrmUpdBlk(C2r, Ar, Br, 2.0, 1.0, UPPER, C2.LeadingIndex(), A.LeadingIndex(), B.LeadingIndex(),
-        bP, 0, bN, nb, nb)
+        bP, 0, bN, nb, nb, nb)
 
     //t.Logf("C1:\n%v\nC0:\n%v\nC2:\n%v\n", C1, C0, C2)
     // C0 == C2.T
@@ -493,9 +536,9 @@ func TestUpdateTrmLower(t *testing.T) {
     DMult(C1r, Ar, Ar, 2.0, 0.0, TRANSB, C1.LeadingIndex(), A.LeadingIndex(), A.LeadingIndex(),
         bP, 0,  bN, 0,  bN, nb, nb, nb)
     DTrmUpdBlk(C0r, Ar, Ar, 2.0, 0.0, LOWER|TRANSB, C0.LeadingIndex(), A.LeadingIndex(), A.LeadingIndex(),
-        bP, 0, bN, nb, nb)
+        bP, 0, bN, nb, nb, nb)
     DTrmUpdBlk(C2r, Ar, Ar, 2.0, 0.0, UPPER|TRANSB, C2.LeadingIndex(), A.LeadingIndex(), A.LeadingIndex(),
-        bP, 0, bN, nb, nb)
+        bP, 0, bN, nb, nb, nb)
 
     //t.Logf("TRANSB:\nC1:\n%v\nC0:\n%v\nC2:\n%v\n", C1, C0, C2)
     // C0 == C2.T
@@ -509,9 +552,9 @@ func TestUpdateTrmLower(t *testing.T) {
     DMult(C1r, Br, Br, 2.0, 0.0, TRANSA, C1.LeadingIndex(), B.LeadingIndex(), B.LeadingIndex(),
         bP, 0,  bN, 0,  bN, nb, nb, nb)
     DTrmUpdBlk(C0r, Br, Br, 2.0, 0.0, LOWER|TRANSA, C0.LeadingIndex(), B.LeadingIndex(), B.LeadingIndex(),
-        bP, 0, bN, nb, nb)
+        bP, 0, bN, nb, nb, nb)
     DTrmUpdBlk(C2r, Br, Br, 2.0, 0.0, UPPER|TRANSA, C2.LeadingIndex(), B.LeadingIndex(), B.LeadingIndex(),
-        bP, 0, bN, nb, nb)
+        bP, 0, bN, nb, nb, nb)
 
     //t.Logf("TRANSA:\nC1:\n%v\nC0:\n%v\nC2:\n%v\n", C1, C0, C2)
     // C0 == C2.T
@@ -525,9 +568,9 @@ func TestUpdateTrmLower(t *testing.T) {
     DMult(C1r, Br, Ar, 2.0, 0.0, TRANSA|TRANSB, C1.LeadingIndex(), B.LeadingIndex(), A.LeadingIndex(),
         bP, 0,  bN, 0,  bN, nb, nb, nb)
     DTrmUpdBlk(C0r, Br, Ar, 2.0, 0.0, LOWER|TRANSA|TRANSB, C0.LeadingIndex(), B.LeadingIndex(), A.LeadingIndex(),
-        bP, 0, bN, nb, nb)
+        bP, 0, bN, nb, nb, nb)
     DTrmUpdBlk(C2r, Br, Ar, 2.0, 0.0, UPPER|TRANSA|TRANSB, C2.LeadingIndex(), B.LeadingIndex(), A.LeadingIndex(),
-        bP, 0, bN, nb, nb)
+        bP, 0, bN, nb, nb, nb)
 
     //t.Logf("TRANSA|TRANSB:\nC1:\n%v\nC0:\n%v\nC2:\n%v\n", C1, C0, C2)
     // C0 == C2.T
@@ -540,7 +583,7 @@ func TestUpdateTrmLower(t *testing.T) {
 }
 
 
-func TestUpdateTrmMV(t *testing.T) {
+func _TestUpdateTrmMV(t *testing.T) {
     //bM := 5
     bN := 8
     //bP := 4

@@ -55,7 +55,7 @@ func trmvTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) bool {
 }
 
 
-func TestTrmvSmall(t *testing.T) {
+func _TestTrmvSmall(t *testing.T) {
 
     L := matrix.FloatMatrixFromTable(lower5, matrix.RowOrder)
     U := L.Transpose()
@@ -85,18 +85,18 @@ func TestTrmvSmall(t *testing.T) {
 
 
 
-func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) bool {
+func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nrhs, nb int) bool {
     var B0 *matrix.FloatMatrix
     N := A.Cols()
     S := 0
     E := A.Cols()
     side := linalg.OptLeft
     if flags & RIGHT != 0 {
-        B0 = matrix.FloatWithValue(2, A.Rows(), 2.0)
+        B0 = matrix.FloatWithValue(nrhs, A.Rows(), 2.0)
         side = linalg.OptRight
         E = B0.Rows()
     } else {
-        B0 = matrix.FloatWithValue(A.Rows(), 2, 2.0)
+        B0 = matrix.FloatWithValue(A.Rows(), nrhs, 2.0)
         E = B0.Cols()
     }
     B1 := B0.Copy()
@@ -124,7 +124,7 @@ func trmmTest(t *testing.T, A *matrix.FloatMatrix, flags Flags, nb int) bool {
     Br := B1.FloatArray()
     if nb != 0 {
         DTrmmBlk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(),
-            N, S, E, nb)
+            N, S, E, nb, nb, nb)
     } else {
         DTrmmUnblk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(),
             N, S, E, 0)
@@ -150,41 +150,41 @@ func _TestTrmmUnblkSmall(t *testing.T) {
     _ = L
 
     t.Logf("-- TRMM-UPPER, NON-UNIT ---")
-    fail(t, trmmTest(t, U3, UPPER, 0))
+    fail(t, trmmTest(t, U3, UPPER, 2, 0))
     t.Logf("-- TRMM-UPPER, UNIT ---")
-    fail(t, trmmTest(t, U3, UPPER|UNIT, 0))
+    fail(t, trmmTest(t, U3, UPPER|UNIT, 2, 0))
     t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
-    fail(t, trmmTest(t, U3, UPPER|TRANSA, 0))
+    fail(t, trmmTest(t, U3, UPPER|TRANSA, 2, 0))
     t.Logf("-- TRMM-UPPER, UNIT, TRANSA ---")
-    fail(t, trmmTest(t, U3, UPPER|TRANSA|UNIT, 0))
+    fail(t, trmmTest(t, U3, UPPER|TRANSA|UNIT, 2, 0))
     t.Logf("-- TRMM-LOWER, NON-UNIT ---")
-    fail(t, trmmTest(t, L3, LOWER, 0))
+    fail(t, trmmTest(t, L3, LOWER, 2, 0))
     t.Logf("-- TRMM-LOWER, UNIT ---")
-    fail(t, trmmTest(t, L3, LOWER|UNIT, 0))
+    fail(t, trmmTest(t, L3, LOWER|UNIT, 2, 0))
     t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
-    fail(t, trmmTest(t, L3, LOWER|TRANSA, 0))
+    fail(t, trmmTest(t, L3, LOWER|TRANSA, 2, 0))
     t.Logf("-- TRMM-LOWER, UNIT, TRANSA ---")
-    fail(t, trmmTest(t, L3, LOWER|TRANSA|UNIT, 0))
+    fail(t, trmmTest(t, L3, LOWER|TRANSA|UNIT, 2, 0))
 
     t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT ---")
-    fail(t, trmmTest(t, U3, UPPER|RIGHT, 0))
+    fail(t, trmmTest(t, U3, UPPER|RIGHT, 2, 0))
     t.Logf("-- TRMM-UPPER, UNIT, RIGHT ---")
-    fail(t, trmmTest(t, U3, UPPER|UNIT|RIGHT, 0))
+    fail(t, trmmTest(t, U3, UPPER|UNIT|RIGHT, 2, 0))
 
     t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT ---")
-    fail(t, trmmTest(t, L3, LOWER|RIGHT, 0))
+    fail(t, trmmTest(t, L3, LOWER|RIGHT, 2, 0))
     t.Logf("-- TRMM-LOWER, UNIT, RIGHT ---")
-    fail(t, trmmTest(t, L3, LOWER|UNIT|RIGHT, 0))
+    fail(t, trmmTest(t, L3, LOWER|UNIT|RIGHT, 2, 0))
 
     t.Logf("-- TRMM-UPPER, NON-UNIT, RIGHT, TRANSA ---")
-    fail(t, trmmTest(t, U3, UPPER|RIGHT|TRANSA, 0))
+    fail(t, trmmTest(t, U3, UPPER|RIGHT|TRANSA, 2, 0))
     t.Logf("-- TRMM-UPPER, UNIT, RIGHT, TRANSA ---")
-    fail(t, trmmTest(t, U3, UPPER|UNIT|RIGHT|TRANSA, 0))
+    fail(t, trmmTest(t, U3, UPPER|UNIT|RIGHT|TRANSA, 2, 0))
 
     t.Logf("-- TRMM-LOWER, NON-UNIT, RIGHT, TRANSA ---")
-    fail(t, trmmTest(t, L3, LOWER|RIGHT|TRANSA, 0))
+    fail(t, trmmTest(t, L3, LOWER|RIGHT|TRANSA, 2, 0))
     t.Logf("-- TRMM-LOWER, UNIT, RIGHT, TRANSA ---")
-    fail(t, trmmTest(t, L3, LOWER|UNIT|RIGHT|TRANSA, 0))
+    fail(t, trmmTest(t, L3, LOWER|UNIT|RIGHT|TRANSA, 2, 0))
 
 }
 
@@ -213,22 +213,76 @@ func _TestTrmmBlkSmall(t *testing.T) {
     _ = L
 
     t.Logf("-- TRMM-UPPER, NON-UNIT ---")
-    fail(t, trmmTest(t, U, UPPER, 2))
+    fail(t, trmmTest(t, U, UPPER, 2, 2))
     t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
-    fail(t, trmmTest(t, U, UPPER|TRANSA, 2))
+    fail(t, trmmTest(t, U, UPPER|TRANSA, 2, 2))
     t.Logf("-- TRMM-LOWER, NON-UNIT ---")
-    fail(t, trmmTest(t, L, LOWER, 2))
+    fail(t, trmmTest(t, L, LOWER, 2, 2))
     t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
-    fail(t, trmmTest(t, L, LOWER|TRANSA, 2))
+    fail(t, trmmTest(t, L, LOWER|TRANSA, 2, 2))
     t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT ---")
-    fail(t, trmmTest(t, U, UPPER|RIGHT, 2))
+    fail(t, trmmTest(t, U, UPPER|RIGHT, 2, 2))
     t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT, TRANSA ---")
-    fail(t, trmmTest(t, U, UPPER|RIGHT|TRANSA, 2))
+    fail(t, trmmTest(t, U, UPPER|RIGHT|TRANSA, 2, 2))
     t.Logf("-- TRMM-LOWER, RIGHT, NON-UNIT ---")
-    fail(t, trmmTest(t, U, LOWER|RIGHT, 2))
+    fail(t, trmmTest(t, U, LOWER|RIGHT, 2, 2))
     t.Logf("-- TRMM-LOWER, RIGHT, NON-UNIT, TRANSA ---")
-    fail(t, trmmTest(t, U, LOWER|RIGHT|TRANSA, 2))
+    fail(t, trmmTest(t, U, LOWER|RIGHT|TRANSA, 2, 2))
 }
+
+
+func TestTrmmBlkBig(t *testing.T) {
+
+    bN := 80
+    nP := 80
+    nb := 16
+    L := matrix.FloatNormalSymmetric(bN, matrix.Lower)
+    U := matrix.FloatNormalSymmetric(bN, matrix.Upper)
+    _, _ = L, U
+
+    t.Logf("-- TRMM-UPPER, NON-UNIT ---")
+    fail(t, trmmTest(t, U, UPPER, nP, nb))
+    t.Logf("-- TRMM-UPPER, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U, UPPER|TRANSA, nP, nb))
+    t.Logf("-- TRMM-LOWER, NON-UNIT ---")
+    fail(t, trmmTest(t, L, LOWER, nP, nb))
+    t.Logf("-- TRMM-LOWER, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, L, LOWER|TRANSA, nP, nb))
+    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT ---")
+    fail(t, trmmTest(t, U, UPPER|RIGHT, nP, nb))
+    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U, UPPER|RIGHT|TRANSA, nP, nb))
+    t.Logf("-- TRMM-LOWER, RIGHT, NON-UNIT ---")
+    fail(t, trmmTest(t, U, LOWER|RIGHT, nP, nb))
+    t.Logf("-- TRMM-LOWER, RIGHT, UNIT ---")
+    fail(t, trmmTest(t, U, LOWER|RIGHT|UNIT, nP, nb))
+    t.Logf("-- TRMM-LOWER, RIGHT, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U, LOWER|RIGHT|TRANSA, nP, nb))
+}
+
+
+func TestTrmmBlkBig2(t *testing.T) {
+
+    bN := 40
+    nP := 80
+    nb := 16
+    L := matrix.FloatNormalSymmetric(bN, matrix.Lower)
+    U := matrix.FloatNormalSymmetric(bN, matrix.Upper)
+    _, _ = L, U
+
+    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT ---")
+    fail(t, trmmTest(t, U, UPPER|RIGHT, nP, nb))
+    t.Logf("-- TRMM-UPPER, RIGHT, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U, UPPER|RIGHT|TRANSA, nP, nb))
+    t.Logf("-- TRMM-LOWER, RIGHT, NON-UNIT ---")
+    fail(t, trmmTest(t, U, LOWER|RIGHT, nP, nb))
+    t.Logf("-- TRMM-LOWER, RIGHT, UNIT ---")
+    fail(t, trmmTest(t, U, LOWER|RIGHT|UNIT, nP, nb))
+    t.Logf("-- TRMM-LOWER, RIGHT, NON-UNIT, TRANSA ---")
+    fail(t, trmmTest(t, U, LOWER|RIGHT|TRANSA, nP, nb))
+}
+
+
 
 
 // Local Variables:

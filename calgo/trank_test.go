@@ -163,7 +163,7 @@ func syrkTest(t *testing.T, C, A *matrix.FloatMatrix, flags Flags, vlen, nb int)
     Ar := A.FloatArray()
     Cr := C.FloatArray()
     DSymmRankBlk(Cr, Ar, 1.0, 1.0, flags, C.LeadingIndex(), A.LeadingIndex(),
-        P, S, E, vlen, nb)
+        P, S, E, vlen, nb, nb)
     result := C0.AllClose(C)
     t.Logf("   C0 == C: %v\n", result)
     if A.Rows() < 8 {
@@ -172,7 +172,7 @@ func syrkTest(t *testing.T, C, A *matrix.FloatMatrix, flags Flags, vlen, nb int)
     return result
 }
 
-func _TestSyrkSmall(t *testing.T) {
+func TestSyrkSmall(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{2.0, 2.0, 2.0},
@@ -252,7 +252,7 @@ func syrk2Test(t *testing.T, C, A, B *matrix.FloatMatrix, flags Flags, vlen, nb 
     Br := B.FloatArray()
     Cr := C.FloatArray()
     DSymmRank2Blk(Cr, Ar, Br, 1.0, 1.0, flags, C.LeadingIndex(), A.LeadingIndex(),
-        B.LeadingIndex(), P, S, E, vlen, nb)
+        B.LeadingIndex(), P, S, E, vlen, nb, nb)
     result := C0.AllClose(C)
     t.Logf("   C0 == C: %v\n", result)
     if A.Rows() < 8 {
@@ -261,7 +261,7 @@ func syrk2Test(t *testing.T, C, A, B *matrix.FloatMatrix, flags Flags, vlen, nb 
     return result
 }
 
-func _TestSyrk2Small(t *testing.T) {
+func TestSyrk2Small(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{2.0, 2.0, 2.0},

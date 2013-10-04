@@ -94,13 +94,23 @@ func _TestSolveBlockedSmall(t *testing.T) {
     solveMVTest(t, U, X1.Copy(), UPPER|UNIT, N, nb)
 }
 
-func _TestSolveRandom(t *testing.T) {
+func TestTrmvRandom(t *testing.T) {
     bN := 22
-    nb := 4
     L := matrix.FloatNormalSymmetric(bN, matrix.Lower)
     U := L.Transpose()
     X0 := matrix.FloatWithValue(L.Rows(), 1, 1.0)
 
+    nb := 0
+    t.Logf("-- UNBLK SOLVE LOWER NON-UNIT ---\n")
+    solveMVTest(t, L, X0.Copy(), LOWER, bN, nb)
+    t.Logf("-- UNBLK SOLVE LOWER UNIT ---\n")
+    solveMVTest(t, L, X0.Copy(), LOWER|UNIT, bN, nb)
+    t.Logf("-- UNBLK SOLVE UPPER NON-UNIT ---\n")
+    solveMVTest(t, U, X0.Copy(), UPPER, bN, nb)
+    t.Logf("-- UNBLK SOLVE UPPER UNIT ---\n")
+    solveMVTest(t, U, X0.Copy(), UPPER|UNIT, bN, nb)
+
+    nb = 4
     t.Logf("-- BLOCKED SOLVE LOWER NON-UNIT ---\n")
     solveMVTest(t, L, X0.Copy(), LOWER, bN, nb)
     t.Logf("-- BLOCKED SOLVE LOWER UNIT ---\n")
@@ -154,7 +164,7 @@ func trsmSolve(t *testing.T, A *matrix.FloatMatrix, flags Flags, rand bool, nrhs
     if nb == 0 || nb == N {
         DSolveUnblk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(), N, S, E)
     } else {
-        DSolveBlk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(), N, S, E, nb)
+        DSolveBlk(Br, Ar, 1.0, flags, B1.LeadingIndex(), A.LeadingIndex(), N, S, E, nb, nb, nb)
     }
     result := B1.AllClose(B0)
     t.Logf("B1 == B0: %v\n", result)
@@ -313,7 +323,7 @@ func _TestTrsmSmall(t *testing.T) {
     trsmSolve(t, L, LOWER|RIGHT|TRANSA, true, nP, nb)
 }
 
-func TestTrsmUnblk(t *testing.T) {
+func _TestTrsmUnblk(t *testing.T) {
     //bN := 7
     Udata3 := [][]float64{
         []float64{2.0, 2.0, 2.0},
