@@ -24,23 +24,6 @@ enum {
   MTX_NOSCALE = 0x800
 };
   
-// multiples of 4 but not powers of 2
-#define MAX_VP_ROWS 196
-#define MAX_VP_COLS 68
-
-
-// max values of block sizes for unaligned cases.
-#define MAX_UA_MB 130
-#define MAX_UA_NB 130
-#define MAX_UA_VP 66
-
-#define MAX_MB_DDOT 94
-#define MAX_NB_DDOT 94
-#define MAX_VP_DDOT 194
-
-//#define MAX_MB 252
-//#define MAX_NB 252
-//#define MAX_VP 196
 
 #ifndef MAX_KB
 #define MAX_KB 160
@@ -75,43 +58,12 @@ typedef struct cbuf_t {
   int nelems;
 } cbuf_t;
 
-extern void *memcpy(void *, const void *, size_t);
-
-
-
-
-extern void print_tile(const double *D, int ldD, int nR, int nC);
-
-
-
-extern double
-ddot_vec(const double *X, const double *Y, int incX, int incY, int N);
 
 extern void
-dscale_vec(double *X, int incX, double f0, int N);
+print_tile(const double *D, int ldD, int nR, int nC);
 
 extern void
 dscale_tile(double *X, int ldX, double f0, int M, int N);
-
-extern void
-vpur_ddot(double *Cc, const double *Aroot, const double *Bc, double alpha,
-          int ldC, int ldA, int ldB, int nSL, int nRE, int nVP);
-
-extern void
-vpur_daxpy(double *Cc, const double *Aroot, const double *Bc, double alpha,
-                int ldC, int ldA, int ldB, int nSL, int nRE, int nVP);
-
-extern void
-_dblock_mult_panel(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                   double alpha, int flags, 
-                   int nP, int nSL, int nRE, int vlen, cbuf_t *Acpy, cbuf_t *Bcpy);
-
-extern void
-_dmult_mm_intern(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                 double alpha, int flags,
-                 int P, int nSL, int nRE, int vlen, int NB, int MB,
-                 cbuf_t *Acpy, cbuf_t *Bcpy);
-
 
 extern void dvec_axpy(mvec_t *Y,  const mvec_t *X, double alpha, int N);
 extern void dvec_scal(mvec_t *X,  double alpha, int N);
@@ -132,25 +84,6 @@ extern void dmmat_scale_plus(mdata_t *A, const mdata_t *B,
                              int S, int L, int R, int E);
 
 extern void
-dmult_mm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                 double alpha, double beta, int flags,
-                 int P, int S, int L, int R, int E, 
-                 int vlen, int NB, int MB);
-
-extern void
-dmult_mm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                  double alpha, double beta, int flags,
-                  int P, int S, int L, int R, int E, 
-                  int vlen, int NB, int MB);
-
-// matrix-matrix: C = alpha* A*B + beta*C  (GEMM)
-extern void
-dmult_mm_blocked3(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                  double alpha, double beta, int flags,
-                  int P, int S, int L, int R, int E, 
-                  int vlen, int NB, int MB);
-
-extern void
 dmult_mm_blocked4(mdata_t *C, const mdata_t *A, const mdata_t *B,
                   double alpha, double beta, int flags,
                   int P, int S, int L, int R, int E, 
@@ -158,32 +91,10 @@ dmult_mm_blocked4(mdata_t *C, const mdata_t *A, const mdata_t *B,
 
 
 extern void 
-dmult_symm_blocked(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                   double alpha, double beta, int flags,
-                   int P, int S, int L, int R, int E,
-                   int vlen, int NB, int MB);
-
-// matrix-matrix: C = alpha* A*B + beta*C  (SYMM); A is nxn symmetric
-extern void 
-dmult_symm_blocked2(mdata_t *C, const mdata_t *A, const mdata_t *B,
-                    double alpha, double beta, int flags,
-                    int P, int S, int L, int R, int E,
-                    int vlen, int NB, int MB);
-
-
-extern void 
 dmult_symm_blocked3(mdata_t *C, const mdata_t *A, const mdata_t *B,
                     double alpha, double beta, int flags,
                     int P, int S, int L, int R, int E,
                     int KB, int NB, int MB);
-
-
-// matrix-vector: Y = alpha*A*X + beta*Y
-extern void
-dmult_gemv_blocked(mvec_t *Y, const mdata_t *A, const mvec_t *X,
-                   double alpha, double beta, int flags, 
-                   int S, int L, int R, int E,
-                   int vlen, int MB);
 
 
 void dmult_gemv2(mvec_t *Y, const mdata_t *A, const mvec_t *X,

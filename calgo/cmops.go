@@ -320,15 +320,6 @@ func DMultMV(Y, A, X []float64, alpha, beta float64, flags Flags, incY, ldA, inc
     Am.md =  (*C.double)(unsafe.Pointer(&A[0]))
     Am.step = C.int(ldA)
 
-    /*
-    C.dmult_gemv_blocked(
-        (*C.mvec_t)(unsafe.Pointer(&Yv)),
-        (*C.mdata_t)(unsafe.Pointer(&Am)),
-        (*C.mvec_t)(unsafe.Pointer(&Xv)),
-        C.double(alpha), C.double(beta), C.int(flags),
-        C.int(S), C.int(L), C.int(R), C.int(E),
-        C.int(H), C.int(MB))
-     */
     C.dmult_gemv2(
         (*C.mvec_t)(unsafe.Pointer(&Yv)),
         (*C.mdata_t)(unsafe.Pointer(&Am)),
