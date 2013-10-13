@@ -24,7 +24,7 @@ void __SCALE(double *X, int ldX, double beta, int M, int N)
 
   // set to zero
   if (beta == 0.0) {
-    for (j = 0; j < N; j += 4) {
+    for (j = 0; j < N-3; j += 4) {
       for (i = 0; i < M; i++) {
         X[i+(j+0)*ldX] = 0.0;
         X[i+(j+1)*ldX] = 0.0;
@@ -42,7 +42,7 @@ void __SCALE(double *X, int ldX, double beta, int M, int N)
     return;
   }
   // scale here
-  for (j = 0; j < N; j += 4) {
+  for (j = 0; j < N-3; j += 4) {
     for (i = 0; i < M; i++) {
       X[i+(j+0)*ldX] *= beta;
       X[i+(j+1)*ldX] *= beta;
