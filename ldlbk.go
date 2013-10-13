@@ -117,7 +117,6 @@ func findBKPivot(A *matrix.FloatMatrix, flags Flags) (int, int) {
         r = IAMax(&rcol) + 1
         // max off-diagonal on first column at index r
         rmax := math.Abs(A.GetAt(r, 0))
-        //fmt.Printf("m(A)=%d, r=%d, rmax=%e, amax=%e\n", m(A), r, rmax, amax)
         if amax >= bkALPHA*rmax {
             // no pivoting, 1x1 diagonal
             return 0, 1
@@ -130,15 +129,11 @@ func findBKPivot(A *matrix.FloatMatrix, flags Flags) (int, int) {
             // rest of the r'th row after diagonal
             A.SubMatrix(&qrow, r+1, r, A.Rows()-r-1, 1)
             q = IAMax(&qrow)
-            //fmt.Printf("qrow: %d, q: %d\n", qrow.NumElements(), q)
             qmax2 := math.Abs(qrow.GetAt(q, 0))
             if qmax2 > qmax {
                 qmax = qmax2
             }
         }
-        //fmt.Printf("m(A)=%d: q=%d, qmax=%e %v\n", m(A), q, qmax, &qrow)
-        //arr := math.Abs(A.GetAt(r, r))
-        //fmt.Printf("unblk: r=%d, q=%d, amax=%e, rmax=%e, qmax=%e, Arr=%e\n", r, q, amax, rmax, qmax, arr)
         
         if amax >= bkALPHA*rmax*(rmax/qmax) {
             // no pivoting, 1x1 diagonal
@@ -156,7 +151,6 @@ func findBKPivot(A *matrix.FloatMatrix, flags Flags) (int, int) {
         if A.Rows() == 1 {
             return 0, 1
         }
-        //fmt.Printf("upper A:\n%v\n", A)
         lastcol := A.Rows() - 1
         amax := math.Abs(A.GetAt(lastcol, lastcol))
         // column above [A.Rows()-1, A.Rows()-1]
@@ -164,7 +158,6 @@ func findBKPivot(A *matrix.FloatMatrix, flags Flags) (int, int) {
         r = IAMax(&rcol)
         // max off-diagonal on first column at index r
         rmax := math.Abs(A.GetAt(r, lastcol))
-        //fmt.Printf("m(A)=%d, r=%d, rmax=%e, amax=%e\n", m(A), r, rmax, amax)
         if amax >= bkALPHA*rmax {
             // no pivoting, 1x1 diagonal
             return -1, 1
@@ -180,14 +173,10 @@ func findBKPivot(A *matrix.FloatMatrix, flags Flags) (int, int) {
         //  b) elements right of diagonal
         A.SubMatrix(&qrow, r, r+1, 1, lastcol-r)
         q = IAMax(&qrow)
-        //fmt.Printf("qrow: %d, q: %d, data: %v\n", qrow.NumElements(), q, &qrow)
         qmax2 := math.Abs(qrow.GetAt(0, q))
         if qmax2 > qmax {
             qmax = qmax2
         }
-
-        //fmt.Printf("m(A)=%d: q=%d, qmax=%e %v\n", m(A), q, qmax, &qrow)
-        //fmt.Printf("unblk: r=%d, q=%d, amax=%e, rmax=%e, qmax=%e\n", r, q, amax, rmax, qmax)
         
         if amax >= bkALPHA*rmax*(rmax/qmax) {
             // no pivoting, 1x1 diagonal
@@ -247,7 +236,6 @@ func unblkDecompBKLower(A, wrk *matrix.FloatMatrix, p *pPivots) (error, int) {
                 ABR.SetAt(1, 0, ABR.GetAt(r, 0))
                 ABR.SetAt(r, 0, t)
             }
-            //fmt.Printf("unblk: ABR after %d pivot [r=%d]:\n%v\n", np, r, &ABR)
         }
         
         // repartition according the pivot size
@@ -306,13 +294,6 @@ func unblkDecompBKLower(A, wrk *matrix.FloatMatrix, p *pPivots) (error, int) {
             p1.pivots[1] = p1.pivots[0]
         }
 
-        /*
-        if m(&ABR) < 5 {
-            var Ablk matrix.FloatMatrix
-            merge1x2(&Ablk, &ABL, &ABR)
-            fmt.Printf("unblocked EOL: Ablk r=%d, nc=%d. np=%d\n%v\n", r, nc, np, &Ablk)
-        }
-        */
         // ------------------------------------------------------------
         nc += np
         continue3x3to2x2(
@@ -360,7 +341,6 @@ func unblkDecompBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots) (error, int) {
         r, np := findBKPivot(&ATL, UPPER)
         if r != -1 /*&& r != np-1*/  { 
             // pivoting needed; do swaping here
-            //fmt.Printf("pre-pivot ATL [%d]:\n%v\n", ATL.Rows()-np, &ATL)
             applyBKPivotSym(&ATL, ATL.Rows()-np, r, UPPER)
             if np == 2 {
                 /*
@@ -372,7 +352,6 @@ func unblkDecompBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots) (error, int) {
                 ATL.SetAt(nr-1, nr, ATL.GetAt(r, nr))
                 ATL.SetAt(r, nr, t)
             }
-            //fmt.Printf("unblk: ATL after %d pivot [r=%d]:\n%v\n", np, r, &ATL)
         }
         
         // repartition according the pivot size
@@ -412,9 +391,6 @@ func unblkDecompBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots) (error, int) {
             // cwrk = a21
             wrk.SubMatrix(&cwrk, 2, 0, a01.Rows(), a01.Cols())
             a01.CopyTo(&cwrk)
-            //fmt.Printf("cwrk:\n%v\n", &cwrk)
-            //fmt.Printf("a11inv:\n%v\n", &a11inv)
-            // a01 = a01*a11.-1
             Mult(&a01, &cwrk, &a11inv, scale, 0.0, NOTRANS)
             // A00 = A00 - a01*a11.-1*a01.T = A00 - a01*cwrk.T
             UpdateTrm(&A00, &a01, &cwrk, -1.0, 1.0, UPPER|TRANSB)
@@ -467,7 +443,6 @@ func findAndBuildBKPivotLower(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
     if k > 0 {
         WL.SubMatrix(&wrow, 0, 0, 1, WL.Cols())
         MVMult(&wk, AL, &wrow, -1.0, 1.0, NOTRANS)
-        //fmt.Printf("wk after update:\n%v\n", &wk)
     }
     if AR.Rows() == 1 {
         return 0, 1
@@ -476,11 +451,10 @@ func findAndBuildBKPivotLower(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
 
     // find max off-diagonal on first column. 
     WR.SubMatrix(&rcol, 1, 0, AR.Rows()-1, 1)
-    //fmt.Printf("rcol:\n%v\n", &rcol)
+
     // r is row index and rmax is its absolute value
     r = IAMax(&rcol) + 1
     rmax := math.Abs(rcol.GetAt(r-1, 0))
-    //fmt.Printf("r=%d, amax=%e, rmax=%e\n", r, amax, rmax)
     if amax >= bkALPHA*rmax {
         // no pivoting, 1x1 diagonal
         return 0, 1
@@ -489,20 +463,16 @@ func findAndBuildBKPivotLower(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
     WR.SubMatrix(&wkp1, 0, 1, AR.Rows(), 1)
     AR.SubMatrix(&qrow, r, 0, 1, r+1)
     qrow.CopyTo(&wkp1)
-    //fmt.Printf("m(AR)=%d, r=%d, qrow: %v\n", AR.Rows(), r, &qrow)
     if  r < AR.Rows()-1 {
         var wkr matrix.FloatMatrix
         AR.SubMatrix(&qrow, r, r, AR.Rows()-r, 1)
         wkp1.SubMatrix(&wkr, r, 0, wkp1.Rows()-r, 1)
         qrow.CopyTo(&wkr)
-        //fmt.Printf("m(AR)=%d, r=%d, qrow: %v\n", AR.Rows(), r, &qrow)
     }
     if k > 0 {
         // update wkp1
         WL.SubMatrix(&wrow, r, 0, 1, WL.Cols())
-        //fmt.Printf("initial wpk1:\n%v\n", &wkp1)
         MVMult(&wkp1, AL, &wrow, -1.0, 1.0, NOTRANS)
-        //fmt.Printf("updated wpk1:\n%v\n", &wkp1)
     }
     
     // set on-diagonal entry to zero to avoid finding it
@@ -513,8 +483,6 @@ func findAndBuildBKPivotLower(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
     qmax := math.Abs(wkp1.GetAt(q, 0))
     // restore on-diagonal entry
     wkp1.SetAt(r, 0, p1)  
-    //arr := math.Abs(WR.GetAt(r, 1))
-    //fmt.Printf("blk: r=%d, q=%d, amax=%e, rmax=%e, qmax=%e, Arr=%e\n", r, q, amax, rmax, qmax, arr)
         
     if amax >= bkALPHA*rmax*(rmax/qmax) {
         // no pivoting, 1x1 diagonal
@@ -525,8 +493,6 @@ func findAndBuildBKPivotLower(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
     if math.Abs(WR.GetAt(r, 1)) >= bkALPHA*qmax {
         // 1x1 pivoting and interchange with k, r
         // pivot row in column WR[:,1] to W[:,0]
-        //pr := WR.GetAt(r, 1)
-        //_ = pr
         WR.SubMatrix(&src,  0, 1, AR.Rows(), 1)
         WR.SubMatrix(&wkp1, 0, 0, AR.Rows(), 1)
         src.CopyTo(&wkp1)
@@ -556,7 +522,6 @@ func unblkBoundedBKLower(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
     var A00, a10t, a11, A20, a21, A22, a11inv matrix.FloatMatrix
     var w00, w10, w11 matrix.FloatMatrix
     var cwrk matrix.FloatMatrix
-    //var s, d matrix.FloatMatrix
     var pT, pB, p0, p1, p2 pPivots
 
     err = nil
@@ -583,15 +548,11 @@ func unblkBoundedBKLower(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
             &w00, nil,
             &w10, &w11, wrk, nc, nc, pTOPLEFT)
 
-        //fmt.Printf("ABR:\n%v\n", &ABR)
         r, np := findAndBuildBKPivotLower(&ABL, &ABR, &w10, &w11, nc)
-        //fmt.Printf("after find: r=%d, np=%d, ncol=%d, nc=%d\n", r, np, ncol, nc)
         if np > ncol - nc {
             // next pivot does not fit into ncol columns, restore last column,
             // return with number of factorized columns
-            //fmt.Printf("np > ncol-nc: %d > %d\n", np, ncol-nc)
             return err, nc
-            //goto undo
         }
         if r != 0 && r != np-1  {
             // pivoting needed; do swaping here
@@ -599,12 +560,6 @@ func unblkBoundedBKLower(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
             // swap left hand rows to get correct updates
             swapRows(&ABL, np-1, r)
             swapRows(&w10, np-1, r)
-            //ABL.SubMatrix(&s, np-1, 0, 1, ABL.Cols())
-            //ABL.SubMatrix(&d, r,    0, 1, ABL.Cols())
-            //Swap(&s, &d)
-            //w10.SubMatrix(&s, np-1, 0, 1, w10.Cols())
-            //w10.SubMatrix(&d, r,    0, 1, w10.Cols())
-            //Swap(&s, &d)
             if np == 2 {
                 /*
                  *          [0,0] | [r,0]
@@ -613,7 +568,6 @@ func unblkBoundedBKLower(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
                  */
                 t0 := w11.GetAt(1, 0)
                 tr := w11.GetAt(r, 0)
-                //fmt.Printf("nc=%d, t0=%e, tr=%e\n", nc, t0, tr)
                 w11.SetAt(1, 0, tr) 
                 w11.SetAt(r, 0, t0)
                 // interchange diagonal entries on w11[:,1] 
@@ -622,8 +576,6 @@ func unblkBoundedBKLower(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
                 w11.SetAt(1, 1, tr)
                 w11.SetAt(r, 1, t0)
             }
-            //fmt.Printf("pivoted A:\n%v\n", A)
-            //fmt.Printf("pivoted wrk:\n%v\n", wrk)
         }
 
         // repartition according the pivot size
@@ -642,10 +594,8 @@ func unblkBoundedBKLower(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
             w11.SubMatrix(&cwrk, np, 0, a21.Rows(), np)
             a11.SetAt(0, 0, w11.GetAt(0, 0))
             // a21 = a21/a11
-            //fmt.Printf("np == 1: pre-update a21\n%v\n", &a21)
             cwrk.CopyTo(&a21)
             InvScale(&a21, a11.Float())
-            //fmt.Printf("np == 1: cwrk\n%v\na21\n%v\n", &cwrk, &a21)
             // store pivot point relative to original matrix
             p1.pivots[0] = r + ATL.Rows() + 1
         } else if np == 2 {
@@ -672,17 +622,6 @@ func unblkBoundedBKLower(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
             p1.pivots[0] = -(r + ATL.Rows() + 1)
             p1.pivots[1] = p1.pivots[0]
         }
-
-        /*
-        if m(&ABR) < 5 {
-            var Ablk, wblk, w5 matrix.FloatMatrix
-            merge1x2(&Ablk, &ABL, &ABR)
-            merge1x2(&wblk, &w10, &w11)
-            wblk.SubMatrix(&w5, 0, 0, Ablk.Rows(), wblk.Cols())
-            fmt.Printf("blocked EOL: Ablk r=%d, nc=%d. np=%d\n%v\n", r, nc, np, &Ablk)
-            fmt.Printf("wblk m(wblk)=%d:\n%v\n", m(&w5), &w5)
-        }
-        */
         // ------------------------------------------------------------
         nc += np
         continue3x3to2x2(
@@ -693,8 +632,6 @@ func unblkBoundedBKLower(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
             &pB,    &p0, &p1,    p, pBOTTOM)
 
     }
-    // undo applied partial row pivots (AL, w00)
-//undo:
     return err, nc
 }
 
@@ -809,9 +746,7 @@ func findAndBuildBKPivotUpper(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
     src.CopyTo(&wk)
     if k > 0 {
         WR.SubMatrix(&wrow, lr, 0, 1, WR.Cols())
-        //fmt.Printf("wrow: %v\n", &wrow)
         MVMult(&wk, AR, &wrow, -1.0, 1.0, NOTRANS)
-        //fmt.Printf("wk after update:\n%v\n", &wk)
     }
     if AL.Rows() == 1 {
         return -1, 1
@@ -820,11 +755,9 @@ func findAndBuildBKPivotUpper(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
 
     // find max off-diagonal on first column. 
     WL.SubMatrix(&rcol, 0, wc, lr, 1)
-    //fmt.Printf("rcol:\n%v\n", &rcol)
     // r is row index and rmax is its absolute value
     r = IAMax(&rcol) 
     rmax := math.Abs(rcol.GetAt(r, 0))
-    //fmt.Printf("r=%d, amax=%e, rmax=%e\n", r, amax, rmax)
     if amax >= bkALPHA*rmax {
         // no pivoting, 1x1 diagonal
         return -1, 1
@@ -837,19 +770,16 @@ func findAndBuildBKPivotUpper(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
         AL.SubMatrix(&qrow, 0, r, r, 1)
         qrow.CopyTo(&wkp1)
     }
-    //fmt.Printf("m(AR)=%d, r=%d, qrow: %v\n", AL.Rows(), r, &qrow)
+
     var wkr matrix.FloatMatrix
     AL.SubMatrix(&qrow, r, r, 1, AL.Rows()-r)
     wkp1.SubMatrix(&wkr, r, 0, AL.Rows()-r, 1)
     qrow.CopyTo(&wkr)
-    //fmt.Printf("m(AR)=%d, r=%d, qrow: %v\n", AR.Rows(), r, &qrow) 
     if k > 0 {
         // update wkp1
         WR.SubMatrix(&wrow, r, 0, 1, WR.Cols())
-        //fmt.Printf("initial wpk1:\n%v\n", &wkp1)
         MVMult(&wkp1, AR, &wrow, -1.0, 1.0, NOTRANS)
     }
-    //fmt.Printf("updated wpk1:\n%v\n", &wkp1)
 
     // set on-diagonal entry to zero to avoid hitting it.
     p1 := wkp1.GetAt(r, 0)
@@ -858,7 +788,6 @@ func findAndBuildBKPivotUpper(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
     q = IAMax(&wkp1)
     qmax := math.Abs(wkp1.GetAt(q, 0))
     wkp1.SetAt(r, 0, p1)
-    //fmt.Printf("blk: r=%d, q=%d, amax=%e, rmax=%e, qmax=%e\n", r, q, amax, rmax, qmax)
         
     if amax >= bkALPHA*rmax*(rmax/qmax) {
         // no pivoting, 1x1 diagonal
@@ -869,7 +798,6 @@ func findAndBuildBKPivotUpper(AL, AR, WL, WR *matrix.FloatMatrix, k int) (int, i
     if math.Abs(WL.GetAt(r, wc-1)) >= bkALPHA*qmax {
         // 1x1 pivoting and interchange with k, r
         // pivot row in column WR[:,1] to W[:,0]
-        //p1 := WL.GetAt(r, wc-1)
         WL.SubMatrix(&src,  0, wc-1, AL.Rows(), 1)
         WL.SubMatrix(&wkp1, 0, wc, AL.Rows(), 1)
         src.CopyTo(&wkp1)
@@ -918,10 +846,7 @@ func unblkBoundedBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
         merge1x2(&wx, &w00, &w01)
         merge1x2(&Ax, &ATL, &ATR)
         
-        //fmt.Printf("ATL:\n%v\n", &ATL)
         r, np := findAndBuildBKPivotUpper(&ATL, &ATR, &w00, &w01, nc)
-        //fmt.Printf("[w00;w01]:\n%v\n", &wx)
-        //fmt.Printf("after find: r=%d, np=%d, ncol=%d, nc=%d\n", r, np, ncol, nc)
         w00.SubMatrix(&wz, 0, w00.Cols()-2, w00.Rows(), 2)
         if np > ncol - nc {
             // next pivot does not fit into ncol columns, restore last column,
@@ -943,7 +868,6 @@ func unblkBoundedBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
                  */
                 t0 := w00.GetAt(-2, -1)
                 tr := w00.GetAt( r, -1)
-                //fmt.Printf("nc=%d, t0=%e, tr=%e\n", nc, t0, tr)
                 w00.SetAt(-2, -1, tr) 
                 w00.SetAt( r, -1, t0)
                 // interchange diagonal entries on w11[:,1] 
@@ -951,10 +875,7 @@ func unblkBoundedBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
                 tr = w00.GetAt( r, -2)
                 w00.SetAt(-2, -2, tr)
                 w00.SetAt( r, -2, t0)
-                //fmt.Printf("wrk:\n%v\n", &wz)
             }
-            //fmt.Printf("pivoted A:\n%v\n", &Ax)
-            //fmt.Printf("pivoted wrk:\n%v\n", &wx)
         }
 
         // repartition according the pivot size
@@ -969,19 +890,12 @@ func unblkBoundedBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
         // ------------------------------------------------------------
 
         wlc := w00.Cols() - np
-        //wlr := w00.Rows() - 1
         w00.SubMatrix(&cwrk, 0, wlc, a01.Rows(), np)
         if np == 1 {
-            //fmt.Printf("wz:\n%v\n", &wz)
-            //fmt.Printf("a11 <-- %e\n", w00.GetAt(a01.Rows(), wlc))
-            
-            //w00.SubMatrix(&cwrk, 0, wlc-np+1, a01.Rows(), np)
             a11.SetAt(0, 0, w00.GetAt(a01.Rows(), wlc))
             // a21 = a21/a11
-            //fmt.Printf("np == 1: pre-update a01\n%v\n", &a01)
             cwrk.CopyTo(&a01)
             InvScale(&a01, a11.Float())
-            //fmt.Printf("np == 1: cwrk\n%v\na21\n%v\n", &cwrk, &a21)
             // store pivot point relative to original matrix
             if r == -1 {
                 p1.pivots[0] = ATL.Rows()
@@ -1001,7 +915,6 @@ func unblkBoundedBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
             // denominator: (a/b)*(d/b)-1.0 == (a*d - b^2)/b^2
             scale := 1.0 / ((a/b)*(d/b) - 1.0)
             scale /= b
-            //fmt.Printf("a11inv:\n%v\n", &a11inv)
 
             // a01 = a01*a11.-1
             Mult(&a01, &cwrk, &a11inv, scale, 0.0, NOTRANS)
@@ -1013,9 +926,6 @@ func unblkBoundedBKUpper(A, wrk *matrix.FloatMatrix, p *pPivots, ncol int) (erro
             p1.pivots[0] = -(r+1)
             p1.pivots[1] = p1.pivots[0]
         }
-
-        //fmt.Printf("end-of-loop: Ax r=%d, nc=%d. np=%d\n%v\n", r, nc, np, &Ax)
-        //fmt.Printf("wx m(wblk)=%d:\n%v\n", m(&wx), &wx)
 
         // ------------------------------------------------------------
         nc += np
@@ -1077,15 +987,12 @@ func blkDecompBKUpper(A, W *matrix.FloatMatrix, p *pPivots, nb int) (err error) 
                 np = 2
             }
             rlen := ATL.Cols() - colno - np
-            //fmt.Printf("undo: k=%d, r=%d, colno=%d, rlen=%d\n", k, r, colno, rlen)
             if r == colno + 1 {
                 // no pivot
                 continue
             }
             ATL.SubMatrix(&s, colno, colno+np, 1, rlen)
             ATL.SubMatrix(&d, r-1,   colno+np, 1, rlen)
-            //fmt.Printf("s %d: %v\n", colno, &s)
-            //fmt.Printf("d %d: %v\n", r-1,   &d)
             Swap(&d, &s)
 
             if p1.pivots[k] < 0 {
