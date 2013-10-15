@@ -628,7 +628,7 @@ void _dmmat_trmm_blk_r_upper(mdata_t *B, const mdata_t *A,
       // update current part with diagonal
       dmmat_trmm_unb(&B1, &A1, alpha, flags, nI, 0, nJ);
       // update current part with rest of the A, B panels
-      __dmult_inner_a_no_scale(&B1, &B0, &A0, alpha, 0, i-nI, nJ, nI,
+      __dmult_inner_a_no_scale(&B1, &B0, &A0, alpha, 0, i-nI, nI, nJ,
                                KB, NB, MB, Acpy, Bcpy);
     }
   }
