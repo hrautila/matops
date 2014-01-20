@@ -3,6 +3,9 @@ matops
 
 Matrix operations. Almost complete implementation of BLAS level 1, 2 and 3 routines for double precision floating point. All computation is in place. The implementation supports matrix views (submatrices of larger matrices) and parallel execution of matrix operations in multiple threads. Some functions already allow parallel execution for better performance.
 
+**NOTE:** I am not working on this code base anymore. I have moved most of the functionality to a new package
+**github.com/hrautila/gomas**. See there for more details.
+
 Supported functionality is:
 
   Blas level 3
